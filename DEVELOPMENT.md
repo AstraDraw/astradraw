@@ -22,13 +22,21 @@ This document provides a complete summary of all modifications made to enable se
                               └───────────────────────────────┘
 ```
 
-## Repository Structure (Current)
+## Repository Structure
 
+Astradraw is split into three separate repositories:
+
+| Repo | URL | Purpose |
+|------|-----|---------|
+| `astradraw` | https://github.com/astrateam-net/astradraw | Deployment configuration (docker-compose, docs) |
+| `astradraw-app` | https://github.com/astrateam-net/astradraw-app | Forked Excalidraw frontend with HTTP storage |
+| `astradraw-storage` | https://github.com/astrateam-net/astradraw-storage | Storage backend with PostgreSQL/MongoDB/S3 support |
+
+**Local Development Structure:**
 ```
 astradraw/
-├── excalidraw/                    # Modified Excalidraw frontend
-├── excalidraw-room/               # Upstream (unmodified, just Node version bump)
-├── excalidraw-storage-backend/    # Modified storage backend
+├── excalidraw/                    # Clone of astradraw-app (optional for local dev)
+├── excalidraw-storage-backend/    # Clone of astradraw-storage (optional for local dev)
 ├── docker-compose.yml             # Main deployment config
 ├── traefik-dynamic.yml            # Traefik TLS config
 ├── env.example                    # Environment template
@@ -37,15 +45,13 @@ astradraw/
 └── DEVELOPMENT.md                 # This file
 ```
 
-## Future Repository Structure (Planned)
+**Production Deployment:**
+- Uses pre-built images from GitHub Container Registry (GHCR)
+- `ghcr.io/astrateam-net/astradraw-app:latest`
+- `ghcr.io/astrateam-net/astradraw-storage:latest`
+- `excalidraw/excalidraw-room:latest` (upstream)
 
-| Repo | Purpose |
-|------|---------|
-| `astradraw` | Deployment only (docker-compose, docs) |
-| `astradraw-app` | Forked Excalidraw frontend |
-| `astradraw-storage` | Forked storage backend with S3 support |
-
-`excalidraw-room` will be built directly from upstream in docker-compose.
+To use local builds during development, uncomment the `build:` sections in docker-compose.yml.
 
 ---
 
@@ -241,9 +247,9 @@ Key services in `docker-compose.yml`:
 ```yaml
 services:
   traefik:      # Reverse proxy with HTTPS
-  app:          # Excalidraw frontend (./excalidraw)
-  room:         # WebSocket server (./excalidraw-room)
-  storage:      # Storage API (./excalidraw-storage-backend)
+  app:          # Excalidraw frontend (astradraw-app)
+  room:         # WebSocket server (upstream excalidraw-room)
+  storage:      # Storage API (astradraw-storage)
   postgres:     # Database
 ```
 
@@ -253,6 +259,27 @@ services:
 - `/api/v2/` → `storage` (REST API)
 
 **HTTPS requirement:** Web Crypto API (used for E2E encryption in collaboration) requires secure context. Use self-signed certs for local testing.
+
+**Deployment Options:**
+
+1. **Production (using GHCR images):**
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Local Development (build from source):**
+   ```bash
+   # Clone the app and storage repos
+   git clone git@github.com:astrateam-net/astradraw-app.git excalidraw
+   git clone git@github.com:astrateam-net/astradraw-storage.git excalidraw-storage-backend
+   
+   # Uncomment build: sections in docker-compose.yml
+   # Then build and run
+   docker compose up -d --build
+   ```
+
+3. **Hybrid (some local, some GHCR):**
+   Edit docker-compose.yml to mix `image:` and `build:` directives as needed.
 
 ---
 
@@ -281,9 +308,9 @@ services:
 
 ## Future Work
 
-- [ ] S3 storage support in `excalidraw-storage-backend`
-- [ ] Split into separate repos (`astradraw-app`, `astradraw-storage`)
+- [ ] S3 storage support in `astradraw-storage`
 - [x] ~~Extend iframe embeds beyond YouTube~~ ✅ **Completed** - Any URL can now be embedded
+- [x] ~~Split into separate repos~~ ✅ **Completed** - Now using `astradraw-app`, `astradraw-storage`, `astradraw` repos
 
 ### Named Rooms with Shared Encryption Key
 

@@ -50,9 +50,16 @@ services:
 
   # Excalidraw Frontend
   app:
-    build:
-      context: ./excalidraw
-      dockerfile: Dockerfile
+    # For local development: clone astradraw-app and build from source
+    # build:
+    #   context: ./astradraw-app
+    #   dockerfile: Dockerfile
+    # For production: use pre-built image from GitHub Container Registry
+    image: ghcr.io/astrateam-net/astradraw-app:latest
+    # Uncomment below to build from local source during development
+    # build:
+    #   context: ./excalidraw
+    #   dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       # Use http:// for local testing, https:// for production with SSL
@@ -84,9 +91,12 @@ services:
 
   # Excalidraw Room Server (WebSocket collaboration)
   room:
-    build:
-      context: ./excalidraw-room
-      dockerfile: Dockerfile
+    # Using upstream excalidraw-room with Node 18
+    image: excalidraw/excalidraw-room:latest
+    # Uncomment below to build from local source during development
+    # build:
+    #   context: ./excalidraw-room
+    #   dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       - PORT=80
@@ -104,9 +114,12 @@ services:
 
   # Storage Backend (HTTP API for scenes/files)
   storage:
-    build:
-      context: ./excalidraw-storage-backend
-      dockerfile: Dockerfile
+    # For production: use pre-built image from GitHub Container Registry
+    image: ghcr.io/astrateam-net/astradraw-storage:latest
+    # Uncomment below to build from local source during development
+    # build:
+    #   context: ./excalidraw-storage-backend
+    #   dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       # Option 1: Use _FILE suffix to read secret from file (recommended for production)
