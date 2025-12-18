@@ -1,5 +1,22 @@
+# Runtime secrets and certificates
 secrets/
 certs/
 .env
+
+# Logs
 *.log
+
+# macOS
 .DS_Store
+
+# Local development clones (optional - use these folders for local builds)
+excalidraw/
+excalidraw-app/
+excalidraw-storage-backend/
+excalidraw-storage/
+excalidraw-room/
+obsidian-excalidraw-plugin/
+
+# Docker volumes
+postgres_data/
+pgadmin_data/
