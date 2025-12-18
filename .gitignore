@@ -1,0 +1,5 @@
+secrets/
+certs/
+.env
+*.log
+.DS_Store
