@@ -90,6 +90,8 @@ services:
       - "traefik.http.services.excalidraw-app.loadbalancer.server.port=80"
       # Redirect middleware
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.excalidraw-app.priority=1"
+      - "traefik.http.routers.excalidraw-app-secure.priority=1"
     depends_on:
       - storage
       - room
@@ -115,7 +117,13 @@ services:
       - "traefik.http.routers.excalidraw-room-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/socket.io`)"
       - "traefik.http.routers.excalidraw-room-secure.entrypoints=websecure"
       - "traefik.http.routers.excalidraw-room-secure.tls=true"
+      - "traefik.http.routers.excalidraw-room-secure.priority=100"
       - "traefik.http.services.excalidraw-room.loadbalancer.server.port=80"
+      # WebSocket routing via /socket.io/ path (HTTP -> HTTPS)
+      - "traefik.http.routers.excalidraw-room.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.excalidraw-room.entrypoints=web"
+      - "traefik.http.routers.excalidraw-room.middlewares=redirect-to-https"
+      - "traefik.http.routers.excalidraw-room.priority=100"
 
   # Storage Backend (HTTP API for scenes/files)
   storage:
@@ -155,7 +163,13 @@ services:
       - "traefik.http.routers.excalidraw-storage-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
       - "traefik.http.routers.excalidraw-storage-secure.entrypoints=websecure"
       - "traefik.http.routers.excalidraw-storage-secure.tls=true"
+      - "traefik.http.routers.excalidraw-storage-secure.priority=100"
       - "traefik.http.services.excalidraw-storage.loadbalancer.server.port=8080"
+      # API routing via /api/v2/ path (HTTP -> HTTPS)
+      - "traefik.http.routers.excalidraw-storage.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
+      - "traefik.http.routers.excalidraw-storage.entrypoints=web"
+      - "traefik.http.routers.excalidraw-storage.middlewares=redirect-to-https"
+      - "traefik.http.routers.excalidraw-storage.priority=100"
       # Note: Don't strip prefix - storage backend already expects /api/v2 routes
     depends_on:
       minio:
