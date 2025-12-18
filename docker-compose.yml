@@ -120,7 +120,7 @@ services:
   # Storage Backend (HTTP API for scenes/files)
   storage:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-storage:latest
+    image: ghcr.io/astrateam-net/astradraw-storage:0.2
     # Uncomment below to build from local source during development
     # build:
     #   context: ./excalidraw-storage-backend
