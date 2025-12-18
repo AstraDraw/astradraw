@@ -192,6 +192,41 @@ docker compose up -d app
 
 ## Modifications to excalidraw-storage-backend
 
+### Storage Architecture
+
+The storage backend supports two pluggable storage implementations:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Controllers                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │   Scenes    │  │    Rooms    │  │    Files    │          │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘          │
+│         │                │                │                  │
+│         └────────────────┼────────────────┘                  │
+│                          ▼                                   │
+│              ┌───────────────────────┐                       │
+│              │   IStorageService     │ ← Interface           │
+│              └───────────┬───────────┘                       │
+│         ┌────────────────┴────────────────┐                  │
+│         ▼                                 ▼                  │
+│  ┌──────────────┐                  ┌──────────────┐         │
+│  │ KeyvStorage  │                  │  S3Storage   │         │
+│  │  Service     │                  │   Service    │         │
+│  └──────┬───────┘                  └──────┬───────┘         │
+│         ▼                                 ▼                  │
+│  ┌──────────────┐                  ┌──────────────┐         │
+│  │  PostgreSQL  │                  │    MinIO     │         │
+│  │   MongoDB    │                  │   AWS S3     │         │
+│  │    Redis     │                  │              │         │
+│  └──────────────┘                  └──────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Selection:** Set `STORAGE_BACKEND` environment variable:
+- `s3` or `minio` → S3StorageService (recommended for blob storage)
+- `keyv` → KeyvStorageService (legacy, for PostgreSQL/MongoDB)
+
 ### New Files Created
 
 1. **`src/utils/secrets.ts`** - Docker secrets support
@@ -202,25 +237,73 @@ docker compose up -d app
    - Checks `VAR_FILE` env, reads file if exists
    - Falls back to `VAR` env, then default
 
+2. **`src/storage/storage.interface.ts`** - Storage abstraction interface
+   ```typescript
+   export interface IStorageService {
+     get(key: string, namespace: StorageNamespace): Promise<Buffer | null>;
+     set(key: string, value: Buffer, namespace: StorageNamespace): Promise<boolean>;
+     has(key: string, namespace: StorageNamespace): Promise<boolean>;
+   }
+   ```
+
+3. **`src/storage/s3-storage.service.ts`** - S3/MinIO implementation
+   - Uses `@aws-sdk/client-s3`
+   - Auto-creates bucket on startup
+   - Maps namespaces to prefixes: `scenes/{id}`, `rooms/{id}`, `files/{id}`
+
+4. **`src/storage/keyv-storage.service.ts`** - Keyv implementation (refactored)
+   - Supports PostgreSQL, MongoDB, Redis, MySQL, SQLite
+   - Uses Keyv library with namespace separation
+
+5. **`src/storage/storage.module.ts`** - Dynamic provider factory
+   - Selects implementation based on `STORAGE_BACKEND` env var
+   - Global module, provides `STORAGE_SERVICE` token
+
 ### Modified Files
 
 1. **`src/main.ts`**
    - Uses `getSecret()` for `PORT`, `LOG_LEVEL`, `GLOBAL_PREFIX`
 
-2. **`src/storage/storage.service.ts`**
-   - Uses `getSecret('STORAGE_URI')` instead of `process.env.STORAGE_URI`
+2. **`src/app.module.ts`**
+   - Imports `StorageModule` instead of direct `StorageService`
 
-3. **`Dockerfile`**
+3. **`src/scenes/scenes.controller.ts`**, **`src/rooms/rooms.controller.ts`**, **`src/files/files.controller.ts`**
+   - Use `@Inject(STORAGE_SERVICE)` for dependency injection
+   - Import from `storage.interface.ts`
+
+4. **`Dockerfile`**
    - Changed `FROM node:20-alpine as builder` to `FROM node:20-alpine AS builder`
 
+5. **`package.json`**
+   - Added `@aws-sdk/client-s3` dependency
+
 ### Environment Variables (Storage Backend)
+
+**Common:**
+
+| Variable | Description | Supports `_FILE` |
+|----------|-------------|------------------|
+| `STORAGE_BACKEND` | Storage type: `s3` or `keyv` | ❌ |
+| `PORT` | Server port (default: 8080) | ✅ |
+| `LOG_LEVEL` | Log level | ✅ |
+| `GLOBAL_PREFIX` | API prefix (default: `/api/v2`) | ✅ |
+
+**S3/MinIO (when `STORAGE_BACKEND=s3`):**
+
+| Variable | Description | Supports `_FILE` |
+|----------|-------------|------------------|
+| `S3_ENDPOINT` | S3 endpoint URL (e.g., `http://minio:9000`) | ✅ |
+| `S3_ACCESS_KEY` | Access key ID | ✅ |
+| `S3_SECRET_KEY` | Secret access key | ✅ |
+| `S3_BUCKET` | Bucket name (default: `excalidraw`) | ✅ |
+| `S3_REGION` | Region (default: `us-east-1`) | ✅ |
+| `S3_FORCE_PATH_STYLE` | Use path-style URLs (default: `true`) | ✅ |
+
+**Keyv (when `STORAGE_BACKEND=keyv`):**
 
 | Variable | Description | Supports `_FILE` |
 |----------|-------------|------------------|
 | `STORAGE_URI` | Keyv connection string | ✅ |
-| `PORT` | Server port (default: 8080) | ✅ |
-| `LOG_LEVEL` | Log level | ✅ |
-| `GLOBAL_PREFIX` | API prefix (default: `/api/v2`) | ✅ |
 
 **Supported databases via Keyv:**
 - PostgreSQL: `postgres://user:pass@host:5432/db`
@@ -250,7 +333,8 @@ services:
   app:          # Excalidraw frontend (astradraw-app)
   room:         # WebSocket server (upstream excalidraw-room)
   storage:      # Storage API (astradraw-storage)
-  postgres:     # Database
+  minio:        # S3-compatible object storage (recommended)
+  postgres:     # Database (for future comments system)
 ```
 
 **Traefik routing:**
@@ -264,22 +348,35 @@ services:
 
 1. **Production (using GHCR images):**
    ```bash
+   # Create secrets
+   mkdir -p secrets
+   echo "minioadmin" > secrets/minio_access_key
+   openssl rand -base64 32 > secrets/minio_secret_key
+   
+   # Copy and configure .env
+   cp env.example .env
+   
+   # Start services
    docker compose up -d
    ```
 
-2. **Local Development (build from source):**
+2. **Local Development (using docker-compose.override.yml):**
    ```bash
    # Clone the app and storage repos
    git clone git@github.com:astrateam-net/astradraw-app.git excalidraw
    git clone git@github.com:astrateam-net/astradraw-storage.git excalidraw-storage-backend
    
-   # Uncomment build: sections in docker-compose.yml
-   # Then build and run
+   # The docker-compose.override.yml automatically builds from local source
+   # Build and run
    docker compose up -d --build
    ```
 
-3. **Hybrid (some local, some GHCR):**
-   Edit docker-compose.yml to mix `image:` and `build:` directives as needed.
+3. **Admin tools (pgAdmin, MinIO Console):**
+   ```bash
+   docker compose --profile admin up -d
+   ```
+   - pgAdmin: `https://db.${APP_DOMAIN}`
+   - MinIO Console: `https://s3.${APP_DOMAIN}`
 
 ---
 
@@ -308,9 +405,12 @@ services:
 
 ## Future Work
 
-- [ ] S3 storage support in `astradraw-storage`
+- [x] ~~S3 storage support in `astradraw-storage`~~ ✅ **Completed** - MinIO/S3 backend with `@aws-sdk/client-s3`
 - [x] ~~Extend iframe embeds beyond YouTube~~ ✅ **Completed** - Any URL can now be embedded
 - [x] ~~Split into separate repos~~ ✅ **Completed** - Now using `astradraw-app`, `astradraw-storage`, `astradraw` repos
+- [ ] Comments system (see detailed spec below)
+- [ ] Named rooms with shared encryption key
+- [ ] Path-based routing for Authentik integration
 
 ### Named Rooms with Shared Encryption Key
 
@@ -360,6 +460,535 @@ https://draw.example.com/room/public/whiteboard
 - Granular access control per room/department
 - Clean, shareable URLs
 - Compatible with enterprise SSO policies
+
+### Comments System
+
+Add full commenting functionality similar to Excalidraw+ but self-hosted. Based on analysis of Excalidraw+ UI.
+
+**Reference Screenshot Features:**
+- User avatars in header showing online collaborators
+- Comment markers on canvas (orange circles with avatars)
+- Popup thread view when clicking a marker
+- Sidebar with all comments, search, sort, and filter
+- Threaded replies with @mentions
+- Read/unread tracking
+- Resolve/unresolve comments
+
+**Current State:**
+- UI placeholder already exists in `excalidraw-app/components/AppSidebar.tsx`
+- Comments tab with `messageCircleIcon` is present but shows promo for Excalidraw+
+- No backend support for comments
+
+**Prerequisites:**
+- SSO/Authentication (Authentik, Keycloak, or similar OIDC provider)
+- PostgreSQL for structured data (comments require queries, unlike blob storage)
+- WebSocket support for real-time updates (can extend excalidraw-room or separate service)
+
+---
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Traefik Proxy (HTTPS)                       │
+│                              + Authentik                            │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+        ▼                           ▼                           ▼
+┌──────────────┐          ┌──────────────┐          ┌──────────────┐
+│   Frontend   │          │   Storage    │          │   Comments   │
+│  (React)     │          │   Backend    │          │   Backend    │
+│              │          │  (NestJS)    │          │  (NestJS)    │
+└──────────────┘          └──────────────┘          └──────────────┘
+        │                         │                         │
+        │ WebSocket               │                         │
+        ▼                         ▼                         ▼
+┌──────────────┐          ┌──────────────┐          ┌──────────────┐
+│  Presence    │          │    MinIO     │          │  PostgreSQL  │
+│  Service     │          │    (S3)      │          │   (users,    │
+│  (Socket.io) │          │  scenes,     │          │   comments,  │
+└──────────────┘          │  rooms,      │          │   presence)  │
+                          │  files       │          └──────────────┘
+                          └──────────────┘
+```
+
+---
+
+#### Database Schema (PostgreSQL)
+
+```sql
+-- ============================================
+-- USERS
+-- ============================================
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  external_id VARCHAR UNIQUE NOT NULL,  -- ID from SSO provider (sub claim)
+  email VARCHAR UNIQUE,
+  name VARCHAR NOT NULL,
+  avatar_url VARCHAR,
+  color VARCHAR(7),                     -- User's cursor/avatar color (#RRGGBB)
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================
+-- COMMENTS
+-- ============================================
+CREATE TABLE comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id VARCHAR NOT NULL,             -- Room where comment was made
+  element_id VARCHAR,                   -- Optional: attached to specific element
+  parent_id UUID REFERENCES comments(id) ON DELETE CASCADE, -- For threaded replies
+  author_id UUID NOT NULL REFERENCES users(id),
+  text TEXT NOT NULL,
+  
+  -- Position on canvas (for root comments only, NULL for replies)
+  position_x FLOAT,
+  position_y FLOAT,
+  
+  -- Resolution status
+  resolved BOOLEAN DEFAULT FALSE,
+  resolved_by UUID REFERENCES users(id),
+  resolved_at TIMESTAMP,
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_comments_room ON comments(room_id);
+CREATE INDEX idx_comments_parent ON comments(parent_id);
+CREATE INDEX idx_comments_element ON comments(element_id);
+CREATE INDEX idx_comments_resolved ON comments(room_id, resolved);
+
+-- ============================================
+-- COMMENT READ STATUS (for read/unread tracking)
+-- ============================================
+CREATE TABLE comment_reads (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  read_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (user_id, comment_id)
+);
+
+-- ============================================
+-- COMMENT MENTIONS (@username references)
+-- ============================================
+CREATE TABLE comment_mentions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  mentioned_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  notified BOOLEAN DEFAULT FALSE,       -- Whether notification was sent
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_mentions_user ON comment_mentions(mentioned_user_id);
+CREATE INDEX idx_mentions_comment ON comment_mentions(comment_id);
+
+-- ============================================
+-- ROOM PRESENCE (who is currently online)
+-- ============================================
+CREATE TABLE room_presence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id VARCHAR NOT NULL,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  socket_id VARCHAR NOT NULL,           -- Socket.io connection ID
+  cursor_x FLOAT,                       -- Current cursor position
+  cursor_y FLOAT,
+  last_seen TIMESTAMP DEFAULT NOW(),
+  connected_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(room_id, user_id, socket_id)
+);
+
+CREATE INDEX idx_presence_room ON room_presence(room_id);
+CREATE INDEX idx_presence_last_seen ON room_presence(last_seen);
+
+-- Cleanup stale presence records (run periodically)
+-- DELETE FROM room_presence WHERE last_seen < NOW() - INTERVAL '5 minutes';
+```
+
+---
+
+#### Backend API Endpoints
+
+```
+# ============================================
+# COMMENTS CRUD
+# ============================================
+GET    /api/v2/rooms/:roomId/comments
+       Query params:
+         - resolved: boolean (filter by resolved status)
+         - sort: "date" | "unread" (default: date)
+         - search: string (full-text search in comment text)
+       Response: { comments: Comment[], unreadCount: number }
+
+POST   /api/v2/rooms/:roomId/comments
+       Body: { text, elementId?, positionX?, positionY?, parentId? }
+       Response: { comment: Comment }
+       Side effects: Parse @mentions, create mention records
+
+GET    /api/v2/comments/:id
+       Response: { comment: Comment, replies: Comment[], viewers: User[] }
+
+PUT    /api/v2/comments/:id
+       Body: { text }
+       Auth: Only author can edit
+       Response: { comment: Comment }
+
+DELETE /api/v2/comments/:id
+       Auth: Only author can delete
+       Response: { success: true }
+
+# ============================================
+# COMMENT ACTIONS
+# ============================================
+POST   /api/v2/comments/:id/resolve
+       Response: { comment: Comment }
+
+POST   /api/v2/comments/:id/unresolve
+       Response: { comment: Comment }
+
+POST   /api/v2/comments/:id/read
+       Mark comment as read for current user
+       Response: { success: true }
+
+POST   /api/v2/rooms/:roomId/comments/read-all
+       Mark all comments in room as read
+       Response: { success: true, count: number }
+
+GET    /api/v2/comments/:id/link
+       Generate shareable deep link to comment
+       Response: { url: "https://draw.example.com/room/x?comment=uuid" }
+
+# ============================================
+# PRESENCE (Online Users)
+# ============================================
+GET    /api/v2/rooms/:roomId/presence
+       Response: { users: User[], count: number }
+
+# WebSocket events (via Socket.io):
+#   - user:join    { userId, name, avatar, color }
+#   - user:leave   { userId }
+#   - user:cursor  { userId, x, y }
+#   - comment:new  { comment }
+#   - comment:update { comment }
+#   - comment:delete { commentId }
+#   - comment:resolve { commentId, resolvedBy }
+
+# ============================================
+# USERS
+# ============================================
+GET    /api/v2/users/me
+       Response: { user: User }
+
+GET    /api/v2/users/search?q=<query>
+       For @mention autocomplete
+       Response: { users: User[] }
+
+PUT    /api/v2/users/me
+       Body: { name?, avatarUrl?, color? }
+       Response: { user: User }
+```
+
+---
+
+#### Feature Specifications
+
+##### 1. Online Users / Presence System
+
+**How it works:**
+- When user connects to room via WebSocket, add to `room_presence` table
+- Broadcast `user:join` event to all users in room
+- Show avatars in top-right header (like Excalidraw+ shows Shogun, TheSnake, TheChief, etc.)
+- Update cursor position in real-time
+- On disconnect, remove from presence and broadcast `user:leave`
+- Periodic heartbeat to detect stale connections
+
+**UI Components:**
+- `PresenceAvatars.tsx` - Row of user avatars in header
+- `UserCursor.tsx` - Colored cursor with username label on canvas
+- Click on avatar → show user card with name, email
+
+**Data flow:**
+```
+User joins room
+    → WebSocket connect
+    → INSERT INTO room_presence
+    → Broadcast user:join to room
+    → Other clients add avatar to header
+
+User moves cursor
+    → Throttled WebSocket event (50ms)
+    → UPDATE room_presence SET cursor_x, cursor_y
+    → Broadcast to room (except sender)
+    → Other clients update cursor position
+
+User disconnects
+    → WebSocket disconnect event
+    → DELETE FROM room_presence
+    → Broadcast user:leave
+    → Other clients remove avatar
+```
+
+##### 2. Comment Markers on Canvas
+
+**How it works:**
+- Render overlay layer above canvas but below UI
+- Each root comment (not a reply) has a marker at (position_x, position_y)
+- Marker shows author's avatar in a colored circle
+- Click marker → open popup with full thread
+- Drag marker to reposition comment
+
+**UI Components:**
+- `CommentMarkerLayer.tsx` - Overlay container
+- `CommentMarker.tsx` - Single marker (avatar + count badge)
+- `CommentPopup.tsx` - Floating popup with thread
+
+**Marker states:**
+- Default: Small avatar circle
+- Hover: Expand slightly, show "3 replies" count
+- Active: Full popup open
+- Resolved: Grayed out or hidden (based on filter)
+
+**Adding new comment:**
+1. User clicks "Add comment" tool in toolbar
+2. Click on canvas → create marker at position
+3. Popup opens with empty text field
+4. Submit → POST to API → marker becomes permanent
+
+##### 3. Comment Thread Popup
+
+**Layout (based on screenshot):**
+```
+┌─────────────────────────────────────────────┐
+│  < >  [Navigate]     ✓ ✏ 🗑  ✕ [Close]      │
+├─────────────────────────────────────────────┤
+│  👤 Butterbean • a day ago            ⋮     │
+│  Excalidraw's hand-drawn charm infuses...   │
+├─────────────────────────────────────────────┤
+│    👤 Tony • 30min ago                ⋮     │
+│    The color palette chosen for...          │
+│                        [Copy link] [Remove] │
+├─────────────────────────────────────────────┤
+│    👤 Smokin • 5min ago                     │
+│    The seamless integration of...           │
+├─────────────────────────────────────────────┤
+│  👤 [Reply, @mention someone...]      ↑     │
+└─────────────────────────────────────────────┘
+```
+
+**Features:**
+- `< >` Navigation between comments (prev/next by date)
+- `✓` Resolve button (marks thread as resolved)
+- `✏` Edit button (only for own comments)
+- `🗑` Delete button (only for own comments)
+- `✕` Close popup
+- `⋮` Menu: Copy link, Remove (for own), Report
+- Reply input with @mention support
+
+##### 4. Sidebar Comments Panel
+
+**Layout (based on screenshot):**
+```
+┌─────────────────────────────────────────────┐
+│  🔍 Quick search                      ⌘3    │
+├─────────────────────────────────────────────┤
+│                         ✓ Mark all as read  │
+│  ↕ Sort by date                             │
+│  ↕ Sort by unread                           │
+│  Show resolved comments  [○────]            │
+├─────────────────────────────────────────────┤
+│  👤 TheChief • a moment ago                 │
+│  The seamless integration of Excalidraw's   │
+│  hand-drawn feeling enhances the design's   │
+│  visual storytelling...                     │
+│  👥👥👥 +99 users    3 replies              │
+├─────────────────────────────────────────────┤
+│  👤 milos • a moment ago                    │
+│  Excalidraw's hand-drawn aesthetics inject  │
+│  a sense of playfulness and warmth...       │
+│  👥👥👥 +99 users    3 replies              │
+├─────────────────────────────────────────────┤
+│  ... more comments ...                      │
+└─────────────────────────────────────────────┘
+```
+
+**Features:**
+- **Quick search**: Filter comments by text content
+- **Sort options**:
+  - By date (newest first)
+  - By unread (unread first, then by date)
+- **Show resolved toggle**: Hide/show resolved comments
+- **Mark all as read**: Bulk action
+- **Comment preview**: Shows first ~100 chars of text
+- **Viewers count**: "+99 users" who viewed the comment
+- **Reply count**: "3 replies" badge
+- **Click to navigate**: Click comment → scroll canvas to marker position
+
+##### 5. @Mentions System
+
+**How it works:**
+1. User types `@` in comment input
+2. Dropdown appears with user search results
+3. As user types, filter by name/email
+4. Select user → insert `@username` into text
+5. On submit:
+   - Parse text for `@username` patterns
+   - Create records in `comment_mentions` table
+   - (Future) Send notification to mentioned users
+
+**UI Components:**
+- `MentionInput.tsx` - Text input with mention detection
+- `MentionDropdown.tsx` - User search/select dropdown
+- `MentionBadge.tsx` - Styled @username in rendered text
+
+**Storage:**
+- Store raw text with `@username` markers
+- On render, replace with styled badges
+- `comment_mentions` table tracks who was mentioned for notifications
+
+##### 6. Read/Unread Tracking
+
+**How it works:**
+- When user opens a comment thread, mark as read
+- Track in `comment_reads` table (user_id, comment_id, read_at)
+- Show unread indicator (dot or bold text) in sidebar
+- "Mark all as read" creates records for all unread comments
+
+**Unread detection:**
+```sql
+-- Get unread comments for user in room
+SELECT c.* FROM comments c
+WHERE c.room_id = :roomId
+  AND c.id NOT IN (
+    SELECT comment_id FROM comment_reads WHERE user_id = :userId
+  )
+ORDER BY c.created_at DESC;
+```
+
+**UI indicators:**
+- Blue dot next to unread comments in sidebar
+- Bold text for unread comment titles
+- Unread count badge on Comments tab icon
+
+##### 7. Copy Link to Comment
+
+**How it works:**
+- Each comment has a unique URL
+- Format: `https://draw.example.com/room/:roomId?comment=:commentId`
+- When opening URL with `?comment=` param:
+  1. Load room
+  2. Scroll canvas to comment position
+  3. Open comment popup
+
+**Implementation:**
+- Add `commentId` query param handling to room initialization
+- Generate link via API or client-side
+- Copy to clipboard with visual feedback
+
+---
+
+#### Frontend File Structure
+
+```
+excalidraw-app/
+├── comments/
+│   ├── CommentsPanel.tsx         # Sidebar panel with all comments
+│   ├── CommentThread.tsx         # Single thread (root + replies)
+│   ├── CommentPopup.tsx          # Floating popup on canvas
+│   ├── CommentMarkerLayer.tsx    # Canvas overlay with markers
+│   ├── CommentMarker.tsx         # Individual marker component
+│   ├── CommentForm.tsx           # Create/edit form
+│   ├── CommentActions.tsx        # Resolve, edit, delete buttons
+│   ├── MentionInput.tsx          # Input with @mention support
+│   ├── MentionDropdown.tsx       # User search dropdown
+│   ├── CommentsContext.tsx       # React context for state
+│   ├── commentsApi.ts            # API client functions
+│   ├── commentsSocket.ts         # WebSocket event handlers
+│   └── types.ts                  # TypeScript interfaces
+├── presence/
+│   ├── PresenceAvatars.tsx       # Online users in header
+│   ├── UserCursor.tsx            # Cursor on canvas
+│   ├── PresenceContext.tsx       # Presence state management
+│   └── presenceSocket.ts         # WebSocket handlers
+└── auth/
+    ├── AuthContext.tsx           # Current user context
+    ├── useAuth.ts                # Auth hook
+    └── authApi.ts                # Auth API client
+```
+
+---
+
+#### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_APP_COMMENTS_ENABLED` | Enable comments feature (`true`/`false`) |
+| `VITE_APP_AUTH_ENABLED` | Require authentication (`true`/`false`) |
+| `VITE_APP_OIDC_ISSUER` | OIDC provider URL (e.g., Authentik) |
+| `VITE_APP_OIDC_CLIENT_ID` | OIDC client ID |
+| `VITE_APP_OIDC_SCOPES` | OIDC scopes (default: `openid profile email`) |
+| `VITE_APP_PRESENCE_ENABLED` | Enable presence/cursors (`true`/`false`) |
+
+---
+
+#### Implementation Phases
+
+**Phase 1: Authentication & Users (Week 1)**
+- [ ] Integrate Authentik with Traefik forward-auth
+- [ ] Add JWT validation middleware to storage backend
+- [ ] Create users table, sync on first SSO login
+- [ ] Add `/api/v2/users/me` endpoint
+- [ ] Frontend: Add AuthContext, redirect to login if needed
+
+**Phase 2: Presence System (Week 1-2)**
+- [ ] Add presence table and cleanup job
+- [ ] Extend excalidraw-room with presence events
+- [ ] Frontend: PresenceAvatars component in header
+- [ ] Frontend: UserCursor component on canvas
+
+**Phase 3: Comments Backend (Week 2)**
+- [ ] Add comments, comment_reads, comment_mentions tables
+- [ ] Implement CRUD endpoints
+- [ ] Add authorization (author-only edit/delete)
+- [ ] Add WebSocket events for real-time updates
+
+**Phase 4: Comments Frontend - Sidebar (Week 2-3)**
+- [ ] Replace promo in AppSidebar with CommentsPanel
+- [ ] Implement comment list with search/sort/filter
+- [ ] Add read/unread tracking UI
+- [ ] Add "Mark all as read" action
+
+**Phase 5: Comments Frontend - Canvas (Week 3)**
+- [ ] CommentMarkerLayer overlay
+- [ ] CommentMarker with avatar
+- [ ] CommentPopup with thread view
+- [ ] Navigation between comments
+
+**Phase 6: @Mentions & Polish (Week 3-4)**
+- [ ] MentionInput with autocomplete
+- [ ] Parse and store mentions
+- [ ] Copy link to comment
+- [ ] Deep link handling (?comment=id)
+- [ ] UI polish, animations, error handling
+
+---
+
+#### Complexity Estimate (Updated)
+
+| Component | Effort |
+|-----------|--------|
+| SSO Integration (Authentik) | 2-3 days |
+| Presence System (backend + frontend) | 3-4 days |
+| Comments Backend API | 3-4 days |
+| Comments Sidebar UI | 3-4 days |
+| Comment Markers & Popup | 4-5 days |
+| @Mentions System | 2-3 days |
+| Read/Unread Tracking | 1-2 days |
+| Deep Links & Polish | 2-3 days |
+| **Total** | **~4-5 weeks** |
 
 ---
 

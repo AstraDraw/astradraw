@@ -20,3 +20,8 @@ obsidian-excalidraw-plugin/
 # Docker volumes
 postgres_data/
 pgadmin_data/
+
+minio_data/
+
+# Docker Compose override (local dev config, not committed)
+docker-compose.override.yml
