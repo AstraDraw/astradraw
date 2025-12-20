@@ -10,22 +10,22 @@ The limit has been increased to **200MB** across all layers of the application.
 
 ### 1. Frontend (App & Package)
 
-- **Modified**: `excalidraw/packages/common/src/constants.ts`
+- **Modified**: `frontend/packages/common/src/constants.ts`
   - Changed `MAX_ALLOWED_FILE_BYTES` from `4 * 1024 * 1024` to `200 * 1024 * 1024`.
   - This is the primary constant used by the `@excalidraw/excalidraw` package for file size validation.
-- **Modified**: `excalidraw/excalidraw-app/app_constants.ts`
+- **Modified**: `frontend/excalidraw-app/app_constants.ts`
   - Changed `FILE_UPLOAD_MAX_BYTES` to `200 * 1024 * 1024` for consistency.
 
 ### 2. Storage Backend
 
-- **Modified**: `excalidraw-storage-backend/src/raw-parser.middleware.ts`
+- **Modified**: `backend/src/raw-parser.middleware.ts`
   - Increased the `body-parser` limit to `200mb`.
   - Code: `limit: process.env.BODY_LIMIT ?? '200mb'`.
   - This can be overridden by the `BODY_LIMIT` environment variable if needed.
 
 ### 3. WebSocket Room Server
 
-- **Modified**: `excalidraw-room/src/index.ts`
+- **Modified**: `room-service/src/index.ts`
   - Increased `maxHttpBufferSize` for the Socket.IO server to `200 * 1024 * 1024`.
   - This ensures that large image data chunks can be transmitted via WebSockets during real-time sync.
 
@@ -38,7 +38,8 @@ The limit has been increased to **200MB** across all layers of the application.
 To apply these changes locally, you must rebuild the containers without cache to ensure the updated `common` package is correctly linked and bundled:
 
 ```bash
-docker compose build --no-cache app storage room
+cd deploy
+docker compose build --no-cache app api room
 docker compose up -d
 ```
 
@@ -59,7 +60,7 @@ As long as you **commit and push** the changes I made to these repositories, the
 
 Ensure you commit changes in:
 
-1. `excalidraw/packages/common/src/constants.ts`
-2. `excalidraw/excalidraw-app/app_constants.ts`
-3. `excalidraw-storage-backend/src/raw-parser.middleware.ts`
-4. `excalidraw-room/src/index.ts`
+1. `frontend/packages/common/src/constants.ts`
+2. `frontend/excalidraw-app/app_constants.ts`
+3. `backend/src/raw-parser.middleware.ts`
+4. `room-service/src/index.ts`

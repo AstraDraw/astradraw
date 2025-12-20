@@ -6,7 +6,7 @@ Add custom pen presets to Astradraw by extending the Excalidraw core with new ap
 
 ## Technical Analysis
 
-The `excalidraw/` fork is based on upstream Excalidraw. The Obsidian plugin uses `@zsviczian/excalidraw`, which contains **core modifications** not present in upstream.
+The `frontend/` fork is based on upstream Excalidraw. The Obsidian plugin uses `@zsviczian/excalidraw`, which contains **core modifications** not present in upstream.
 
 ### What @zsviczian/excalidraw adds for pens
 
@@ -100,12 +100,12 @@ Update `getFreedrawOutlinePoints()` to read from `appState.currentStrokeOptions`
 
 | File | Change |
 |------|--------|
-| `excalidraw/packages/excalidraw/types.ts` | Add 3 new AppState fields |
-| `excalidraw/packages/excalidraw/appState.ts` | Add defaults for new fields |
-| `excalidraw/packages/element/src/renderElement.ts` | Make `getFreedrawOutlinePoints` use appState |
-| `excalidraw/packages/excalidraw/components/FixedSideContainer.scss` | Uncomment `side_right` CSS |
-| `excalidraw/excalidraw-app/App.tsx` | Add pen toolbar, wire state |
-| `excalidraw/excalidraw-app/pens/*` (new) | Pen presets and UI |
+| `frontend/packages/excalidraw/types.ts` | Add 3 new AppState fields |
+| `frontend/packages/excalidraw/appState.ts` | Add defaults for new fields |
+| `frontend/packages/element/src/renderElement.ts` | Make `getFreedrawOutlinePoints` use appState |
+| `frontend/packages/excalidraw/components/FixedSideContainer.scss` | Uncomment `side_right` CSS |
+| `frontend/excalidraw-app/App.tsx` | Add pen toolbar, wire state |
+| `frontend/excalidraw-app/pens/*` | Pen presets and UI |
 
 ---
 

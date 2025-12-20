@@ -26,23 +26,31 @@ This document provides a complete summary of all modifications made to enable se
 
 Astradraw is split into three separate repositories:
 
-| Repo | URL | Purpose |
-|------|-----|---------|
-| `astradraw` | https://github.com/astrateam-net/astradraw | Deployment configuration (docker-compose, docs) |
-| `astradraw-app` | https://github.com/astrateam-net/astradraw-app | Forked Excalidraw frontend with HTTP storage |
-| `astradraw-storage` | https://github.com/astrateam-net/astradraw-storage | Storage backend with PostgreSQL/MongoDB/S3 support |
+| Repo | URL | Local Folder |
+|------|-----|--------------|
+| `astradraw` | https://github.com/astrateam-net/astradraw | Main orchestration repo |
+| `astradraw-app` | https://github.com/astrateam-net/astradraw-app | `frontend/` |
+| `astradraw-storage` | https://github.com/astrateam-net/astradraw-storage | `backend/` |
+| `excalidraw-room` | https://github.com/excalidraw/excalidraw-room | `room-service/` (upstream) |
 
 **Local Development Structure:**
 ```
 astradraw/
-├── excalidraw/                    # Clone of astradraw-app (optional for local dev)
-├── excalidraw-storage-backend/    # Clone of astradraw-storage (optional for local dev)
-├── docker-compose.yml             # Main deployment config
-├── traefik-dynamic.yml            # Traefik TLS config
-├── env.example                    # Environment template
-├── secrets/                       # Docker secrets (gitignored)
-├── certs/                         # TLS certificates (gitignored)
-└── DEVELOPMENT.md                 # This file
+├── frontend/                      # Clone of astradraw-app (gitignored)
+├── backend/                       # Clone of astradraw-storage (gitignored)
+├── room-service/                  # Clone of excalidraw-room (gitignored)
+├── deploy/                        # Deployment configuration
+│   ├── docker-compose.yml         # Main deployment config
+│   ├── docker-compose.override.yml # Local builds (gitignored)
+│   ├── .env                       # Environment variables (gitignored)
+│   ├── env.example                # Environment template
+│   ├── traefik-dynamic.yml        # Traefik TLS config
+│   ├── dex-config.yaml            # OIDC test provider config
+│   ├── secrets/                   # Docker secrets (gitignored)
+│   ├── certs/                     # TLS certificates (gitignored)
+│   └── libraries/                 # Excalidraw shape libraries
+├── docs/                          # Feature documentation
+└── .cursor/rules/                 # AI assistant rules
 ```
 
 **Production Deployment:**
@@ -51,11 +59,11 @@ astradraw/
 - `ghcr.io/astrateam-net/astradraw-storage:latest`
 - `excalidraw/excalidraw-room:latest` (upstream)
 
-To use local builds during development, uncomment the `build:` sections in docker-compose.yml.
+To use local builds during development, copy `docker-compose.override.yml.disabled` to `docker-compose.override.yml` in the `deploy/` folder.
 
 ---
 
-## Modifications to excalidraw (Frontend)
+## Modifications to Frontend (`frontend/`)
 
 ### New Files Created
 
@@ -190,7 +198,7 @@ docker compose up -d app
 
 ---
 
-## Modifications to excalidraw-storage-backend
+## Modifications to Backend (`backend/`)
 
 ### Storage Architecture
 
@@ -314,7 +322,7 @@ The storage backend supports two pluggable storage implementations:
 
 ---
 
-## Modifications to excalidraw-room
+## Modifications to Room Service (`room-service/`)
 
 **No code changes.** Only the Dockerfile was updated:
 - Changed `FROM node:12-alpine` to `FROM node:18-alpine`
@@ -325,22 +333,24 @@ Can be built directly from upstream with inline Dockerfile override.
 
 ## Docker Compose Configuration
 
-Key services in `docker-compose.yml`:
+Key services in `deploy/docker-compose.yml`:
 
 ```yaml
 services:
   traefik:      # Reverse proxy with HTTPS
   app:          # Excalidraw frontend (astradraw-app)
   room:         # WebSocket server (upstream excalidraw-room)
-  storage:      # Storage API (astradraw-storage)
+  api:          # Storage API (astradraw-storage)
   minio:        # S3-compatible object storage (recommended)
-  postgres:     # Database (for future comments system)
+  postgres:     # Database
+  dex:          # OIDC test provider (profile: oidc)
+  pgadmin:      # Database admin (profile: admin)
 ```
 
 **Traefik routing:**
 - `/` → `app` (frontend)
 - `/socket.io/` → `room` (WebSocket, requires sticky sessions)
-- `/api/v2/` → `storage` (REST API)
+- `/api/v2/` → `api` (REST API)
 
 **HTTPS requirement:** Web Crypto API (used for E2E encryption in collaboration) requires secure context. Use self-signed certs for local testing.
 
@@ -348,6 +358,8 @@ services:
 
 1. **Production (using GHCR images):**
    ```bash
+   cd deploy
+   
    # Create secrets
    mkdir -p secrets
    echo "minioadmin" > secrets/minio_access_key
@@ -362,21 +374,33 @@ services:
 
 2. **Local Development (using docker-compose.override.yml):**
    ```bash
-   # Clone the app and storage repos
-   git clone git@github.com:astrateam-net/astradraw-app.git excalidraw
-   git clone git@github.com:astrateam-net/astradraw-storage.git excalidraw-storage-backend
+   # Clone the app and storage repos (from project root)
+   git clone git@github.com:astrateam-net/astradraw-app.git frontend
+   git clone git@github.com:astrateam-net/astradraw-storage.git backend
+   git clone git@github.com:excalidraw/excalidraw-room.git room-service
    
-   # The docker-compose.override.yml automatically builds from local source
+   # Enable local builds
+   cd deploy
+   cp docker-compose.override.yml.disabled docker-compose.override.yml
+   
    # Build and run
    docker compose up -d --build
    ```
 
 3. **Admin tools (pgAdmin, MinIO Console):**
    ```bash
+   cd deploy
    docker compose --profile admin up -d
    ```
    - pgAdmin: `https://db.${APP_DOMAIN}`
    - MinIO Console: `https://s3.${APP_DOMAIN}`
+
+4. **OIDC Testing (with Dex):**
+   ```bash
+   cd deploy
+   docker compose --profile oidc up -d
+   ```
+   - Test users: `admin@example.com` / `admin123`
 
 ---
 

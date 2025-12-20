@@ -30,7 +30,7 @@ The Excalidraw library system allows users to:
 | Library Class | `packages/excalidraw/data/library.ts` | Core library management |
 | LibraryMenu | `packages/excalidraw/components/LibraryMenu.tsx` | UI for browsing libraries |
 | PublishLibrary | `packages/excalidraw/components/PublishLibrary.tsx` | Publishing dialog |
-| LibraryIndexedDBAdapter | `excalidraw-app/data/LocalData.ts` | Browser storage |
+| LibraryIndexedDBAdapter | `frontend/excalidraw-app/data/LocalData.ts` | Browser storage |
 | useHandleLibrary | `packages/excalidraw/data/library.ts` | React hook for library operations |
 
 ---
@@ -138,7 +138,7 @@ LibraryIndexedDBAdapter.save() persists to IndexedDB
 
 ### LibraryIndexedDBAdapter Implementation
 
-Located in `excalidraw-app/data/LocalData.ts`:
+Located in `frontend/excalidraw-app/data/LocalData.ts`:
 
 ```typescript
 export class LibraryIndexedDBAdapter {

@@ -70,6 +70,7 @@ JWT_SECRET=your-secure-jwt-secret
 ### 3. Restart Services
 
 ```bash
+cd deploy
 docker compose down
 docker compose up -d --build
 ```
@@ -138,16 +139,16 @@ model Scene {
 ## Troubleshooting
 
 ### "Authentication not configured" message
-- Verify OIDC_ISSUER_URL, OIDC_CLIENT_ID, and OIDC_CLIENT_SECRET are set
-- Check storage backend logs: `docker compose logs storage`
+- Verify OIDC_ISSUER_URL, OIDC_CLIENT_ID, and OIDC_CLIENT_SECRET are set in `deploy/.env`
+- Check API logs: `cd deploy && docker compose logs api`
 
 ### Login redirects fail
 - Verify OIDC_CALLBACK_URL matches your Authentik redirect URI
-- Ensure APP_PROTOCOL and APP_DOMAIN are correct
+- Ensure APP_PROTOCOL and APP_DOMAIN are correct in `deploy/.env`
 
 ### Database connection errors
-- Check PostgreSQL is running: `docker compose ps`
+- Check PostgreSQL is running: `cd deploy && docker compose ps`
 - Verify DATABASE_URL format: `postgresql://user:password@host:5432/db`
 
 ### Migration errors
-- Run migrations manually: `docker compose exec storage npx prisma migrate deploy`
+- Run migrations manually: `cd deploy && docker compose exec api npx prisma migrate deploy`

@@ -42,17 +42,17 @@ flowchart TB
 
 ### 1. New Files
 
-- **`excalidraw-app/components/Giphy/GiphyPanel.tsx`** - Main panel component with search, tabs (GIFs/Stickers), trending, and grid display
-- **`excalidraw-app/components/Giphy/GiphyPanel.scss`** - Styles for the GIPHY panel
-- **`excalidraw-app/components/Giphy/index.ts`** - Export file
-- **`excalidraw-app/components/Giphy/giphyApi.ts`** - API helper functions for GIPHY fetch requests
+- **`frontend/excalidraw-app/components/Stickers/StickersPanel.tsx`** - Main panel component with search, tabs (GIFs/Stickers), trending, and grid display
+- **`frontend/excalidraw-app/components/Stickers/StickersPanel.scss`** - Styles for the panel
+- **`frontend/excalidraw-app/components/Stickers/index.ts`** - Export file
+- **`frontend/excalidraw-app/components/Stickers/giphyApi.ts`** - API helper functions for GIPHY fetch requests
 
-### 2. Modify Existing Files
+### 2. Modified Existing Files
 
-- **[`excalidraw-app/components/AppSidebar.tsx`](excalidraw-app/components/AppSidebar.tsx)** - Add new GIPHY tab trigger and tab content
-- **[`packages/excalidraw/components/icons.tsx`](packages/excalidraw/components/icons.tsx)** - Add GIPHY/GIF icon
-- **[`packages/excalidraw/locales/en.json`](packages/excalidraw/locales/en.json)** - Add English translations for GIPHY tab
-- **[`packages/excalidraw/locales/ru-RU.json`](packages/excalidraw/locales/ru-RU.json)** - Add Russian translations for GIPHY tab
+- **`frontend/excalidraw-app/components/AppSidebar.tsx`** - Add new Stickers tab trigger and tab content
+- **`frontend/packages/excalidraw/components/icons.tsx`** - Add sticker icon
+- **`frontend/packages/excalidraw/locales/en.json`** - Add English translations
+- **`frontend/packages/excalidraw/locales/ru-RU.json`** - Add Russian translations
 
 ## Implementation Details
 
@@ -190,35 +190,35 @@ No new npm packages needed - we'll use the native Fetch API to call GIPHY endpoi
 
 
 
-Implementation Complete
-I've successfully implemented the Stickers & GIFs sidebar tab for AstraDraw. Here's what was created/modified:
-New Files Created
-excalidraw-app/components/Stickers/giphyApi.ts - API helper functions for GIPHY endpoints:
-fetchTrending() - Fetch trending content by type
-searchContent() - Search GIFs/Stickers/Emojis
-imageUrlToDataUrl() - Convert image URL to data URL for canvas insertion
-Support for all content types: GIFs, Stickers, Emojis, All
-excalidraw-app/components/Stickers/StickersPanel.tsx - Main panel component with:
-Search bar with debounced search
-Sub-tabs: All, Stickers, Emojis, GIFs
-Masonry grid layout
-Click-to-insert functionality
-Loading/error/empty states
-"Powered by GIPHY" attribution footer
-excalidraw-app/components/Stickers/StickersPanel.scss - Styles matching the GIPHY UI design
-excalidraw-app/components/Stickers/index.ts - Export file
-Modified Files
-packages/excalidraw/components/icons.tsx - Added stickerIcon
-packages/excalidraw/locales/en.json - Added English translations for the stickers tab
-packages/excalidraw/locales/ru-RU.json - Added Russian translations
-excalidraw-app/components/AppSidebar.tsx - Added the new Stickers tab trigger and content
-docker-compose.yml - Added VITE_APP_GIPHY_API_KEY environment variable
-env.example - Documented the GIPHY API key configuration
-To Use
-Add your GIPHY API key to your .env file:
+## Implementation Summary
+
+The Stickers & GIFs sidebar tab has been implemented with:
+
+### Files Created (`frontend/excalidraw-app/components/Stickers/`)
+- `giphyApi.ts` - API helper functions (fetchTrending, searchContent, imageUrlToDataUrl)
+- `StickersPanel.tsx` - Main panel with search, tabs (All/Stickers/Emojis/GIFs), masonry grid
+- `StickersPanel.scss` - Styles matching GIPHY UI design
+- `index.ts` - Export file
+
+### Files Modified
+- `frontend/packages/excalidraw/components/icons.tsx` - Added stickerIcon
+- `frontend/packages/excalidraw/locales/en.json` - English translations
+- `frontend/packages/excalidraw/locales/ru-RU.json` - Russian translations
+- `frontend/excalidraw-app/components/AppSidebar.tsx` - Added Stickers tab
+- `deploy/docker-compose.yml` - Added VITE_APP_GIPHY_API_KEY environment variable
+- `deploy/env.example` - Documented the GIPHY API key configuration
+
+## Usage
+
+1. Add your GIPHY API key to `deploy/.env`:
+   ```bash
    GIPHY_API_KEY=your_api_key_here
-   GIPHY_API_KEY=your_api_key_here
-Rebuild and restart Docker:
+   ```
+
+2. Rebuild and restart Docker:
+   ```bash
+   cd deploy
    docker compose up -d --build
-   docker compose up -d --build
-The new Stickers & GIFs tab will appear in the sidebar (alongside Search, Libraries, Comments, Presentation). Users can browse trending content, search for GIFs/Stickers/Emojis, and click to insert them directly onto the canvas.
+   ```
+
+The Stickers & GIFs tab appears in the sidebar. Users can browse trending content, search, and click to insert directly onto the canvas.

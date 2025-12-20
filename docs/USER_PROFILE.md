@@ -161,7 +161,7 @@ A user can be linked to both local auth and SSO:
 
 ### UserProfileDialog
 
-Location: `excalidraw-app/components/Workspace/UserProfileDialog.tsx`
+Location: `frontend/excalidraw-app/components/Workspace/UserProfileDialog.tsx`
 
 A modal dialog that displays:
 1. **Avatar Section**
@@ -319,16 +319,16 @@ The profile dialog fully supports dark mode through CSS variables:
 
 ## Related Files
 
-### Backend
+### Backend (`backend/`)
 - `src/users/users.controller.ts` - API endpoints
 - `src/users/users.service.ts` - Business logic
 - `src/users/users.module.ts` - Module definition
 - `prisma/schema.prisma` - Database schema
 
-### Frontend
-- `components/Workspace/UserProfileDialog.tsx` - Dialog component
-- `components/Workspace/UserProfileDialog.scss` - Styles
-- `components/Workspace/WorkspaceSidebar.tsx` - Integration
-- `auth/workspaceApi.ts` - API functions
+### Frontend (`frontend/`)
+- `excalidraw-app/components/Workspace/UserProfileDialog.tsx` - Dialog component
+- `excalidraw-app/components/Workspace/UserProfileDialog.scss` - Styles
+- `excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Integration
+- `excalidraw-app/auth/workspaceApi.ts` - API functions
 - `packages/excalidraw/locales/*.json` - Translations
 

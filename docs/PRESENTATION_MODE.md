@@ -40,7 +40,7 @@ Presentation Mode allows users to create presentations using Excalidraw frames a
 ### File Structure
 
 ```
-excalidraw-app/components/Presentation/
+frontend/excalidraw-app/components/Presentation/
 ├── index.ts                    # Exports
 ├── usePresentationMode.ts      # Core logic hook (Jotai state)
 ├── PresentationPanel.tsx       # Sidebar panel component
@@ -179,11 +179,11 @@ All UI strings are localized. Keys added to `locales/en.json` and `locales/ru-RU
 
 | File | Changes |
 |------|---------|
-| `excalidraw-app/App.tsx` | Import and render `PresentationMode` component |
-| `excalidraw-app/components/AppSidebar.tsx` | Import and render `PresentationPanel`, pass `excalidrawAPI` |
-| `excalidraw-app/pens/PenToolbar.tsx` | Hide when `zenModeEnabled` or `viewModeEnabled` |
-| `packages/excalidraw/locales/en.json` | Add presentation translation keys |
-| `packages/excalidraw/locales/ru-RU.json` | Add Russian translations |
+| `frontend/excalidraw-app/App.tsx` | Import and render `PresentationMode` component |
+| `frontend/excalidraw-app/components/AppSidebar.tsx` | Import and render `PresentationPanel`, pass `excalidrawAPI` |
+| `frontend/excalidraw-app/pens/PenToolbar.tsx` | Hide when `zenModeEnabled` or `viewModeEnabled` |
+| `frontend/packages/excalidraw/locales/en.json` | Add presentation translation keys |
+| `frontend/packages/excalidraw/locales/ru-RU.json` | Add Russian translations |
 
 ### Excalidraw API Usage
 

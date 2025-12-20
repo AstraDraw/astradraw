@@ -24,7 +24,7 @@ Talktrack is a Miro-style recording feature that allows you to create video walk
 
 ### 2. Configure Environment Variables
 
-Add the following to your `.env` file:
+Add the following to your `deploy/.env` file:
 
 ```bash
 # Kinescope API Key for video upload and playback
@@ -37,7 +37,8 @@ KINESCOPE_PROJECT_ID=your_project_id_here
 ### 3. Rebuild and Start
 
 ```bash
-docker-compose up -d --build
+cd deploy
+docker compose up -d --build
 ```
 
 ## Usage
@@ -79,6 +80,8 @@ Click "Add to board" to embed the Kinescope player as an embeddable element on y
 
 ### Components
 
+All located in `frontend/excalidraw-app/components/Talktrack/`:
+
 | File | Description |
 |------|-------------|
 | `TalktrackRecorder.ts` | Core recording logic with canvas capture, camera PIP compositing, and MediaRecorder |
@@ -87,7 +90,8 @@ Click "Add to board" to embed the Kinescope player as an embeddable element on y
 | `TalktrackToolbar.tsx` | Floating controls during recording |
 | `TalktrackManager.tsx` | Orchestrates recording lifecycle and upload |
 | `kinescopeApi.ts` | Kinescope upload helpers |
-| `workspaceApi.ts` | Backend API client for recording CRUD operations |
+
+Backend API client: `frontend/excalidraw-app/auth/workspaceApi.ts`
 
 ### Backend API Endpoints
 
