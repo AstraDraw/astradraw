@@ -57,8 +57,8 @@ docker compose logs -f app
 |---------|-------|------|---------|
 | traefik | traefik:v3.0 | 80, 443 | Reverse proxy |
 | app | ghcr.io/astrateam-net/astradraw-app | 80 | Frontend |
-| api | ghcr.io/astrateam-net/astradraw-storage | 8080 | Backend API |
-| room | excalidraw/excalidraw-room | 80 | WebSocket |
+| api | ghcr.io/astrateam-net/astradraw-api | 8080 | Backend API |
+| room | ghcr.io/astrateam-net/astradraw-room | 80 | WebSocket |
 | postgres | postgres:16-alpine | 5432 | Database |
 | minio | minio/minio | 9000/9001 | Object storage |
 | dex | ghcr.io/dexidp/dex (profile: oidc) | 5556 | OIDC testing |
@@ -86,7 +86,7 @@ When releasing new versions:
    app:
      image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.XX
    api:
-     image: ghcr.io/astrateam-net/astradraw-storage:0.5.X
+     image: ghcr.io/astrateam-net/astradraw-api:0.5.X
    ```
 
 ## Local Development Builds

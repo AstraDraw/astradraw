@@ -176,7 +176,7 @@ Update `deploy/docker-compose.yml` with new image versions:
 app:
   image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.36
 api:
-  image: ghcr.io/astrateam-net/astradraw-storage:0.5.3
+  image: ghcr.io/astrateam-net/astradraw-api:0.5.3
 ```
 
 ### Step 9: Commit Main Repo
