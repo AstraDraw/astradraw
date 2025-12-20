@@ -42,14 +42,43 @@ astradraw/                    # Main orchestration repo
 - Avatars stored as base64 data URLs in database
 
 ### Frontend Patterns
-- Stop keyboard event propagation in input fields
+- Stop keyboard event propagation in input fields:
+  ```typescript
+  <input
+    onKeyDown={(e) => e.stopPropagation()}
+    onKeyUp={(e) => e.stopPropagation()}
+  />
+  ```
 - Use Jotai for shared state
-- Always add translation keys to both en.json and ru-RU.json
+- Always add translation keys to both `packages/excalidraw/locales/en.json` and `ru-RU.json`
+- API calls must include credentials for JWT cookies:
+  ```typescript
+  fetch(`${getApiBaseUrl()}/endpoint`, {
+    credentials: "include",
+  });
+  ```
+
+### Frontend Structure (in `frontend/`)
+- `excalidraw-app/components/Workspace/` - User auth, scene management, profile
+- `excalidraw-app/components/Talktrack/` - Video recording feature
+- `excalidraw-app/auth/workspaceApi.ts` - API client for backend
+- `excalidraw-app/data/StorageBackend.ts` - Storage abstraction interface
+- `excalidraw-app/data/httpStorage.ts` - HTTP storage implementation
+- `excalidraw-app/env.ts` - Runtime environment helper (`window.__ENV__`)
 
 ### Backend Patterns
 - JWT guard is at `auth/jwt.guard.ts` (not jwt-auth.guard.ts)
 - Use Prisma for database operations
 - File uploads require @types/multer
+- Docker secrets support via `_FILE` suffix (e.g., `JWT_SECRET_FILE`)
+
+### Backend Structure (in `backend/`)
+- `src/auth/` - Authentication (JWT, OIDC, local)
+- `src/users/` - User profile management
+- `src/workspace/` - Scene CRUD and data storage
+- `src/talktrack/` - Video recording metadata
+- `src/storage/` - S3/MinIO abstraction
+- `prisma/schema.prisma` - Database schema
 
 ## Documentation
 
