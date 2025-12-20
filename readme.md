@@ -29,6 +29,7 @@ All features are documented in the `/docs` folder for AI assistants and develope
 | Feature | Description | Documentation |
 |---------|-------------|---------------|
 | **Workspace** | Save/organize scenes with user accounts | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
+| **Roles, Teams & Collections** | Multi-workspace support with ADMIN/MEMBER/VIEWER roles, team-based access | [docs/ROLES_TEAMS_COLLECTIONS.md](docs/ROLES_TEAMS_COLLECTIONS.md) |
 | **User Profile** | Avatar upload, name editing, profile management | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
 | **Collaboration Profile** | Use profile name & avatar in collaboration | [docs/COLLABORATION_PROFILE.md](docs/COLLABORATION_PROFILE.md) |
 | **Talktrack** | Record canvas walkthroughs with camera PIP | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
@@ -182,11 +183,19 @@ docker compose up -d --build
 - `POST /api/v2/auth/register` - Local registration
 - `GET /api/v2/auth/me` - Get current user
 
-### Workspace
+### Workspace & Scenes
 - `GET /api/v2/workspace/scenes` - List user's scenes
 - `POST /api/v2/workspace/scenes` - Create scene
 - `GET /api/v2/workspace/scenes/:id/data` - Get scene data
 - `PUT /api/v2/workspace/scenes/:id` - Update scene
+
+### Workspaces, Teams & Collections
+- `GET /api/v2/workspaces` - List user's workspaces
+- `GET /api/v2/workspaces/:id/members` - List workspace members
+- `POST /api/v2/workspaces/:id/members/invite` - Invite member (admin)
+- `GET /api/v2/workspaces/:id/teams` - List teams
+- `GET /api/v2/workspaces/:id/collections` - List collections
+- `POST /api/v2/workspaces/join` - Join via invite link
 
 ### User Profile
 - `GET /api/v2/users/me` - Get profile
@@ -210,6 +219,7 @@ docker compose up -d --build
 | Feature | Documentation |
 |---------|---------------|
 | Workspace & Auth | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
+| Roles, Teams & Collections | [docs/ROLES_TEAMS_COLLECTIONS.md](docs/ROLES_TEAMS_COLLECTIONS.md) |
 | User Profile | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
 | Talktrack | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
 | Presentation Mode | [docs/PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) |

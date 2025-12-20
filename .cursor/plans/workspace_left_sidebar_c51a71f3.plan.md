@@ -245,5 +245,3 @@ Backend endpoints:
 
 1. **authApi.ts** - Add register() function
 2. **LoginDialog.tsx** - Sign-up form with toggle
-3. **WorkspaceSidebar.tsx** - Search, sections, Excalidraw+ style
-4. **SceneCard.tsx** - Thumbnail, author, date, lock icon

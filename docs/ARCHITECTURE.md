@@ -126,50 +126,110 @@ Upstream Excalidraw Room server for WebSocket-based real-time collaboration.
 
 ## Database Schema
 
-PostgreSQL is used for structured data (users, scenes, recordings).
+PostgreSQL is used for structured data (users, workspaces, teams, collections, scenes, recordings).
 
 **Core Tables:**
 
 ```prisma
 model User {
-  id            String    @id @default(uuid())
+  id            String    @id @default(cuid())
   email         String    @unique
-  name          String
+  name          String?
   passwordHash  String?   // null for SSO-only users
   oidcId        String?   @unique
-  oidcProvider  String?
   avatarUrl     String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  scenes        Scene[]
-  recordings    TalktrackRecording[]
+  
+  scenes              Scene[]
+  recordings          TalktrackRecording[]
+  workspaceMembers    WorkspaceMember[]
+  teamMembers         TeamMember[]
+  ownedCollections    Collection[]
+}
+
+model Workspace {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  members     WorkspaceMember[]
+  teams       Team[]
+  collections Collection[]
+  inviteLinks InviteLink[]
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  role        WorkspaceRole @default(MEMBER)
+  workspaceId String
+  workspace   Workspace     @relation(...)
+  userId      String
+  user        User          @relation(...)
+  createdAt   DateTime      @default(now())
+  
+  @@unique([workspaceId, userId])
+}
+
+enum WorkspaceRole {
+  ADMIN   // Full control
+  MEMBER  // Can create/edit scenes
+  VIEWER  // Read-only
+}
+
+model Team {
+  id          String    @id @default(cuid())
+  name        String
+  color       String?
+  workspaceId String
+  workspace   Workspace @relation(...)
+  members     TeamMember[]
+  collections TeamCollection[]
+}
+
+model Collection {
+  id          String    @id @default(cuid())
+  name        String
+  icon        String?
+  isPrivate   Boolean   @default(false)
+  userId      String    // Owner
+  workspaceId String
+  workspace   Workspace @relation(...)
+  scenes      Scene[]
 }
 
 model Scene {
-  id          String    @id @default(uuid())
-  name        String
+  id          String    @id @default(cuid())
+  title       String
   storageKey  String    @unique
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(...)
+  collectionId String?
+  collection  Collection? @relation(...)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   recordings  TalktrackRecording[]
 }
 
 model TalktrackRecording {
-  id              String    @id @default(uuid())
+  id              String    @id @default(cuid())
   name            String
   kinescopeId     String
   duration        Int?
   thumbnailUrl    String?
   sceneId         String
-  scene           Scene     @relation(fields: [sceneId], references: [id])
+  scene           Scene     @relation(...)
   userId          String
-  user            User      @relation(fields: [userId], references: [id])
+  user            User      @relation(...)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
 ```
+
+> **See also:** [Roles, Teams & Collections](./ROLES_TEAMS_COLLECTIONS.md) for the complete schema and access control documentation.
 
 ## Authentication
 
@@ -194,6 +254,63 @@ const issuer = process.env.OIDC_ISSUER_URL;
 1. Check by OIDC ID (existing SSO user)
 2. Check by email (migration from local to SSO)
 3. Create new user if neither found
+
+### Default Workspace Creation
+
+When a new user is created (via OIDC or local registration), a default workspace is automatically provisioned:
+
+1. Workspace named "My Workspace" with slug derived from email
+2. User added as ADMIN
+3. Private collection created with 🔒 icon
+
+This ensures every user has a working workspace immediately after signup.
+
+## Backend Modules
+
+The NestJS backend is organized into feature modules:
+
+```
+backend/src/
+├── auth/                 # Authentication (OIDC, JWT, local)
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   ├── jwt.guard.ts
+│   └── jwt.strategy.ts
+├── users/                # User profile management
+│   ├── users.controller.ts
+│   └── users.service.ts
+├── workspaces/           # Workspace & member management
+│   ├── workspaces.controller.ts
+│   ├── workspaces.service.ts
+│   └── workspace-role.guard.ts
+├── teams/                # Team management
+│   ├── teams.controller.ts
+│   └── teams.service.ts
+├── collections/          # Collection management
+│   ├── collections.controller.ts
+│   └── collections.service.ts
+├── workspace/            # Scene CRUD (legacy name)
+│   └── workspace-scenes.controller.ts
+├── talktrack/            # Video recordings
+│   └── scene-talktrack.controller.ts
+├── storage/              # S3/MinIO abstraction
+│   └── s3-storage.service.ts
+└── prisma/               # Database service
+    └── prisma.service.ts
+```
+
+### Role-Based Access Control
+
+The `WorkspaceRoleGuard` enforces permissions:
+
+```typescript
+@UseGuards(JwtAuthGuard, WorkspaceRoleGuard)
+@SetMetadata('role', WorkspaceRole.ADMIN)
+@Post('teams')
+async createTeam() { ... }
+```
+
+Role hierarchy: ADMIN > MEMBER > VIEWER
 
 ## Traefik Routing
 

@@ -1,13 +1,18 @@
 # AstraDraw Workspace Feature
 
-The Workspace feature allows users to save, organize, and access their drawings from any device using OIDC authentication (e.g., Authentik).
+The Workspace feature allows users to save, organize, and access their drawings from any device using OIDC authentication (e.g., Authentik) or local email/password authentication.
 
 ## Features
 
-- **User Authentication**: Sign in with your Authentik (or any OIDC provider) account
-- **Scene Management**: Save, open, and delete scenes from your personal workspace
-- **Left Sidebar**: Quick access to all your saved scenes
-- **Auto-save Ready**: Scene data is stored separately from metadata for efficient updates
+- **User Authentication**: Sign in with SSO (OIDC) or local email/password
+- **Multi-Workspace Support**: Create and switch between multiple workspaces
+- **Scene Management**: Save, open, and delete scenes organized in collections
+- **Collections**: Organize scenes into folders with team-based access control
+- **Teams & Roles**: Collaborate with team members using ADMIN/MEMBER/VIEWER roles
+- **Left Sidebar**: Quick access to collections and scenes
+- **Auto-save**: Scene data is automatically saved with change detection
+
+> **See also:** [Roles, Teams & Collections](./ROLES_TEAMS_COLLECTIONS.md) for detailed access control documentation.
 
 ## Architecture
 
@@ -17,6 +22,9 @@ The Workspace feature allows users to save, organize, and access their drawings 
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
 │  │ AuthProvider │  │WorkspaceSidebar│  │   ExcalidrawWrapper  │ │
 │  └──────────────┘  └──────────────┘  └───────────────────────┘ │
+│                    ┌──────────────┐                             │
+│                    │SettingsLayout│  (Full-page settings)       │
+│                    └──────────────┘                             │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -26,10 +34,14 @@ The Workspace feature allows users to save, organize, and access their drawings 
 │  │ AuthController│  │WorkspaceCtrl │  │   Storage Service     │ │
 │  │  (OIDC/JWT)  │  │ (Scenes API) │  │   (S3/MinIO)          │ │
 │  └──────────────┘  └──────────────┘  └───────────────────────┘ │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
+│  │WorkspacesCtrl│  │ TeamsCtrl    │  │  CollectionsCtrl      │ │
+│  │(Members/Roles)│  │(Team CRUD)  │  │  (Collection CRUD)    │ │
+│  └──────────────┘  └──────────────┘  └───────────────────────┘ │
 │                              │                                   │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │                     Prisma ORM                            │   │
-│  │         (Users, Scenes, Collections metadata)             │   │
+│  │   Users, Workspaces, Members, Teams, Collections, Scenes  │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -38,8 +50,9 @@ The Workspace feature allows users to save, organize, and access their drawings 
 ┌─────────────────────┐               ┌─────────────────────┐
 │    PostgreSQL       │               │    MinIO/S3         │
 │  (User metadata,    │               │  (Scene data,       │
-│   Scene metadata)   │               │   Files)            │
-└─────────────────────┘               └─────────────────────┘
+│   Scene metadata,   │               │   Files)            │
+│   Workspaces/Teams) │               └─────────────────────┘
+└─────────────────────┘
 ```
 
 ## Setup
@@ -107,12 +120,49 @@ The storage backend will automatically run Prisma migrations on startup.
 
 ```prisma
 model User {
-  id        String   @id
-  email     String   @unique
-  name      String?
-  avatarUrl String?
-  oidcId    String   @unique
-  scenes    Scene[]
+  id           String   @id
+  email        String   @unique
+  name         String?
+  avatarUrl    String?
+  oidcId       String?  @unique  // For SSO users
+  passwordHash String?           // For local auth users
+  
+  scenes              Scene[]
+  workspaceMembers    WorkspaceMember[]
+  teamMembers         TeamMember[]
+  ownedCollections    Collection[]
+}
+
+model Workspace {
+  id          String   @id
+  name        String
+  slug        String   @unique
+  avatarUrl   String?
+  
+  members     WorkspaceMember[]
+  teams       Team[]
+  collections Collection[]
+  inviteLinks InviteLink[]
+}
+
+model WorkspaceMember {
+  id          String        @id
+  role        WorkspaceRole @default(MEMBER)  // ADMIN, MEMBER, VIEWER
+  workspaceId String
+  userId      String
+  
+  @@unique([workspaceId, userId])
+}
+
+model Collection {
+  id          String   @id
+  name        String
+  icon        String?
+  isPrivate   Boolean  @default(false)
+  userId      String   // Owner
+  workspaceId String
+  
+  scenes      Scene[]
 }
 
 model Scene {
@@ -122,12 +172,14 @@ model Scene {
   storageKey   String   @unique  // S3 key
   roomId       String?           // Collaboration room
   userId       String
-  user         User     @relation(...)
+  collectionId String?
   isPublic     Boolean
   createdAt    DateTime
   updatedAt    DateTime
 }
 ```
+
+> **See also:** [Roles, Teams & Collections](./ROLES_TEAMS_COLLECTIONS.md) for the complete schema including Teams and InviteLinks.
 
 ## Security
 
