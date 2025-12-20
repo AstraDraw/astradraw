@@ -1,7 +1,6 @@
 ---
 description: "Frontend development patterns for AstraDraw (React/Excalidraw)"
-globs: ["frontend/**/*.ts", "frontend/**/*.tsx", "frontend/**/*.scss"]
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Frontend Development Patterns

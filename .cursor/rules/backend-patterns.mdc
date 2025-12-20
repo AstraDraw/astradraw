@@ -1,7 +1,6 @@
 ---
 description: "Backend development patterns for AstraDraw API (NestJS)"
-globs: ["backend/**/*.ts"]
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Backend Development Patterns

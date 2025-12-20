@@ -1,7 +1,6 @@
 ---
 description: "Docker deployment patterns for AstraDraw"
-globs: ["deploy/**/*.yml", "deploy/**/*.yaml", "deploy/.env*"]
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Docker Deployment Patterns

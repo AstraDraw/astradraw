@@ -1,6 +1,6 @@
 ---
 description: "Guidelines for implementing new features in AstraDraw"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Feature Implementation Guidelines
