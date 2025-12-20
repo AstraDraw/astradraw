@@ -9,16 +9,28 @@ AstraDraw is a self-hosted fork of Excalidraw with enterprise features. This rul
 
 ## Repository Structure
 
+```
+astradraw/                    # Main orchestration repo
+├── frontend/                 # React app (Excalidraw fork) - SEPARATE GIT REPO
+├── backend/                  # NestJS API - SEPARATE GIT REPO
+├── room-service/             # WebSocket server - SEPARATE GIT REPO
+├── docs/                     # Feature documentation
+├── deploy/                   # Docker Compose, configs, secrets
+│   ├── docker-compose.yml
+│   ├── .env, certs/, secrets/
+│   └── libraries/
+└── .cursor/rules/            # AI assistant rules
+```
+
 | Folder | Description | Tech Stack |
 |--------|-------------|------------|
 | `frontend/` | Excalidraw fork with AstraDraw features | React, Vite, TypeScript, Jotai |
 | `backend/` | NestJS API for auth, workspace, storage | NestJS, Prisma, PostgreSQL |
 | `room-service/` | WebSocket collaboration server | Node.js, Socket.io |
+| `deploy/` | All files needed to run/test the app | Docker Compose, Traefik |
 | `docs/` | Feature documentation | Markdown |
 
-**Important:** These are separate git repositories. Do NOT commit changes to the parent astradraw repo that include these folders.
-
-**For AI Assistance:** When working on frontend or backend code, open that folder as a separate workspace in Cursor for full indexing and better AI support. The main astradraw repo is for orchestration (Docker, docs, rules).
+**Important:** `frontend/`, `backend/`, `room-service/` are separate git repositories. Do NOT commit changes to the parent astradraw repo that include these folders.
 
 ## Architecture
 
@@ -56,4 +68,3 @@ All features are documented in `/docs`:
 - `DEVELOPMENT.md` - Full technical documentation
 
 **Always read relevant docs before implementing features.**
-

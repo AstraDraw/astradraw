@@ -20,7 +20,10 @@ astradraw/                    # Main orchestration repo
 ├── backend/                  # NestJS API - SEPARATE GIT REPO
 ├── room-service/             # WebSocket server - SEPARATE GIT REPO
 ├── docs/                     # Feature documentation
-├── docker-compose.yml        # Production deployment
+├── deploy/                   # Docker Compose, configs, secrets, certs
+│   ├── docker-compose.yml
+│   ├── .env, env.example
+│   ├── certs/, secrets/, libraries/
 └── .cursor/rules/            # Detailed Cursor rules
 ```
 
@@ -70,7 +73,8 @@ cd backend
 npm run build          # Build
 npm run prisma:generate # Generate Prisma client
 
-# Docker
+# Docker (from deploy/ folder)
+cd deploy
 docker compose up -d --build  # Build and start
 docker compose logs -f api    # View API logs
 ```
@@ -81,6 +85,6 @@ docker compose logs -f api    # View API logs
 2. Run local build to verify
 3. Commit and tag (`git tag vX.X.X`)
 4. Push with tags (`git push origin main --tags`)
-5. Update docker-compose.yml with new image versions
+5. Update `deploy/docker-compose.yml` with new image versions
 6. Push main repo
 

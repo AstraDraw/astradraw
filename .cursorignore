@@ -22,17 +22,9 @@ certs/
 **/secrets.json
 
 # =============================================================================
-# SUBMODULE REPOSITORIES - These have their own .git and should be opened
-# separately for full indexing. Including them here would cause duplicate
-# indexing and confusion.
+# LEGACY FOLDER NAMES (not used anymore)
 # =============================================================================
 
-# Main development repos (open these as separate workspaces for full AI support)
-frontend/
-backend/
-room-service/
-
-# Legacy folder names
 excalidraw/
 excalidraw-app/
 excalidraw-storage-backend/

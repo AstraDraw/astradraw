@@ -1,32 +1,68 @@
 ---
 description: "Docker deployment patterns for AstraDraw"
-globs: ["docker-compose*.yml", "Dockerfile", ".env*"]
+globs: ["deploy/**/*.yml", "deploy/**/*.yaml", "deploy/.env*"]
 alwaysApply: false
 ---
 
 # Docker Deployment Patterns
 
-## Docker Compose Files
+## Deploy Folder Structure
 
-| File | Purpose |
-|------|---------|
-| `docker-compose.yml` | Main production config with GHCR images |
-| `docker-compose.override.yml` | Local builds (gitignored, auto-merged) |
-| `docker-compose.override.yml.disabled` | Template for local builds |
+All deployment and testing files are in `deploy/`:
+
+```
+deploy/
+├── docker-compose.yml              # Main config (GHCR images)
+├── docker-compose.override.yml     # Local builds (gitignored)
+├── docker-compose.override.yml.disabled  # Template for local builds
+├── .env                            # Environment variables (gitignored)
+├── env.example                     # Environment template
+├── dex-config.yaml                 # OIDC test provider config
+├── traefik-dynamic.yml             # Traefik TLS config
+├── certs/                          # SSL certificates (gitignored)
+│   ├── server.crt
+│   └── server.key
+├── secrets/                        # Docker secrets (gitignored)
+│   ├── minio_access_key
+│   └── minio_secret_key
+└── libraries/                      # Excalidraw shape libraries
+    └── *.excalidrawlib
+```
+
+## Running the Application
+
+```bash
+# Navigate to deploy folder first
+cd deploy
+
+# Copy and configure environment
+cp env.example .env
+# Edit .env with your settings
+
+# Start with production images
+docker compose up -d
+
+# Start with local builds (requires frontend/, backend/ repos)
+cp docker-compose.override.yml.disabled docker-compose.override.yml
+docker compose up -d --build
+
+# View logs
+docker compose logs -f api
+docker compose logs -f app
+```
 
 ## Services
 
-```yaml
-services:
-  traefik:    # Reverse proxy (ports 80, 443)
-  app:        # Frontend (ghcr.io/astrateam-net/astradraw-app)
-  api:        # Backend (ghcr.io/astrateam-net/astradraw-storage)
-  room:       # WebSocket (excalidraw/excalidraw-room)
-  postgres:   # Database
-  minio:      # Object storage
-  dex:        # OIDC provider for testing (profile: oidc)
-  pgadmin:    # Database admin (profile: admin)
-```
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------|
+| traefik | traefik:v3.0 | 80, 443 | Reverse proxy |
+| app | ghcr.io/astrateam-net/astradraw-app | 80 | Frontend |
+| api | ghcr.io/astrateam-net/astradraw-storage | 8080 | Backend API |
+| room | excalidraw/excalidraw-room | 80 | WebSocket |
+| postgres | postgres:16-alpine | 5432 | Database |
+| minio | minio/minio | 9000/9001 | Object storage |
+| dex | ghcr.io/dexidp/dex (profile: oidc) | 5556 | OIDC testing |
+| pgadmin | dpage/pgadmin4 (profile: admin) | 80 | DB admin |
 
 ## Image Versioning
 
@@ -45,7 +81,7 @@ When releasing new versions:
    git tag v0.5.X
    git push origin main --tags
    ```
-3. Update `docker-compose.yml` with new image versions:
+3. Update `deploy/docker-compose.yml` with new image versions:
    ```yaml
    app:
      image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.XX
@@ -55,31 +91,21 @@ When releasing new versions:
 
 ## Local Development Builds
 
-To build locally instead of using GHCR images:
+The override file uses paths relative to `deploy/`:
 
-```bash
-# Enable local builds
-cp docker-compose.override.yml.disabled docker-compose.override.yml
-
-# Build and start
-docker compose up -d --build
-```
-
-The override file changes:
 ```yaml
-app:
-  build:
-    context: ./frontend
-    dockerfile: Dockerfile
-api:
-  build:
-    context: ./backend
-    dockerfile: Dockerfile
+services:
+  app:
+    build:
+      context: ../frontend    # Goes up to project root, then into frontend/
+  api:
+    build:
+      context: ../backend
 ```
 
 ## Environment Variables
 
-Key variables in `.env`:
+Key variables in `deploy/.env`:
 
 ```bash
 APP_DOMAIN=localhost          # Or your domain
@@ -100,40 +126,11 @@ KINESCOPE_API_KEY=<key>
 KINESCOPE_PROJECT_ID=<id>
 ```
 
-## Docker Secrets
-
-Sensitive values use the `_FILE` suffix pattern:
-
-```yaml
-environment:
-  - S3_ACCESS_KEY_FILE=/run/secrets/minio_access_key
-volumes:
-  - ./secrets:/run/secrets:ro
-```
-
-Create secrets:
-```bash
-mkdir -p secrets
-echo "minioadmin" > secrets/minio_access_key
-openssl rand -base64 32 > secrets/minio_secret_key
-```
-
-## Traefik Routing
-
-Routes are defined via Docker labels:
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.my-service.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
-  - "traefik.http.routers.my-service.entrypoints=websecure"
-  - "traefik.http.routers.my-service.tls=true"
-  - "traefik.http.services.my-service.loadbalancer.server.port=8080"
-```
-
 ## Testing with Dex (OIDC)
 
 ```bash
+cd deploy
+
 # Start with OIDC profile
 docker compose --profile oidc up -d
 
@@ -147,8 +144,29 @@ docker compose --profile oidc up -d
 To reset all data:
 
 ```bash
+cd deploy
 docker compose down -v
 docker volume rm astradraw_postgres_data astradraw_minio_data
 docker compose up -d
 ```
 
+## Creating Certificates
+
+For local HTTPS testing:
+
+```bash
+cd deploy
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/server.key -out certs/server.crt \
+  -subj "/CN=localhost"
+```
+
+## Creating Secrets
+
+```bash
+cd deploy
+mkdir -p secrets
+echo "minioadmin" > secrets/minio_access_key
+openssl rand -base64 32 > secrets/minio_secret_key
+```

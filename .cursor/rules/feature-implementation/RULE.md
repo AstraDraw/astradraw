@@ -7,9 +7,10 @@ alwaysApply: false
 
 ## Before Starting
 
-1. **Read existing documentation** in `/docs` folder
-2. **Check existing patterns** in similar features
-3. **Plan the full stack** - frontend, backend, database changes
+1. **Create feature branches** in all affected repos (see `git-workflow` rule)
+2. **Read existing documentation** in `/docs` folder
+3. **Check existing patterns** in similar features
+4. **Plan the full stack** - frontend, backend, database changes
 
 ## Implementation Checklist
 
@@ -137,6 +138,7 @@ const [value, setValue] = useAtom(myFeatureAtom);
 
 2. **Docker test:**
    ```bash
+   cd deploy
    docker compose up -d --build
    ```
 
@@ -147,9 +149,11 @@ const [value, setValue] = useAtom(myFeatureAtom);
 
 ## Release Process
 
-1. Update CHANGELOGs
-2. Commit and push to respective repos
-3. Tag new versions
-4. Update `docker-compose.yml` with new image versions
-5. Push main repo changes
+**Only after successful local testing!** See `git-workflow` rule for full details.
+
+1. Merge feature branches to main in each repo
+2. Update CHANGELOGs in each affected repo
+3. Tag new versions and push
+4. Update `deploy/docker-compose.yml` with new image versions
+5. Commit and push main repo
 

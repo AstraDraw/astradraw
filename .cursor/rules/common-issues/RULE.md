@@ -80,11 +80,10 @@ npm install --save-dev @types/multer
 
 **Cause:** API container can't resolve external hostname.
 
-**Solution:** Use `OIDC_INTERNAL_URL` for Docker networking:
-```yaml
-environment:
-  - OIDC_ISSUER_URL=https://auth.example.com/dex  # External URL
-  - OIDC_INTERNAL_URL=http://dex:5556/dex         # Internal Docker URL
+**Solution:** Use `OIDC_INTERNAL_URL` in `deploy/.env`:
+```bash
+OIDC_ISSUER_URL=https://auth.example.com/dex  # External URL
+OIDC_INTERNAL_URL=http://dex:5556/dex         # Internal Docker URL
 ```
 
 ### 4. Prisma Migration Issues
@@ -100,11 +99,20 @@ npx prisma migrate dev --name init
 
 ## Docker Issues
 
-### 1. Git Detects Subfolders as Embedded Repos
+### 1. Running Docker Commands
+
+**Important:** Docker Compose files are in `deploy/` folder:
+```bash
+cd deploy
+docker compose up -d
+docker compose logs -f api
+```
+
+### 2. Git Detects Subfolders as Embedded Repos
 
 **Cause:** `frontend/`, `backend/`, `room-service/` have their own `.git` folders.
 
-**Solution:** Add to `.gitignore`:
+**Solution:** Already in `.gitignore`:
 ```
 frontend/
 backend/

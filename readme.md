@@ -67,22 +67,35 @@ All features are documented in the `/docs` folder for AI assistants and develope
 
 ## Repository Structure
 
+```
+astradraw/
+├── frontend/           # React app (Excalidraw fork) - separate git repo
+├── backend/            # NestJS API - separate git repo
+├── room-service/       # WebSocket server - separate git repo
+├── docs/               # Feature documentation
+├── deploy/             # Docker Compose, configs, secrets
+│   ├── docker-compose.yml
+│   ├── .env, env.example
+│   ├── certs/          # SSL certificates
+│   ├── secrets/        # Docker secrets
+│   └── libraries/      # Excalidraw shape libraries
+└── .cursor/rules/      # AI assistant rules
+```
+
 | Folder | Description |
 |--------|-------------|
 | `frontend/` | Modified Excalidraw frontend with all AstraDraw features |
 | `backend/` | NestJS API for auth, workspace, storage, and Talktrack |
 | `room-service/` | WebSocket server for real-time collaboration (upstream) |
 | `docs/` | Detailed documentation for each feature |
-| `libraries/` | Pre-bundled `.excalidrawlib` files (Docker mount) |
-| `certs/` | SSL certificates for local HTTPS testing |
-| `secrets/` | Docker secrets for sensitive credentials |
+| `deploy/` | All deployment files (Docker, configs, secrets, certs) |
 
 ## Quick Start
 
 ```bash
 # 1. Clone this repository
 git clone https://github.com/astrateam-net/astradraw.git
-cd astradraw
+cd astradraw/deploy
 
 # 2. Copy environment template
 cp env.example .env
@@ -95,7 +108,7 @@ openssl rand -base64 32 > secrets/minio_secret_key
 # 4. Generate self-signed certs for local testing
 mkdir -p certs
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout certs/key.pem -out certs/cert.pem \
+  -keyout certs/server.key -out certs/server.crt \
   -subj "/CN=localhost"
 
 # 5. Start all services
@@ -108,7 +121,7 @@ docker compose up -d
 
 ### Environment Variables
 
-Copy `env.example` to `.env` and configure:
+In `deploy/`, copy `env.example` to `.env` and configure:
 
 | Variable | Description |
 |----------|-------------|
@@ -145,10 +158,12 @@ volumes:
 Use the override file for local builds:
 
 ```bash
-# Rename to enable local builds
-mv docker-compose.override.yml.disabled docker-compose.override.yml
+cd deploy
 
-# Build and start
+# Enable local builds
+cp docker-compose.override.yml.disabled docker-compose.override.yml
+
+# Build and start (requires frontend/, backend/ repos cloned)
 docker compose up -d --build
 ```
 
@@ -226,6 +241,41 @@ All features are documented in `/docs`:
 - Docker Compose orchestration
 - Traefik reverse proxy
 - Let's Encrypt SSL (optional)
+
+## AI-Assisted Development
+
+This project is optimized for development with Cursor IDE. Open `astradraw/` as your workspace to get AI assistance across all repositories.
+
+### Tips for Effective AI Collaboration
+
+**For new features:**
+```
+I want to implement [FEATURE NAME].
+It should [describe behavior].
+Similar to [reference if any].
+```
+
+**For bug fixes:**
+```
+[Describe the bug]
+Steps to reproduce: [steps]
+Error: [error message if any]
+```
+
+**For full-stack features:**
+```
+I want to add [FEATURE]. 
+This will need both backend API and frontend UI.
+Please check existing patterns first and propose a plan.
+```
+
+### Cursor Rules
+
+The `.cursor/rules/` folder contains AI instructions for:
+- Project structure and patterns
+- Common issues and solutions
+- Multi-repo workflow
+- Context management
 
 ## Credits
 

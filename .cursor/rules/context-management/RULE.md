@@ -50,8 +50,8 @@ cd frontend && yarn prettier --write <files>
 # Backend build
 cd backend && npm run build
 
-# Docker logs
-docker compose logs -f api
+# Docker (from deploy/ folder)
+cd deploy && docker compose logs -f api
 
 # Git status
 git status
@@ -138,25 +138,36 @@ Respect user's choice to:
 
 Never force a new chat - always ask first and accept "no" gracefully.
 
-## Workspace Recommendations
+## Workspace Structure
 
-**This project has multiple repositories.** For optimal AI assistance:
+**This project has multiple repositories:**
 
-| Working On | Open This Workspace |
-|------------|---------------------|
-| Docker, deployment, docs | `astradraw/` (main repo) |
-| Frontend/React code | `astradraw/frontend/` |
-| Backend/NestJS code | `astradraw/backend/` |
-| WebSocket server | `astradraw/room-service/` |
+| Folder | Purpose | Indexed Here? |
+|--------|---------|---------------|
+| `astradraw/` | Main repo (Docker, docs, rules) | ✅ Yes |
+| `frontend/` | React/Excalidraw app | ❌ No (but accessible) |
+| `backend/` | NestJS API | ❌ No (but accessible) |
+| `room-service/` | WebSocket server | ❌ No (but accessible) |
 
-**Why separate workspaces?**
-- Each repo gets full codebase indexing
-- Semantic search is more accurate
-- Context is focused on relevant code
-- Avoids confusion between similar files in different repos
+**How it works:**
+- Submodule folders are in `.cursorindexingignore` (not `.cursorignore`)
+- This means: **NOT indexed** but **still accessible**
+- AI can read files via @ mentions or direct access
+- Semantic search won't find them, but AI can still understand cross-repo logic
 
-**When to suggest opening a different workspace:**
+**When to use main workspace (astradraw/):**
+- Understanding how all parts connect
+- Docker/deployment changes
+- Documentation updates
+- Cross-repo debugging
+
+**When to open submodule as separate workspace:**
+- Heavy development in one repo
+- Need semantic search within that codebase
+- Making many changes to that repo
+
+**Suggest separate workspace for intensive work:**
 ```
-📂 **Workspace Tip**: You're asking about frontend React code, but we're in the main astradraw repo. For better AI assistance with frontend changes, consider opening `frontend/` as a separate workspace in Cursor.
+📂 **Workspace Tip**: For intensive frontend development, consider opening `frontend/` as a separate workspace. You'll get full semantic search and better code completion. For quick cross-repo checks, the main workspace works fine.
 ```
 

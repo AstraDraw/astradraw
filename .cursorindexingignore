@@ -7,6 +7,20 @@
 # See: https://cursor.com/docs/context/ignore-files
 
 # =============================================================================
+# SUBMODULE REPOSITORIES
+# =============================================================================
+# These are separate git repos. We exclude them from indexing to:
+# - Avoid duplicate indexing (they have their own indexes when opened separately)
+# - Improve semantic search accuracy in main repo
+#
+# BUT they remain accessible via @ mentions and direct file reads!
+# So AI can still understand cross-repo logic when needed.
+
+frontend/
+backend/
+room-service/
+
+# =============================================================================
 # LARGE DOCUMENTATION FILES
 # =============================================================================
 # These are useful for reference but shouldn't pollute semantic search results

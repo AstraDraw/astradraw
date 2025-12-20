@@ -1,15 +1,14 @@
-# Runtime secrets and certificates
-secrets/
-certs/
-.env
+# =============================================================================
+# DEPLOY FOLDER - Runtime/sensitive files
+# =============================================================================
+deploy/secrets/
+deploy/certs/
+deploy/.env
+deploy/docker-compose.override.yml
 
-# Logs
-*.log
-
-# macOS
-.DS_Store
-
-# Local development clones (git submodules - use these folders for local builds)
+# =============================================================================
+# LOCAL DEVELOPMENT CLONES (separate git repos)
+# =============================================================================
 frontend/
 backend/
 room-service/
@@ -22,16 +21,24 @@ excalidraw-storage/
 excalidraw-room/
 obsidian-excalidraw-plugin/
 
-# Docker volumes
+# =============================================================================
+# GENERAL
+# =============================================================================
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Docker volumes (if created locally)
 postgres_data/
 pgadmin_data/
-
 minio_data/
 
-# Docker Compose override (local dev config, not committed)
+# Old location (before deploy/ folder)
+secrets/
+certs/
+.env
 docker-compose.override.yml
-
-# Pre-bundled libraries (mounted into Docker container)
 libraries/
-
 excalidraw-libraries/
