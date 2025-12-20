@@ -13,14 +13,6 @@ frontend/
 backend/
 room-service/
 
-# Legacy folder names (if still present)
-excalidraw/
-excalidraw-app/
-excalidraw-storage-backend/
-excalidraw-storage/
-excalidraw-room/
-obsidian-excalidraw-plugin/
-
 # =============================================================================
 # GENERAL
 # =============================================================================
@@ -41,4 +33,3 @@ certs/
 .env
 docker-compose.override.yml
 libraries/
-excalidraw-libraries/

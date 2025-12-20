@@ -24,18 +24,6 @@ deploy/.env.*
 **/secrets.json
 
 # =============================================================================
-# LEGACY FOLDER NAMES (not used anymore)
-# =============================================================================
-
-excalidraw/
-excalidraw-app/
-excalidraw-storage-backend/
-excalidraw-storage/
-excalidraw-room/
-obsidian-excalidraw-plugin/
-excalidraw-libraries/
-
-# =============================================================================
 # LARGE/BINARY FILES - Not useful for AI context
 # =============================================================================
 
