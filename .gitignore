@@ -9,7 +9,12 @@ certs/
 # macOS
 .DS_Store
 
-# Local development clones (optional - use these folders for local builds)
+# Local development clones (git submodules - use these folders for local builds)
+frontend/
+backend/
+room-service/
+
+# Legacy folder names (if still present)
 excalidraw/
 excalidraw-app/
 excalidraw-storage-backend/

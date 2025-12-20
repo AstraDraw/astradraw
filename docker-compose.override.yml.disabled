@@ -19,6 +19,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: astradraw-app:dev
+    volumes:
+      # Mount pre-bundled libraries
+      - ./libraries:/app/libraries
 
   # Build API backend from local source
   api:

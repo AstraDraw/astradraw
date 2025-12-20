@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: test-integration
     content: "Test end-to-end: upload and delete via proxy"
-    status: in_progress
+    status: completed
 ---
 
 # Add Talktrack Support to Storage Backend
@@ -372,5 +372,3 @@ describe('TalktrackController', () => {
 6. **Backward Compatible**: Direct upload still works if storage backend URL not configured
 
 ## Deployment Notes
-
-- Storage backend needs `KINESCOPE_API_KEY` and `KINESCOPE_PROJECT_ID` environment variables

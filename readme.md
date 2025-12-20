@@ -1,62 +1,108 @@
-# Astradraw - Self-hosted Excalidraw with Collaboration
+# AstraDraw - Self-hosted Excalidraw with Collaboration & Workspace
 
-A fully self-hosted Excalidraw deployment with real-time collaboration support.
+A fully self-hosted, feature-rich fork of [Excalidraw](https://excalidraw.com) with real-time collaboration, user workspaces, video recordings, presentation mode, custom pens, and more.
+
+## About This Project
+
+AstraDraw extends the open-source Excalidraw whiteboard with enterprise-ready features while remaining fully self-hostable. It's designed for teams and organizations that need:
+
+- **User authentication** via OIDC (Authentik, Keycloak, Dex) or local accounts
+- **Personal workspaces** to save, organize, and sync drawings across devices
+- **Video walkthroughs** (Talktrack) with camera PIP and Kinescope integration
+- **Presentation mode** using frames as slides with laser pointer
+- **Custom pen presets** (highlighter, fountain, marker, etc.)
+- **GIF/Sticker search** via GIPHY integration
+- **Pre-bundled libraries** for team-wide shape collections
+
+All features are documented in the `/docs` folder for AI assistants and developers.
 
 ## Features
 
-- **Real-time Collaboration**: Multiple users can draw together in the same canvas
-- **Self-hosted Storage**: No Firebase dependency - uses HTTP storage backend with PostgreSQL/MongoDB/S3
-- **Single Domain**: All services accessible via one domain with path-based routing
-- **Traefik Integration**: Ready-to-use reverse proxy configuration with HTTPS
-- **End-to-End Encryption**: All scene data encrypted client-side
-- **Docker Secrets Support**: `_FILE` suffix pattern for production deployments
+### Core Features (from Excalidraw)
+- 🎨 **Infinite canvas** with hand-drawn style
+- 🔒 **End-to-end encryption** for all scene data
+- 🤝 **Real-time collaboration** via WebSocket
+- 📱 **Responsive design** for desktop and mobile
+- 🌙 **Dark mode** support
 
-## Quick Start
-
-```bash
-# 1. Clone this repository
-git clone <repo-url>
-cd astradraw
-
-# 2. Copy environment template
-cp env.example .env
-
-# 3. Edit .env with your configuration
-nano .env
-
-# 4. Generate self-signed certs for local testing (optional)
-mkdir -p certs
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout certs/key.pem -out certs/cert.pem \
-  -subj "/CN=localhost"
-
-# 5. Build and start all services
-docker compose up -d --build
-
-# 6. Access Excalidraw at https://localhost (accept cert warning)
-```
+### AstraDraw Extensions
+| Feature | Description | Documentation |
+|---------|-------------|---------------|
+| **Workspace** | Save/organize scenes with user accounts | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
+| **User Profile** | Avatar upload, name editing, profile management | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
+| **Talktrack** | Record canvas walkthroughs with camera PIP | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
+| **Presentation Mode** | Use frames as slides with laser pointer | [docs/PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) |
+| **Custom Pens** | Highlighter, fountain, marker presets | [docs/PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) |
+| **Stickers & GIFs** | GIPHY integration for inserting media | [docs/GIPHY_SUPPORT.md](docs/GIPHY_SUPPORT.md) |
+| **Libraries** | Pre-bundled shape libraries via Docker | [docs/LIBRARIES_SYSTEM.md](docs/LIBRARIES_SYSTEM.md) |
 
 ## Architecture
-
-See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed technical documentation.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Traefik Proxy (HTTPS)                       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐   │
 │  │ /            │  │ /socket.io/  │  │ /api/v2/                 │   │
-│  │ Frontend     │  │ Room Server  │  │ Storage Backend          │   │
+│  │ Frontend     │  │ Room Server  │  │ Backend API              │   │
 │  └──────────────┘  └──────────────┘  └──────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
+         │                  │                      │
+         ▼                  ▼                      ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────┐
+│ React + Vite    │ │ Socket.io       │ │ NestJS + Prisma             │
+│ Excalidraw Fork │ │ Collaboration   │ │ - Auth (OIDC/Local)         │
+│                 │ │                 │ │ - Workspace API             │
+│                 │ │                 │ │ - Talktrack API             │
+│                 │ │                 │ │ - Storage (S3/MinIO)        │
+└─────────────────┘ └─────────────────┘ └─────────────────────────────┘
+                                                   │
+                           ┌───────────────────────┴───────────────────┐
+                           ▼                                           ▼
+                  ┌─────────────────────┐               ┌─────────────────────┐
+                  │    PostgreSQL       │               │    MinIO/S3         │
+                  │  (Users, Scenes,    │               │  (Scene data,       │
+                  │   Metadata)         │               │   Files, Rooms)     │
+                  └─────────────────────┘               └─────────────────────┘
 ```
 
 ## Repository Structure
 
 | Folder | Description |
 |--------|-------------|
-| `excalidraw/` | Modified Excalidraw frontend with HTTP storage support |
-| `excalidraw-room/` | WebSocket server for real-time collaboration (upstream) |
-| `excalidraw-storage-backend/` | HTTP API for scene/file persistence with `_FILE` secrets |
+| `frontend/` | Modified Excalidraw frontend with all AstraDraw features |
+| `backend/` | NestJS API for auth, workspace, storage, and Talktrack |
+| `room-service/` | WebSocket server for real-time collaboration (upstream) |
+| `docs/` | Detailed documentation for each feature |
+| `libraries/` | Pre-bundled `.excalidrawlib` files (Docker mount) |
+| `certs/` | SSL certificates for local HTTPS testing |
+| `secrets/` | Docker secrets for sensitive credentials |
+
+## Quick Start
+
+```bash
+# 1. Clone this repository
+git clone https://github.com/astrateam-net/astradraw.git
+cd astradraw
+
+# 2. Copy environment template
+cp env.example .env
+
+# 3. Create secrets directory
+mkdir -p secrets
+echo "minioadmin" > secrets/minio_access_key
+openssl rand -base64 32 > secrets/minio_secret_key
+
+# 4. Generate self-signed certs for local testing
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/key.pem -out certs/cert.pem \
+  -subj "/CN=localhost"
+
+# 5. Start all services
+docker compose up -d
+
+# 6. Access AstraDraw at https://localhost (accept cert warning)
+```
 
 ## Configuration
 
@@ -68,60 +114,125 @@ Copy `env.example` to `.env` and configure:
 |----------|-------------|
 | `APP_DOMAIN` | Your domain (e.g., `draw.example.com`) |
 | `APP_PROTOCOL` | `http` or `https` |
-| `POSTGRES_USER` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | PostgreSQL password |
-| `POSTGRES_DB` | PostgreSQL database name |
+| `POSTGRES_*` | PostgreSQL credentials |
+| `OIDC_*` | OIDC provider settings (optional) |
+| `GIPHY_API_KEY` | For Stickers & GIFs sidebar |
+| `KINESCOPE_*` | For Talktrack video hosting |
 
-### Docker Secrets Support (`_FILE` suffix)
+### Authentication Options
 
-All sensitive environment variables in `excalidraw-storage-backend` support reading values from files via the `_FILE` suffix. This is useful for Docker Swarm secrets or Kubernetes secrets.
+1. **Local Auth** (default): Email/password with admin account
+2. **OIDC/SSO**: Authentik, Keycloak, Dex, or any OIDC provider
+3. **Hybrid**: Both local and SSO enabled
 
-**Supported variables:** `STORAGE_URI`, `PORT`, `LOG_LEVEL`, `GLOBAL_PREFIX`
+See [docs/WORKSPACE.md](docs/WORKSPACE.md) for detailed auth setup.
+
+### Docker Secrets Support
+
+All sensitive variables support the `_FILE` suffix pattern:
 
 ```yaml
-# Example: docker-compose.yml
-services:
-  storage:
-    environment:
-      - STORAGE_URI_FILE=/run/secrets/storage_uri
-    volumes:
-      - ./secrets:/run/secrets:ro
+environment:
+  - S3_ACCESS_KEY_FILE=/run/secrets/minio_access_key
+volumes:
+  - ./secrets:/run/secrets:ro
 ```
-
-### Supported Databases
-
-Via Keyv connection strings:
-- **PostgreSQL**: `postgres://user:pass@host:5432/db` (recommended)
-- **MongoDB**: `mongodb://user:pass@host:27017/db`
-- **Redis**: `redis://user:pass@host:6379`
-- **MySQL**: `mysql://user:pass@host:3306/db`
 
 ## Development
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for all modifications made to upstream repos.
+### Local Development with Docker
+
+Use the override file for local builds:
+
+```bash
+# Rename to enable local builds
+mv docker-compose.override.yml.disabled docker-compose.override.yml
+
+# Build and start
+docker compose up -d --build
+```
 
 ### Frontend Development
 
 ```bash
-cd excalidraw
+cd frontend
 yarn install
 yarn start
 ```
 
-### Storage Backend Development
+### Backend Development
 
 ```bash
-cd excalidraw-storage-backend
+cd backend
 npm install
 npm run start:dev
 ```
+
+## API Endpoints
+
+### Authentication
+- `GET /api/v2/auth/status` - Check auth configuration
+- `GET /api/v2/auth/login` - Start OIDC login flow
+- `POST /api/v2/auth/login` - Local login
+- `POST /api/v2/auth/register` - Local registration
+- `GET /api/v2/auth/me` - Get current user
+
+### Workspace
+- `GET /api/v2/workspace/scenes` - List user's scenes
+- `POST /api/v2/workspace/scenes` - Create scene
+- `GET /api/v2/workspace/scenes/:id/data` - Get scene data
+- `PUT /api/v2/workspace/scenes/:id` - Update scene
+
+### User Profile
+- `GET /api/v2/users/me` - Get profile
+- `PUT /api/v2/users/me` - Update profile
+- `POST /api/v2/users/me/avatar` - Upload avatar
+
+### Talktrack
+- `GET /api/v2/workspace/scenes/:id/talktracks` - List recordings
+- `POST /api/v2/workspace/scenes/:id/talktracks` - Create recording
+
+## Documentation
+
+All features are documented in `/docs`:
+
+| Document | Description |
+|----------|-------------|
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Full technical documentation |
+| [WORKSPACE.md](docs/WORKSPACE.md) | User authentication and scene management |
+| [USER_PROFILE.md](docs/USER_PROFILE.md) | Profile management implementation |
+| [TALKTRACK.MD](docs/TALKTRACK.MD) | Video recording feature |
+| [PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) | Slideshow functionality |
+| [PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) | Custom pen presets |
+| [GIPHY_SUPPORT.md](docs/GIPHY_SUPPORT.md) | Stickers & GIFs integration |
+| [LIBRARIES_SYSTEM.md](docs/LIBRARIES_SYSTEM.md) | Shape library system |
+
+## Tech Stack
+
+### Frontend
+- React 18 + TypeScript
+- Vite build system
+- Jotai state management
+- SCSS modules
+
+### Backend
+- NestJS framework
+- Prisma ORM
+- PostgreSQL database
+- MinIO/S3 object storage
+- JWT authentication
+
+### Infrastructure
+- Docker Compose orchestration
+- Traefik reverse proxy
+- Let's Encrypt SSL (optional)
 
 ## Credits
 
 - [Excalidraw](https://github.com/excalidraw/excalidraw) - The amazing whiteboard app
 - [excalidraw-room](https://github.com/excalidraw/excalidraw-room) - Official collaboration server
-- [alswl/excalidraw-collaboration](https://github.com/alswl/excalidraw-collaboration) - HTTP storage backend inspiration
-- [alswl/excalidraw-storage-backend](https://github.com/alswl/excalidraw-storage-backend) - Storage backend implementation
+- [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin) - Inspiration for pens and presentation mode
+- [alswl/excalidraw-storage-backend](https://github.com/alswl/excalidraw-storage-backend) - Storage backend foundation
 
 ## License
 

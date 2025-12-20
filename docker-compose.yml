@@ -99,7 +99,7 @@ services:
     image: excalidraw/excalidraw-room:latest
     # Uncomment below to build from local source during development
     # build:
-    #   context: ./excalidraw-room
+    #   context: ./room-service
     #   dockerfile: Dockerfile
     restart: unless-stopped
     environment:
