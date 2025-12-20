@@ -7,9 +7,10 @@
 # See: https://cursor.com/docs/context/ignore-files
 
 # =============================================================================
-# SUBMODULE REPOSITORIES
+# SEPARATE GIT REPOSITORIES
 # =============================================================================
-# These are separate git repos. We exclude them from indexing to:
+# These folders contain separate git repos (not submodules, just cloned here).
+# We exclude them from indexing to:
 # - Avoid duplicate indexing (they have their own indexes when opened separately)
 # - Improve semantic search accuracy in main repo
 #
