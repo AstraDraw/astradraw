@@ -1,0 +1,37 @@
+# Docker Compose Override for Local Development
+#
+# This file is automatically merged with docker-compose.yml when running:
+#   docker compose up -d
+#
+# It overrides production images with local builds from source.
+# 
+# Prerequisites:
+#   - Clone astradraw-app to ./excalidraw/
+#   - Clone astradraw-storage to ./excalidraw-storage-backend/
+#
+# To use production images instead, rename or delete this file.
+
+services:
+  # Build frontend from local source
+  app:
+    build:
+      context: ./excalidraw
+      dockerfile: Dockerfile
+    image: astradraw-app:dev
+
+  # Build storage backend from local source
+  storage:
+    build:
+      context: ./excalidraw-storage-backend
+      dockerfile: Dockerfile
+    image: astradraw-storage:dev
+    # Mount source for faster iteration (optional, requires nodemon)
+    # volumes:
+    #   - ./excalidraw-storage-backend/src:/app/src:ro
+
+  # Optionally build room server from local source
+  # room:
+  #   build:
+  #     context: ./excalidraw-room
+  #     dockerfile: Dockerfile
+  #   image: astradraw-room:dev

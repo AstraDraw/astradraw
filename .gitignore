@@ -25,3 +25,8 @@ minio_data/
 
 # Docker Compose override (local dev config, not committed)
 docker-compose.override.yml
+
+# Pre-bundled libraries (mounted into Docker container)
+libraries/
+
+excalidraw-libraries/

@@ -77,9 +77,8 @@ services:
       - VITE_APP_DISABLE_TRACKING=true
       # GIPHY API key for Stickers & GIFs sidebar (get one at https://developers.giphy.com/)
       - VITE_APP_GIPHY_API_KEY=${GIPHY_API_KEY:-}
-      # Kinescope configuration for Talktrack recordings (get keys at https://app.kinescope.io/)
-      - VITE_APP_KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
-      - VITE_APP_KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}
+      # Note: Kinescope API keys are configured in the storage backend service for security
+      # The frontend automatically uses the proxy at VITE_APP_HTTP_STORAGE_BACKEND_URL
     networks:
       - astradraw
     labels:
