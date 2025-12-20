@@ -132,7 +132,7 @@ services:
   # Storage Backend (HTTP API for scenes/files)
   storage:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-storage:0.2
+    image: ghcr.io/astrateam-net/astradraw-storage:0.3
     # Uncomment below to build from local source during development
     # build:
     #   context: ./excalidraw-storage-backend
@@ -153,6 +153,17 @@ services:
       # === Keyv Configuration (when STORAGE_BACKEND=keyv) ===
       # - STORAGE_URI_FILE=/run/secrets/storage_uri
       # - STORAGE_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      
+      # === PostgreSQL Configuration (for Workspace/User management) ===
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      
+      # === OIDC Configuration (Authentik) ===
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_CALLBACK_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/api/v2/auth/callback
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       
       # === Kinescope Configuration (for Talktrack video proxy) ===
       - KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
@@ -181,6 +192,8 @@ services:
       # Note: Don't strip prefix - storage backend already expects /api/v2 routes
     depends_on:
       minio:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   # MinIO - S3-compatible Object Storage (recommended for blob storage)
