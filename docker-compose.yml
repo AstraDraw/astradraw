@@ -55,16 +55,9 @@ services:
 
   # Excalidraw Frontend
   app:
-    # For local development: clone astradraw-app and build from source
-    # build:
-    #   context: ./astradraw-app
-    #   dockerfile: Dockerfile
     # For production: use pre-built image from GitHub Container Registry
     image: ghcr.io/astrateam-net/astradraw-app:latest
-    # Uncomment below to build from local source during development
-    # build:
-    #   context: ./excalidraw
-    #   dockerfile: Dockerfile
+    # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
       # Use http:// for local testing, https:// for production with SSL
@@ -97,7 +90,7 @@ services:
       - "traefik.http.routers.excalidraw-app.priority=1"
       - "traefik.http.routers.excalidraw-app-secure.priority=1"
     depends_on:
-      - storage
+      - api
       - room
 
   # Excalidraw Room Server (WebSocket collaboration)
@@ -129,14 +122,11 @@ services:
       - "traefik.http.routers.excalidraw-room.middlewares=redirect-to-https"
       - "traefik.http.routers.excalidraw-room.priority=100"
 
-  # Storage Backend (HTTP API for scenes/files)
-  storage:
+  # AstraDraw API (authentication, workspace, storage)
+  api:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-storage:0.3
-    # Uncomment below to build from local source during development
-    # build:
-    #   context: ./excalidraw-storage-backend
-    #   dockerfile: Dockerfile
+    image: ghcr.io/astrateam-net/astradraw-api:0.5
+    # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
       # Storage backend selection: 's3' (MinIO/S3) or 'keyv' (PostgreSQL/MongoDB)
@@ -165,6 +155,12 @@ services:
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       
+      # === Local Authentication (Default Admin) ===
+      - ENABLE_LOCAL_AUTH=${ENABLE_LOCAL_AUTH:-true}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+      
       # === Kinescope Configuration (for Talktrack video proxy) ===
       - KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
       - KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}
@@ -179,17 +175,17 @@ services:
     labels:
       - "traefik.enable=true"
       # API routing via /api/v2/ path (HTTPS)
-      - "traefik.http.routers.excalidraw-storage-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
-      - "traefik.http.routers.excalidraw-storage-secure.entrypoints=websecure"
-      - "traefik.http.routers.excalidraw-storage-secure.tls=true"
-      - "traefik.http.routers.excalidraw-storage-secure.priority=100"
-      - "traefik.http.services.excalidraw-storage.loadbalancer.server.port=8080"
+      - "traefik.http.routers.astradraw-api-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
+      - "traefik.http.routers.astradraw-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.astradraw-api-secure.tls=true"
+      - "traefik.http.routers.astradraw-api-secure.priority=100"
+      - "traefik.http.services.astradraw-api.loadbalancer.server.port=8080"
       # API routing via /api/v2/ path (HTTP -> HTTPS)
-      - "traefik.http.routers.excalidraw-storage.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
-      - "traefik.http.routers.excalidraw-storage.entrypoints=web"
-      - "traefik.http.routers.excalidraw-storage.middlewares=redirect-to-https"
-      - "traefik.http.routers.excalidraw-storage.priority=100"
-      # Note: Don't strip prefix - storage backend already expects /api/v2 routes
+      - "traefik.http.routers.astradraw-api.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/v2`)"
+      - "traefik.http.routers.astradraw-api.entrypoints=web"
+      - "traefik.http.routers.astradraw-api.middlewares=redirect-to-https"
+      - "traefik.http.routers.astradraw-api.priority=100"
+      # Note: Don't strip prefix - API already expects /api/v2 routes
     depends_on:
       minio:
         condition: service_healthy
