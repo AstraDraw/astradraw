@@ -94,14 +94,10 @@ services:
       - api
       - room
 
-  # Excalidraw Room Server (WebSocket collaboration)
+  # AstraDraw Room Server (WebSocket collaboration)
   room:
-    # Using upstream excalidraw-room with Node 18
-    image: excalidraw/excalidraw-room:latest
-    # Uncomment below to build from local source during development
-    # build:
-    #   context: ./room-service
-    #   dockerfile: Dockerfile
+    image: ghcr.io/astrateam-net/astradraw-room:latest
+    # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
       - PORT=80
@@ -112,21 +108,21 @@ services:
     labels:
       - "traefik.enable=true"
       # WebSocket routing via /socket.io/ path (HTTPS)
-      - "traefik.http.routers.excalidraw-room-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/socket.io`)"
-      - "traefik.http.routers.excalidraw-room-secure.entrypoints=websecure"
-      - "traefik.http.routers.excalidraw-room-secure.tls=true"
-      - "traefik.http.routers.excalidraw-room-secure.priority=100"
-      - "traefik.http.services.excalidraw-room.loadbalancer.server.port=80"
+      - "traefik.http.routers.astradraw-room-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.astradraw-room-secure.entrypoints=websecure"
+      - "traefik.http.routers.astradraw-room-secure.tls=true"
+      - "traefik.http.routers.astradraw-room-secure.priority=100"
+      - "traefik.http.services.astradraw-room.loadbalancer.server.port=80"
       # WebSocket routing via /socket.io/ path (HTTP -> HTTPS)
-      - "traefik.http.routers.excalidraw-room.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/socket.io`)"
-      - "traefik.http.routers.excalidraw-room.entrypoints=web"
-      - "traefik.http.routers.excalidraw-room.middlewares=redirect-to-https"
-      - "traefik.http.routers.excalidraw-room.priority=100"
+      - "traefik.http.routers.astradraw-room.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.astradraw-room.entrypoints=web"
+      - "traefik.http.routers.astradraw-room.middlewares=redirect-to-https"
+      - "traefik.http.routers.astradraw-room.priority=100"
 
   # AstraDraw API (authentication, workspace, storage)
   api:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-storage:0.5.2
+    image: ghcr.io/astrateam-net/astradraw-api:0.5.2
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:

@@ -7,8 +7,8 @@
 # 
 # Prerequisites:
 #   - Clone astradraw-app to ../frontend/
-#   - Clone astradraw-storage to ../backend/
-#   - Clone excalidraw-room to ../room-service/
+#   - Clone astradraw-api to ../backend/
+#   - Clone astradraw-room to ../room-service/
 #
 # To use production images instead, rename or delete this file.
 

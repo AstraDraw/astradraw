@@ -18,8 +18,8 @@ AstraDraw consists of multiple repositories:
 |------------|-------------|--------------|
 | [astradraw](https://github.com/astrateam-net/astradraw) | Main orchestration (this repo) | `/` |
 | [astradraw-app](https://github.com/astrateam-net/astradraw-app) | React frontend (Excalidraw fork) | `frontend/` |
-| [astradraw-storage](https://github.com/astrateam-net/astradraw-storage) | NestJS backend API | `backend/` |
-| [excalidraw-room](https://github.com/excalidraw/excalidraw-room) | WebSocket server (upstream) | `room-service/` |
+| [astradraw-api](https://github.com/astrateam-net/astradraw-api) | NestJS backend API | `backend/` |
+| [astradraw-room](https://github.com/astrateam-net/astradraw-room) | WebSocket server | `room-service/` |
 
 ## Getting Started
 
@@ -37,10 +37,10 @@ cd astradraw
 git clone https://github.com/astrateam-net/astradraw-app.git frontend
 
 # Backend (NestJS API)
-git clone https://github.com/astrateam-net/astradraw-storage.git backend
+git clone https://github.com/astrateam-net/astradraw-api.git backend
 
-# Room service (WebSocket - upstream)
-git clone https://github.com/excalidraw/excalidraw-room.git room-service
+# Room service (WebSocket)
+git clone https://github.com/astrateam-net/astradraw-room.git room-service
 ```
 
 ### 3. Set Up the Deploy Environment

@@ -162,8 +162,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup instructions.
 git clone https://github.com/astrateam-net/astradraw.git
 cd astradraw
 git clone https://github.com/astrateam-net/astradraw-app.git frontend
-git clone https://github.com/astrateam-net/astradraw-storage.git backend
-git clone https://github.com/excalidraw/excalidraw-room.git room-service
+git clone https://github.com/astrateam-net/astradraw-api.git backend
+git clone https://github.com/astrateam-net/astradraw-room.git room-service
 
 # Setup and run
 cd deploy
@@ -274,7 +274,7 @@ The `.cursor/rules/` folder contains AI instructions for:
 ## Credits
 
 - [Excalidraw](https://github.com/excalidraw/excalidraw) - The amazing whiteboard app
-- [excalidraw-room](https://github.com/excalidraw/excalidraw-room) - Official collaboration server
+- [excalidraw-room](https://github.com/excalidraw/excalidraw-room) - Official collaboration server (upstream)
 - [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin) - Inspiration for pens and presentation mode
 - [alswl/excalidraw-storage-backend](https://github.com/alswl/excalidraw-storage-backend) - Storage backend foundation
 

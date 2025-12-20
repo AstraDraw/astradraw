@@ -6,7 +6,7 @@ This document outlines planned features and their specifications.
 
 - [x] S3/MinIO storage backend
 - [x] Any URL iframe embedding
-- [x] Split into separate repos (astradraw-app, astradraw-storage)
+- [x] Split into separate repos (astradraw-app, astradraw-api, astradraw-room)
 - [x] User authentication (local + OIDC)
 - [x] Personal workspaces with scene management
 - [x] Talktrack video recordings
