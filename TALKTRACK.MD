@@ -11,6 +11,7 @@ Talktrack is a Miro-style recording feature that allows you to create video walk
 - Microphone audio
 - Automatic upload to Kinescope video hosting
 - Embeddable player on the board
+- **Scene-specific storage** - Recordings are linked to workspace scenes and stored in PostgreSQL
 
 ## Setup
 
@@ -61,12 +62,14 @@ docker-compose up -d --build
 
 ### Managing Recordings
 
-After recording stops, your video is automatically uploaded to Kinescope. The recording appears in the Talktrack panel where you can:
+After recording stops, your video is automatically uploaded to Kinescope and saved to your scene. The recording appears in the Talktrack panel where you can:
 
 - **Add to board** - Embed the video player on the canvas
 - **Copy link** - Copy the embed URL to clipboard
-- **Rename** - Change the recording title
-- **Delete** - Remove from the list
+- **Rename** - Change the recording title (owner only)
+- **Delete** - Remove from the list and Kinescope (owner only)
+
+> **Note:** Recordings are linked to the current scene. You must save your scene to the workspace before recording. Shared viewers can see recordings but cannot modify them.
 
 ### Playback
 
@@ -79,11 +82,37 @@ Click "Add to board" to embed the Kinescope player as an embeddable element on y
 | File | Description |
 |------|-------------|
 | `TalktrackRecorder.ts` | Core recording logic with canvas capture, camera PIP compositing, and MediaRecorder |
-| `TalktrackPanel.tsx` | Sidebar panel showing recordings list |
+| `TalktrackPanel.tsx` | Sidebar panel showing recordings list (scene-specific) |
 | `TalktrackSetupDialog.tsx` | Camera/mic selection dialog before recording |
 | `TalktrackToolbar.tsx` | Floating controls during recording |
 | `TalktrackManager.tsx` | Orchestrates recording lifecycle and upload |
-| `kinescopeApi.ts` | Kinescope upload and storage helpers |
+| `kinescopeApi.ts` | Kinescope upload helpers |
+| `workspaceApi.ts` | Backend API client for recording CRUD operations |
+
+### Backend API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/workspace/scenes/:sceneId/talktracks` | GET | JWT | List recordings for a scene |
+| `/workspace/scenes/:sceneId/talktracks` | POST | JWT | Create recording (owner only) |
+| `/workspace/scenes/:sceneId/talktracks/:id` | PUT | JWT | Update title/status (owner only) |
+| `/workspace/scenes/:sceneId/talktracks/:id` | DELETE | JWT | Delete recording (owner only) |
+
+### Database Schema
+
+```sql
+CREATE TABLE "talktrack_recordings" (
+    "id" TEXT PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "kinescopeVideoId" TEXT UNIQUE NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "processingStatus" TEXT DEFAULT 'processing',
+    "sceneId" TEXT NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
+    "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL
+);
+```
 
 ### Recording Pipeline
 
