@@ -58,7 +58,24 @@ Before writing any code:
 
 **NEVER push to main without passing all checks!**
 
-#### Frontend Checks
+**Use `just` commands** (preferred - simpler for AI and user):
+
+```bash
+# Run all checks
+just check-all
+
+# Or individually:
+just check-frontend    # TypeScript + Prettier + ESLint
+just check-backend     # Build + Prettier + ESLint  
+just check-room        # Build + Prettier + ESLint
+
+# Fix formatting issues
+just fix-all
+```
+
+#### Alternative: Manual Commands
+
+##### Frontend Checks
 
 ```bash
 cd frontend

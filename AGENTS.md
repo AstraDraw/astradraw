@@ -66,37 +66,51 @@ Read these docs before implementing features:
 - `/docs/TALKTRACK.MD` - Video recordings
 - `/docs/PRESENTATION_MODE.md` - Slideshow
 
-## Common Commands
+## Common Commands (use Justfile)
+
+**Always prefer `just` commands over writing full shell commands.**
 
 ```bash
-# Frontend checks (run before release)
-cd frontend
-yarn test:typecheck    # TypeScript type checking
-yarn test:other        # Prettier formatting
-yarn test:code         # ESLint code quality
-yarn test:all          # All checks + tests
+# Code checks
+just check-all           # Run ALL checks (frontend + backend + room)
+just check-frontend      # TypeScript + Prettier + ESLint
+just check-backend       # Build + Prettier + ESLint
+just fix-all             # Auto-fix formatting issues
 
-# Backend checks (run before release)
-cd backend
-npm run build          # Build (includes TypeScript)
-npm run format         # Prettier formatting
-npm run lint           # ESLint code quality
+# Docker deployment
+just up-dev              # Start with local builds
+just up                  # Start with production images
+just down                # Stop services
+just fresh               # Fresh start (removes volumes)
+just logs-api            # View API logs
 
-# Docker (from deploy/ folder)
-cd deploy
-docker compose up -d --build  # Build and start
-docker compose logs -f api    # View API logs
+# Development
+just dev-frontend        # Start frontend dev server
+just dev-backend         # Start backend dev server
+just install             # Install all dependencies
+
+# Database
+just db-migrate          # Run Prisma migrations
+just db-studio           # Open Prisma Studio
+
+# Git
+just status              # Git status for all repos
+just pull                # Pull latest from all repos
+
+# Release
+just release-frontend 0.18.0-beta0.XX
+just release-backend 0.5.X
 ```
 
 ## Release Checklist
 
 1. Create feature branches in affected repos
 2. Implement changes
-3. Run all checks (see commands above)
-4. Test with Docker deployment
+3. Run `just check-all`
+4. Test with `just up-dev`
 5. Merge to main in each repo
 6. Update CHANGELOG.md in each repo
-7. Tag and push (`git tag vX.X.X && git push origin main --tags`)
+7. Run `just release-frontend X.X.X` / `just release-backend X.X.X`
 8. Update `deploy/docker-compose.yml` with new image versions
 9. Commit and push main repo
 
