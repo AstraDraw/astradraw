@@ -75,6 +75,11 @@ services:
       - VITE_APP_HTTP_STORAGE_BACKEND_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/api/v2
       - VITE_APP_FIREBASE_CONFIG=
       - VITE_APP_DISABLE_TRACKING=true
+      # GIPHY API key for Stickers & GIFs sidebar (get one at https://developers.giphy.com/)
+      - VITE_APP_GIPHY_API_KEY=${GIPHY_API_KEY:-}
+      # Kinescope configuration for Talktrack recordings (get keys at https://app.kinescope.io/)
+      - VITE_APP_KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
+      - VITE_APP_KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}
     networks:
       - astradraw
     labels:
@@ -149,6 +154,10 @@ services:
       # === Keyv Configuration (when STORAGE_BACKEND=keyv) ===
       # - STORAGE_URI_FILE=/run/secrets/storage_uri
       # - STORAGE_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      
+      # === Kinescope Configuration (for Talktrack video proxy) ===
+      - KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
+      - KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}
       
       - PORT=8080
       - LOG_LEVEL=log  # Set to 'log' to see secret loading messages
