@@ -1,0 +1,34 @@
+# =============================================================================
+# AstraDraw Cursor Indexing Ignore
+# =============================================================================
+# Files listed here are excluded from codebase indexing but remain accessible
+# to AI features. This improves search accuracy by excluding large content files.
+#
+# See: https://cursor.com/docs/context/ignore-files
+
+# =============================================================================
+# LARGE DOCUMENTATION FILES
+# =============================================================================
+# These are useful for reference but shouldn't pollute semantic search results
+# when looking for code. They can still be @mentioned directly.
+
+# Cursor plan files (internal planning, not code)
+.cursor/plans/
+
+# =============================================================================
+# CONFIGURATION FILES
+# =============================================================================
+# Static configs that rarely need semantic search
+
+traefik-dynamic.yml
+dex-config.yaml
+
+# =============================================================================
+# BACKUP FILES
+# =============================================================================
+
+*.bak
+*.backup
+docker-compose.override.yml.bak
+docker-compose.override.yml.disabled
+

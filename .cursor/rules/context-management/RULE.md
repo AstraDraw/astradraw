@@ -138,3 +138,25 @@ Respect user's choice to:
 
 Never force a new chat - always ask first and accept "no" gracefully.
 
+## Workspace Recommendations
+
+**This project has multiple repositories.** For optimal AI assistance:
+
+| Working On | Open This Workspace |
+|------------|---------------------|
+| Docker, deployment, docs | `astradraw/` (main repo) |
+| Frontend/React code | `astradraw/frontend/` |
+| Backend/NestJS code | `astradraw/backend/` |
+| WebSocket server | `astradraw/room-service/` |
+
+**Why separate workspaces?**
+- Each repo gets full codebase indexing
+- Semantic search is more accurate
+- Context is focused on relevant code
+- Avoids confusion between similar files in different repos
+
+**When to suggest opening a different workspace:**
+```
+📂 **Workspace Tip**: You're asking about frontend React code, but we're in the main astradraw repo. For better AI assistance with frontend changes, consider opening `frontend/` as a separate workspace in Cursor.
+```
+

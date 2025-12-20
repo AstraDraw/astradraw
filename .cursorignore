@@ -1,0 +1,69 @@
+# =============================================================================
+# AstraDraw Cursor Ignore Configuration
+# =============================================================================
+# This file controls which files Cursor can access for AI features.
+# Files listed here are blocked from indexing, Tab, Agent, and @ mentions.
+#
+# See: https://cursor.com/docs/context/ignore-files
+
+# =============================================================================
+# SECURITY - Sensitive files that should never be indexed
+# =============================================================================
+
+# Secrets and credentials
+secrets/
+certs/
+.env
+.env.*
+*.key
+*.pem
+**/id_rsa
+**/credentials.json
+**/secrets.json
+
+# =============================================================================
+# SUBMODULE REPOSITORIES - These have their own .git and should be opened
+# separately for full indexing. Including them here would cause duplicate
+# indexing and confusion.
+# =============================================================================
+
+# Main development repos (open these as separate workspaces for full AI support)
+frontend/
+backend/
+room-service/
+
+# Legacy folder names
+excalidraw/
+excalidraw-app/
+excalidraw-storage-backend/
+excalidraw-storage/
+excalidraw-room/
+obsidian-excalidraw-plugin/
+excalidraw-libraries/
+
+# =============================================================================
+# LARGE/BINARY FILES - Not useful for AI context
+# =============================================================================
+
+# Docker volumes (if accidentally created locally)
+postgres_data/
+pgadmin_data/
+minio_data/
+
+# Libraries (binary/large JSON files)
+libraries/
+
+# Lock files (already ignored by default, but explicit)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# =============================================================================
+# BUILD ARTIFACTS
+# =============================================================================
+
+dist/
+build/
+.next/
+node_modules/
+

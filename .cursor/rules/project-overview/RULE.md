@@ -18,6 +18,8 @@ AstraDraw is a self-hosted fork of Excalidraw with enterprise features. This rul
 
 **Important:** These are separate git repositories. Do NOT commit changes to the parent astradraw repo that include these folders.
 
+**For AI Assistance:** When working on frontend or backend code, open that folder as a separate workspace in Cursor for full indexing and better AI support. The main astradraw repo is for orchestration (Docker, docs, rules).
+
 ## Architecture
 
 ```
