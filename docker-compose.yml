@@ -56,7 +56,7 @@ services:
   # Excalidraw Frontend
   app:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-app:latest
+    image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.35
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
@@ -125,7 +125,7 @@ services:
   # AstraDraw API (authentication, workspace, storage)
   api:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-api:0.5
+    image: ghcr.io/astrateam-net/astradraw-storage:0.5.2
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
@@ -152,11 +152,14 @@ services:
       - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
       - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
       - OIDC_CALLBACK_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/api/v2/auth/callback
+      # Internal URL for OIDC discovery (uses Docker network, bypasses Traefik/SSL)
+      - OIDC_INTERNAL_URL=${OIDC_INTERNAL_URL:-}
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       
       # === Local Authentication (Default Admin) ===
       - ENABLE_LOCAL_AUTH=${ENABLE_LOCAL_AUTH:-true}
+      - ENABLE_REGISTRATION=${ENABLE_REGISTRATION:-true}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
@@ -186,6 +189,9 @@ services:
       - "traefik.http.routers.astradraw-api.middlewares=redirect-to-https"
       - "traefik.http.routers.astradraw-api.priority=100"
       # Note: Don't strip prefix - API already expects /api/v2 routes
+    extra_hosts:
+      # Allow API to reach Dex via external hostname (for OIDC discovery)
+      - "auth.${APP_DOMAIN}:host-gateway"
     depends_on:
       minio:
         condition: service_healthy
@@ -278,6 +284,30 @@ services:
       - postgres
     profiles:
       - admin  # Only start with: docker-compose --profile admin up
+
+  # Dex - Lightweight OIDC Provider for Testing
+  # Start with: docker-compose --profile oidc up
+  dex:
+    image: ghcr.io/dexidp/dex:v2.38.0
+    restart: unless-stopped
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    volumes:
+      - ./dex-config.yaml:/etc/dex/config.yaml:ro
+    networks:
+      - astradraw
+    labels:
+      - "traefik.enable=true"
+      # HTTPS routing for Dex
+      - "traefik.http.routers.dex-secure.rule=Host(`auth.${APP_DOMAIN}`)"
+      - "traefik.http.routers.dex-secure.entrypoints=websecure"
+      - "traefik.http.routers.dex-secure.tls=true"
+      - "traefik.http.services.dex.loadbalancer.server.port=5556"
+      # HTTP redirect
+      - "traefik.http.routers.dex.rule=Host(`auth.${APP_DOMAIN}`)"
+      - "traefik.http.routers.dex.entrypoints=web"
+      - "traefik.http.routers.dex.middlewares=redirect-to-https"
+    profiles:
+      - oidc  # Only start with: docker-compose --profile oidc up
 
 networks:
   astradraw:

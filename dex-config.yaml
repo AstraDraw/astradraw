@@ -1,0 +1,87 @@
+# Dex OIDC Provider Configuration for Testing
+# Documentation: https://dexidp.io/docs/
+
+# The base path of dex and the external name of the OpenID Connect service.
+# This is the canonical URL that all clients MUST use to refer to dex.
+# Change APP_DOMAIN to match your .env configuration
+issuer: https://auth.10.100.0.10/dex
+
+# The storage configuration determines where dex stores its state.
+# For testing, we use in-memory storage (data is lost on restart)
+storage:
+  type: memory
+
+# HTTP service configuration
+web:
+  http: 0.0.0.0:5556
+  # Uncomment for HTTPS (if not using Traefik)
+  # https: 0.0.0.0:5554
+  # tlsCert: /etc/dex/tls.crt
+  # tlsKey: /etc/dex/tls.key
+
+# Telemetry configuration (optional)
+# telemetry:
+#   http: 0.0.0.0:5558
+
+# OAuth2 configuration
+oauth2:
+  # Skip the approval screen for testing
+  skipApprovalScreen: true
+  # Allow refresh tokens
+  responseTypes: ["code", "token", "id_token"]
+
+# Static clients - applications that can authenticate via Dex
+staticClients:
+  # AstraDraw Application
+  - id: astradraw
+    name: AstraDraw
+    secret: astradraw-secret-change-in-production
+    # Redirect URIs - where Dex will send users after authentication
+    # Update APP_DOMAIN to match your environment
+    redirectURIs:
+      - https://10.100.0.10/api/v2/auth/callback
+      - http://10.100.0.10/api/v2/auth/callback
+      - http://localhost:3000/api/v2/auth/callback
+      - http://localhost:5173/api/v2/auth/callback
+
+# Connectors are used to authenticate users
+# For testing, we use static passwords (built-in users)
+connectors: []
+
+# Enable the password database (static users for testing)
+enablePasswordDB: true
+
+# Static users for testing (password login)
+staticPasswords:
+  # Test Admin User
+  # Password: admin123
+  - email: admin@example.com
+    hash: $2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W
+    username: admin
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+  
+  # Test Regular User
+  # Password: user123
+  - email: user@example.com
+    hash: $2a$10$XVMN/Fid.q1BqYPS0M6/k.FRIv6Ra5S4XPpE6IxGKzGFgVELHPHDi
+    username: testuser
+    userID: "41331323-6f44-45e6-b3b9-2c4b60c02be5"
+
+# Expiry configuration
+expiry:
+  # How long device codes are valid
+  deviceRequests: "5m"
+  # How long signing keys are valid
+  signingKeys: "6h"
+  # How long ID tokens are valid
+  idTokens: "24h"
+  # How long refresh tokens are valid (0 = never expire)
+  refreshTokens:
+    validIfNotUsedFor: "168h"  # 7 days
+    absoluteLifetime: "720h"   # 30 days
+
+# Logger configuration
+logger:
+  level: "debug"
+  format: "text"
+
