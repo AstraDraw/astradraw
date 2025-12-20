@@ -30,6 +30,7 @@ All features are documented in the `/docs` folder for AI assistants and develope
 |---------|-------------|---------------|
 | **Workspace** | Save/organize scenes with user accounts | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
 | **User Profile** | Avatar upload, name editing, profile management | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
+| **Collaboration Profile** | Use profile name & avatar in collaboration | [docs/COLLABORATION_PROFILE.md](docs/COLLABORATION_PROFILE.md) |
 | **Talktrack** | Record canvas walkthroughs with camera PIP | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
 | **Presentation Mode** | Use frames as slides with laser pointer | [docs/PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) |
 | **Custom Pens** | Highlighter, fountain, marker presets | [docs/PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) |
