@@ -9,13 +9,24 @@ default:
 # DOCKER DEPLOYMENT
 # ============================================
 
-# Start all services (production images)
+# Start with production images (from GHCR)
 up:
+    @test ! -f deploy/docker-compose.override.yml || (echo "Warning: override file exists, using local builds. Run 'just up-prod' to force production images." && exit 1)
     cd deploy && docker compose up -d
 
-# Start with local builds
+# Start with production images (ignores override file)
+up-prod:
+    cd deploy && docker compose -f docker-compose.yml up -d
+
+# Start with local builds (enables override file)
 up-dev:
+    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
     cd deploy && docker compose up -d --build
+
+# Build local images without starting
+build:
+    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
+    cd deploy && docker compose build
 
 # Stop all services
 down:
@@ -37,11 +48,37 @@ logs-api:
 logs-app:
     cd deploy && docker compose logs -f app
 
-# Fresh start (remove volumes)
+# Fresh start with production images (removes volumes)
 fresh:
     cd deploy && docker compose down -v
     docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
+    @test ! -f deploy/docker-compose.override.yml || rm deploy/docker-compose.override.yml
     cd deploy && docker compose up -d
+
+# Fresh start with local builds (removes volumes)
+fresh-dev:
+    cd deploy && docker compose down -v
+    docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
+    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
+    cd deploy && docker compose up -d --build
+
+# Pull latest production images
+pull:
+    cd deploy && docker compose -f docker-compose.yml pull
+
+# Enable local builds (copy override file)
+enable-dev:
+    @test -f deploy/docker-compose.override.yml && echo "Already enabled" || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
+    @echo "Local builds enabled. Run 'just up-dev' to start."
+
+# Disable local builds (remove override file)
+disable-dev:
+    @test -f deploy/docker-compose.override.yml && rm deploy/docker-compose.override.yml && echo "Local builds disabled" || echo "Already disabled"
+    @echo "Production images enabled. Run 'just up' to start."
+
+# Show current mode (production or development)
+mode:
+    @test -f deploy/docker-compose.override.yml && echo "Mode: DEVELOPMENT (local builds)" || echo "Mode: PRODUCTION (GHCR images)"
 
 # Start with OIDC testing (Dex)
 up-oidc:
@@ -191,8 +228,8 @@ status:
     @echo "\n=== Backend ===" && cd backend && git status -s
     @echo "\n=== Room Service ===" && cd room-service && git status -s
 
-# Pull latest from all repos
-pull:
+# Pull latest from all repos (git pull)
+git-pull:
     git pull origin main
     cd frontend && git pull origin main
     cd backend && git pull origin main
@@ -216,5 +253,4 @@ setup:
     @test -f deploy/certs/server.crt || openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout deploy/certs/server.key -out deploy/certs/server.crt -subj "/CN=localhost"
     @echo "Installing dependencies..."
     just install
-    @echo "\nSetup complete! Run 'just up-dev' to start."
-
+    @echo "\nSetup complete! Run 'just up' for production images or 'just up-dev' for local builds."

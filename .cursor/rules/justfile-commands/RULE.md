@@ -7,20 +7,60 @@ alwaysApply: true
 
 This project uses [just](https://github.com/casey/just) for common commands. **Always prefer `just` commands over writing full shell commands.**
 
+## Deployment Modes
+
+AstraDraw supports two deployment modes:
+
+| Mode | Description | Command |
+|------|-------------|---------|
+| **Production** | Uses pre-built images from GHCR | `just up` |
+| **Development** | Builds from local source code | `just up-dev` |
+
+Check current mode: `just mode`
+
+### Switching Modes
+
+```bash
+just enable-dev    # Enable local builds (creates override file)
+just disable-dev   # Use production images (removes override file)
+```
+
 ## Quick Reference
 
-### Docker
+### Docker - Production Images
 
 | Command | Description |
 |---------|-------------|
-| `just up` | Start services (production images) |
+| `just up` | Start with GHCR images |
+| `just up-prod` | Force production images (ignores override) |
+| `just fresh` | Fresh start with production images |
+| `just pull` | Pull latest production images |
+
+### Docker - Local Builds
+
+| Command | Description |
+|---------|-------------|
 | `just up-dev` | Start with local builds |
+| `just fresh-dev` | Fresh start with local builds |
+| `just build` | Build local images without starting |
+| `just enable-dev` | Enable local build mode |
+| `just disable-dev` | Disable local build mode |
+
+### Docker - Common
+
+| Command | Description |
+|---------|-------------|
 | `just down` | Stop services |
 | `just restart` | Restart services |
-| `just fresh` | Fresh start (removes volumes) |
 | `just logs` | View all logs |
 | `just logs-api` | View API logs |
 | `just logs-app` | View frontend logs |
+| `just mode` | Show current mode |
+
+### Docker - Profiles
+
+| Command | Description |
+|---------|-------------|
 | `just up-oidc` | Start with Dex OIDC |
 | `just up-admin` | Start with pgAdmin/MinIO Console |
 
@@ -55,53 +95,84 @@ This project uses [just](https://github.com/casey/just) for common commands. **A
 | Command | Description |
 |---------|-------------|
 | `just status` | Git status for all repos |
-| `just pull` | Pull latest from all repos |
+| `just git-pull` | Pull latest from all repos |
 
-### Setup
+### Setup & Release
 
 | Command | Description |
 |---------|-------------|
 | `just setup` | Full setup for new developers |
-
-### Release
-
-| Command | Description |
-|---------|-------------|
 | `just release-frontend 0.18.0-beta0.37` | Tag and push frontend |
 | `just release-backend 0.5.3` | Tag and push backend |
-| `just release-room 1.0.1` | Tag and push room service |
 
 ## AI Usage Guidelines
 
-1. **For deployment testing**: Use `just up-dev` instead of `cd deploy && docker compose up -d --build`
-2. **For checking code**: Use `just check-all` instead of running individual commands
-3. **For viewing logs**: Use `just logs-api` instead of `cd deploy && docker compose logs -f api`
-4. **For fresh start**: Use `just fresh` instead of manually removing volumes
+### When to use which deployment command
 
-## Example AI Responses
+| Scenario | Command |
+|----------|---------|
+| Testing a new GHCR image release | `just fresh` |
+| Developing/debugging local changes | `just up-dev` or `just fresh-dev` |
+| Quick restart after config change | `just restart` |
+| Checking if production images work | `just up-prod` |
+
+### Example AI Responses
 
 ❌ **Bad** (verbose):
-```
-Let me run the checks:
-cd frontend && yarn test:typecheck && yarn test:other && yarn test:code
-cd backend && npm run build && npm run format && npm run lint
-```
-
-✅ **Good** (concise):
-```
-Let me run the checks:
-just check-all
-```
-
-❌ **Bad**:
 ```
 cd deploy && docker compose down -v
 docker volume rm astradraw_postgres_data astradraw_minio_data
 cd deploy && docker compose up -d
 ```
 
-✅ **Good**:
+✅ **Good** (concise):
 ```
 just fresh
 ```
 
+❌ **Bad**:
+```
+cd deploy && docker compose -f docker-compose.yml up -d
+```
+
+✅ **Good**:
+```
+just up-prod
+```
+
+❌ **Bad**:
+```
+cd frontend && yarn test:typecheck && yarn test:other && yarn test:code
+cd backend && npm run build && npm run format && npm run lint
+```
+
+✅ **Good**:
+```
+just check-all
+```
+
+### Workflow Examples
+
+**Testing a new feature with local builds:**
+```bash
+just check-all        # Run all checks first
+just fresh-dev        # Fresh start with local builds
+just logs-api         # Check API logs
+```
+
+**Testing production images after release:**
+```bash
+just disable-dev      # Ensure using production mode
+just pull             # Pull latest images
+just fresh            # Fresh start
+```
+
+**Switching between modes:**
+```bash
+just mode             # Check current mode
+just enable-dev       # Switch to local builds
+just up-dev           # Start with local builds
+# ... test ...
+just disable-dev      # Switch back to production
+just up               # Start with GHCR images
+```

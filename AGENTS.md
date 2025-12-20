@@ -77,11 +77,25 @@ just check-frontend      # TypeScript + Prettier + ESLint
 just check-backend       # Build + Prettier + ESLint
 just fix-all             # Auto-fix formatting issues
 
-# Docker deployment
-just up-dev              # Start with local builds
+# Docker deployment - Production (GHCR images)
 just up                  # Start with production images
+just up-prod             # Force production (ignores override file)
+just fresh               # Fresh start with production images
+just pull                # Pull latest production images
+
+# Docker deployment - Development (local builds)
+just up-dev              # Start with local builds
+just fresh-dev           # Fresh start with local builds
+just build               # Build local images only
+
+# Docker - Mode switching
+just mode                # Show current mode (production/development)
+just enable-dev          # Enable local builds
+just disable-dev         # Use production images
+
+# Docker - Common
 just down                # Stop services
-just fresh               # Fresh start (removes volumes)
+just restart             # Restart services
 just logs-api            # View API logs
 
 # Development
@@ -95,7 +109,7 @@ just db-studio           # Open Prisma Studio
 
 # Git
 just status              # Git status for all repos
-just pull                # Pull latest from all repos
+just git-pull            # Pull latest from all repos
 
 # Release
 just release-frontend 0.18.0-beta0.XX
