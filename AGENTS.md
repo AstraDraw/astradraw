@@ -54,11 +54,17 @@ astradraw/                    # Main orchestration repo
 ## Documentation
 
 Read these docs before implementing features:
+
+**Architecture & Setup:**
+- `/CONTRIBUTING.md` - How to set up for development
+- `/docs/ARCHITECTURE.md` - Technical architecture and design decisions
+- `/docs/ROADMAP.md` - Planned features and specifications
+
+**Feature Documentation:**
 - `/docs/WORKSPACE.md` - Auth and scene management
 - `/docs/USER_PROFILE.md` - Profile management
 - `/docs/TALKTRACK.MD` - Video recordings
 - `/docs/PRESENTATION_MODE.md` - Slideshow
-- `/docs/DEVELOPMENT.md` - Full technical docs
 
 ## Common Commands
 

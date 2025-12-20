@@ -151,46 +151,25 @@ volumes:
   - ./secrets:/run/secrets:ro
 ```
 
-## Development
+## Contributing
 
-### Local Development with Docker
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup instructions.
 
-Use the override file for local builds:
+**Quick start for development:**
 
 ```bash
+# Clone repositories
+git clone https://github.com/astrateam-net/astradraw.git
+cd astradraw
+git clone https://github.com/astrateam-net/astradraw-app.git frontend
+git clone https://github.com/astrateam-net/astradraw-storage.git backend
+git clone https://github.com/excalidraw/excalidraw-room.git room-service
+
+# Setup and run
 cd deploy
-
-# Enable local builds
+cp env.example .env
 cp docker-compose.override.yml.disabled docker-compose.override.yml
-
-# Build and start (requires frontend/, backend/ repos cloned)
 docker compose up -d --build
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-yarn install
-yarn start              # Development server
-
-# Before committing, run checks:
-yarn test:typecheck     # TypeScript
-yarn test:other         # Prettier
-yarn test:code          # ESLint
-```
-
-### Backend Development
-
-```bash
-cd backend
-npm install
-npm run start:dev       # Development server
-
-# Before committing, run checks:
-npm run build           # Build + TypeScript
-npm run format          # Prettier
-npm run lint            # ESLint
 ```
 
 ## API Endpoints
@@ -219,18 +198,23 @@ npm run lint            # ESLint
 
 ## Documentation
 
-All features are documented in `/docs`:
-
 | Document | Description |
 |----------|-------------|
-| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Full technical documentation |
-| [WORKSPACE.md](docs/WORKSPACE.md) | User authentication and scene management |
-| [USER_PROFILE.md](docs/USER_PROFILE.md) | Profile management implementation |
-| [TALKTRACK.MD](docs/TALKTRACK.MD) | Video recording feature |
-| [PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) | Slideshow functionality |
-| [PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) | Custom pen presets |
-| [GIPHY_SUPPORT.md](docs/GIPHY_SUPPORT.md) | Stickers & GIFs integration |
-| [LIBRARIES_SYSTEM.md](docs/LIBRARIES_SYSTEM.md) | Shape library system |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | **How to set up for development** |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture and design decisions |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Planned features and specifications |
+
+### Feature Documentation
+
+| Feature | Documentation |
+|---------|---------------|
+| Workspace & Auth | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
+| User Profile | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
+| Talktrack | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
+| Presentation Mode | [docs/PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) |
+| Custom Pens | [docs/PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) |
+| Stickers & GIFs | [docs/GIPHY_SUPPORT.md](docs/GIPHY_SUPPORT.md) |
+| Libraries | [docs/LIBRARIES_SYSTEM.md](docs/LIBRARIES_SYSTEM.md) |
 
 ## Tech Stack
 

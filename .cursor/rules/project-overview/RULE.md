@@ -57,14 +57,18 @@ Backend connects to:
 
 ## Documentation
 
-All features are documented in `/docs`:
-- `WORKSPACE.md` - Authentication and scene management
-- `USER_PROFILE.md` - Profile management
-- `TALKTRACK.MD` - Video recording feature
-- `PRESENTATION_MODE.md` - Slideshow functionality
-- `PENS_IMPLEMENTATION.md` - Custom pen presets
-- `GIPHY_SUPPORT.md` - Stickers & GIFs
-- `LIBRARIES_SYSTEM.md` - Shape library system
-- `DEVELOPMENT.md` - Full technical documentation
+**Architecture & Setup:**
+- `/CONTRIBUTING.md` - How to set up for development
+- `/docs/ARCHITECTURE.md` - Technical architecture and design decisions
+- `/docs/ROADMAP.md` - Planned features and specifications
+
+**Feature Documentation:**
+- `/docs/WORKSPACE.md` - Authentication and scene management
+- `/docs/USER_PROFILE.md` - Profile management
+- `/docs/TALKTRACK.MD` - Video recording feature
+- `/docs/PRESENTATION_MODE.md` - Slideshow functionality
+- `/docs/PENS_IMPLEMENTATION.md` - Custom pen presets
+- `/docs/GIPHY_SUPPORT.md` - Stickers & GIFs
+- `/docs/LIBRARIES_SYSTEM.md` - Shape library system
 
 **Always read relevant docs before implementing features.**
