@@ -63,15 +63,18 @@ Read these docs before implementing features:
 ## Common Commands
 
 ```bash
-# Frontend
+# Frontend checks (run before release)
 cd frontend
-yarn tsc --noEmit      # Type check
-yarn prettier --write  # Format
+yarn test:typecheck    # TypeScript type checking
+yarn test:other        # Prettier formatting
+yarn test:code         # ESLint code quality
+yarn test:all          # All checks + tests
 
-# Backend
+# Backend checks (run before release)
 cd backend
-npm run build          # Build
-npm run prisma:generate # Generate Prisma client
+npm run build          # Build (includes TypeScript)
+npm run format         # Prettier formatting
+npm run lint           # ESLint code quality
 
 # Docker (from deploy/ folder)
 cd deploy
@@ -81,10 +84,13 @@ docker compose logs -f api    # View API logs
 
 ## Release Checklist
 
-1. Update CHANGELOG.md in respective repo
-2. Run local build to verify
-3. Commit and tag (`git tag vX.X.X`)
-4. Push with tags (`git push origin main --tags`)
-5. Update `deploy/docker-compose.yml` with new image versions
-6. Push main repo
+1. Create feature branches in affected repos
+2. Implement changes
+3. Run all checks (see commands above)
+4. Test with Docker deployment
+5. Merge to main in each repo
+6. Update CHANGELOG.md in each repo
+7. Tag and push (`git tag vX.X.X && git push origin main --tags`)
+8. Update `deploy/docker-compose.yml` with new image versions
+9. Commit and push main repo
 

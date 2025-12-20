@@ -10,11 +10,13 @@
 # SECURITY - Sensitive files that should never be indexed
 # =============================================================================
 
-# Secrets and credentials
-secrets/
-certs/
-.env
-.env.*
+# Secrets and credentials (in deploy/ folder)
+deploy/secrets/
+deploy/certs/
+deploy/.env
+deploy/.env.*
+
+# General sensitive patterns
 *.key
 *.pem
 **/id_rsa
@@ -43,7 +45,7 @@ pgadmin_data/
 minio_data/
 
 # Libraries (binary/large JSON files)
-libraries/
+deploy/libraries/
 
 # Lock files (already ignored by default, but explicit)
 package-lock.json

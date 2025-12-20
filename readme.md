@@ -172,7 +172,12 @@ docker compose up -d --build
 ```bash
 cd frontend
 yarn install
-yarn start
+yarn start              # Development server
+
+# Before committing, run checks:
+yarn test:typecheck     # TypeScript
+yarn test:other         # Prettier
+yarn test:code          # ESLint
 ```
 
 ### Backend Development
@@ -180,7 +185,12 @@ yarn start
 ```bash
 cd backend
 npm install
-npm run start:dev
+npm run start:dev       # Development server
+
+# Before committing, run checks:
+npm run build           # Build + TypeScript
+npm run format          # Prettier
+npm run lint            # ESLint
 ```
 
 ## API Endpoints

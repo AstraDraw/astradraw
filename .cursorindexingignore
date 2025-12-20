@@ -34,8 +34,8 @@ room-service/
 # =============================================================================
 # Static configs that rarely need semantic search
 
-traefik-dynamic.yml
-dex-config.yaml
+deploy/traefik-dynamic.yml
+deploy/dex-config.yaml
 
 # =============================================================================
 # BACKUP FILES
@@ -43,6 +43,6 @@ dex-config.yaml
 
 *.bak
 *.backup
-docker-compose.override.yml.bak
-docker-compose.override.yml.disabled
+deploy/docker-compose.override.yml.bak
+deploy/docker-compose.override.yml.disabled
 
