@@ -1,0 +1,164 @@
+---
+description: "Common issues and solutions encountered in AstraDraw development"
+alwaysApply: true
+---
+
+# Common Issues and Solutions
+
+## Frontend Issues
+
+### 1. Translation Key Errors
+
+**Error:** `Argument of type '"some.key"' is not assignable to parameter of type 'NestedKeyOf<{...}>'`
+
+**Solution:** Add the missing key to locale files:
+- `frontend/packages/excalidraw/locales/en.json`
+- `frontend/packages/excalidraw/locales/ru-RU.json`
+
+### 2. Input Fields Affecting Canvas
+
+**Problem:** Typing in input fields (especially `@`, shortcuts) triggers canvas actions.
+
+**Solution:** Stop event propagation:
+```typescript
+<input
+  onKeyDown={(e) => e.stopPropagation()}
+  onKeyUp={(e) => e.stopPropagation()}
+/>
+```
+
+### 3. Sidebar Overlay vs Push
+
+**Problem:** Sidebar overlays canvas instead of pushing content.
+
+**Solution:** Use flexbox layout:
+```scss
+.excalidraw-app {
+  display: flex;
+  .excalidraw-wrapper {
+    flex-grow: 1;
+  }
+}
+```
+
+### 4. Auto-save Not Working
+
+**Solution:** Implement debounced save with change detection:
+```typescript
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+const lastSavedDataRef = useRef<string>("");
+
+// Compare serialized data to detect changes
+const currentData = JSON.stringify(elements);
+if (currentData !== lastSavedDataRef.current) {
+  setHasUnsavedChanges(true);
+}
+```
+
+## Backend Issues
+
+### 1. Build Fails with "Cannot find module '../auth/jwt-auth.guard'"
+
+**Cause:** Wrong import path.
+
+**Solution:** Use correct path:
+```typescript
+// CORRECT
+import { JwtAuthGuard } from '../auth/jwt.guard';
+```
+
+### 2. Build Fails with Express.Multer.File Type Error
+
+**Cause:** Missing `@types/multer` package.
+
+**Solution:** Add to `devDependencies`:
+```bash
+npm install --save-dev @types/multer
+```
+
+### 3. OIDC Discovery Fails in Docker
+
+**Cause:** API container can't resolve external hostname.
+
+**Solution:** Use `OIDC_INTERNAL_URL` for Docker networking:
+```yaml
+environment:
+  - OIDC_ISSUER_URL=https://auth.example.com/dex  # External URL
+  - OIDC_INTERNAL_URL=http://dex:5556/dex         # Internal Docker URL
+```
+
+### 4. Prisma Migration Issues
+
+**Solution:** For fresh deployments, consolidate migrations:
+```bash
+# Delete old migrations
+rm -rf prisma/migrations/*
+
+# Create new consolidated migration
+npx prisma migrate dev --name init
+```
+
+## Docker Issues
+
+### 1. Git Detects Subfolders as Embedded Repos
+
+**Cause:** `frontend/`, `backend/`, `room-service/` have their own `.git` folders.
+
+**Solution:** Add to `.gitignore`:
+```
+frontend/
+backend/
+room-service/
+```
+
+### 2. SSL Certificate Invalid (ERR_CERT_AUTHORITY_INVALID)
+
+**Cause:** Self-signed certificate not trusted.
+
+**Solution:** Accept the certificate in browser, or use Let's Encrypt for production.
+
+### 3. 401 Unauthorized After Login
+
+**Cause:** JWT cookie not being sent.
+
+**Solution:** Ensure `credentials: "include"` in all fetch calls:
+```typescript
+fetch(url, { credentials: "include" });
+```
+
+## Release Process Issues
+
+### 1. Tag Already Exists
+
+**Solution:** Force update the tag:
+```bash
+git tag -f v0.5.2
+git push origin v0.5.2 --force
+```
+
+### 2. GitHub Actions Build Fails
+
+**Check:**
+1. Run local build first: `npm run build`
+2. Check for missing dependencies
+3. Verify import paths
+4. Ensure all translation keys exist
+
+## Database Issues
+
+### 1. User Not Found After SSO Login
+
+**Cause:** User not being created/linked properly.
+
+**Solution:** Check `UsersService.upsertFromOidc()` logic:
+- First checks by OIDC ID
+- Then checks by email (migration case)
+- Creates new user if neither found
+
+### 2. Scene Data Not Loading
+
+**Check:**
+1. Scene exists in PostgreSQL (metadata)
+2. Scene data exists in MinIO (actual content)
+3. Storage key matches between both
+

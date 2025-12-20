@@ -1,0 +1,164 @@
+---
+description: "Backend development patterns for AstraDraw API (NestJS)"
+globs: ["backend/**/*.ts"]
+alwaysApply: false
+---
+
+# Backend Development Patterns
+
+## Project Location
+
+Backend code is in `backend/` (formerly `excalidraw-storage-backend/`). It's a NestJS application.
+
+## Key Directories
+
+```
+backend/
+├── src/
+│   ├── auth/                 # Authentication (OIDC, JWT, local)
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── jwt.guard.ts      # NOT jwt-auth.guard.ts!
+│   │   └── jwt.strategy.ts
+│   ├── users/                # User management
+│   │   ├── users.controller.ts
+│   │   ├── users.service.ts
+│   │   └── users.module.ts
+│   ├── workspace/            # Scene management
+│   │   └── workspace-scenes.controller.ts
+│   ├── talktrack/            # Video recordings
+│   │   └── scene-talktrack.controller.ts
+│   ├── storage/              # S3/MinIO storage
+│   │   └── s3-storage.service.ts
+│   ├── prisma/               # Database service
+│   └── app.module.ts         # Main module
+├── prisma/
+│   ├── schema.prisma         # Database schema
+│   └── migrations/           # Database migrations
+```
+
+## Authentication
+
+### JWT Guard Import
+
+**Critical:** The guard file is `jwt.guard.ts`, NOT `jwt-auth.guard.ts`:
+
+```typescript
+// CORRECT
+import { JwtAuthGuard } from '../auth/jwt.guard';
+
+// WRONG - will cause build failure
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+```
+
+### Protecting Endpoints
+
+```typescript
+@Controller('api/v2/users')
+export class UsersController {
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getProfile(@Request() req: any) {
+    const userId = req.user.sub;  // User ID from JWT
+    // ...
+  }
+}
+```
+
+## Database (Prisma)
+
+### Schema Location
+
+`backend/prisma/schema.prisma`
+
+### Key Models
+
+```prisma
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  avatarUrl    String?
+  oidcId       String?  @unique  // For SSO users
+  passwordHash String?           // For local auth users
+  scenes       Scene[]
+  talktrackRecordings TalktrackRecording[]
+}
+
+model Scene {
+  id           String   @id @default(cuid())
+  title        String
+  storageKey   String   @unique  // S3 key
+  userId       String
+  user         User     @relation(...)
+  talktrackRecordings TalktrackRecording[]
+}
+
+model TalktrackRecording {
+  id               String @id @default(cuid())
+  title            String
+  kinescopeVideoId String @unique
+  sceneId          String
+  userId           String
+}
+```
+
+### Using Prisma
+
+```typescript
+@Injectable()
+export class UsersService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+}
+```
+
+## File Uploads
+
+Use `@nestjs/platform-express` with `FileInterceptor`:
+
+```typescript
+import { FileInterceptor } from '@nestjs/platform-express';
+
+@Post('me/avatar')
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(FileInterceptor('avatar', {
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.match(/^image\/(jpeg|png|gif|webp)$/)) {
+      cb(new BadRequestException('Only images allowed'), false);
+    } else {
+      cb(null, true);
+    }
+  },
+}))
+async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
+  // Requires @types/multer in devDependencies!
+}
+```
+
+**Required dependency:** `@types/multer` in `devDependencies`
+
+## Build Commands
+
+```bash
+cd backend
+npm install
+npm run build         # Production build
+npm run start:dev     # Development with watch
+npm run prisma:generate  # Generate Prisma client
+npm run prisma:migrate   # Run migrations
+```
+
+## Environment Variables
+
+Key environment variables (see `docker-compose.yml`):
+- `DATABASE_URL` - PostgreSQL connection string
+- `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` - SSO config
+- `OIDC_INTERNAL_URL` - Internal Docker URL for OIDC discovery
+- `JWT_SECRET` - For signing JWT tokens
+- `KINESCOPE_API_KEY`, `KINESCOPE_PROJECT_ID` - Video hosting
+
