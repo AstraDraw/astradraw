@@ -142,15 +142,24 @@ async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
 
 **Required dependency:** `@types/multer` in `devDependencies`
 
-## Build Commands
+## Build & Check Commands
 
 ```bash
 cd backend
-npm install
-npm run build         # Production build
-npm run start:dev     # Development with watch
-npm run prisma:generate  # Generate Prisma client
-npm run prisma:migrate   # Run migrations
+npm install               # Install dependencies
+npm run start:dev         # Development with watch
+
+# Required checks before release:
+npm run build             # Build (includes TypeScript)
+npm run format            # Prettier formatting
+npm run lint              # ESLint code quality
+npm run test              # Jest unit tests
+
+# Prisma commands:
+npm run prisma:generate   # Generate Prisma client
+npm run prisma:migrate    # Run migrations (production)
+npm run prisma:migrate:dev # Run migrations (development)
+npm run prisma:studio     # Open Prisma Studio GUI
 ```
 
 ## Environment Variables

@@ -130,22 +130,46 @@ const [value, setValue] = useAtom(myFeatureAtom);
 
 ## Testing New Features
 
-1. **Local build test:**
-   ```bash
-   cd frontend && yarn tsc --noEmit
-   cd backend && npm run build
-   ```
+### 1. Run All Checks
 
-2. **Docker test:**
-   ```bash
-   cd deploy
-   docker compose up -d --build
-   ```
+**Frontend** (if modified):
+```bash
+cd frontend
+yarn test:typecheck    # TypeScript
+yarn test:other        # Prettier
+yarn test:code         # ESLint
+# Or all at once: yarn test:all
+```
 
-3. **Browser test:**
-   - Test in both light and dark mode
-   - Test with and without authentication
-   - Test keyboard shortcuts don't interfere
+**Backend** (if modified):
+```bash
+cd backend
+npm run build          # Build + TypeScript
+npm run format         # Prettier
+npm run lint           # ESLint
+```
+
+**Room Service** (if modified):
+```bash
+cd room-service
+yarn build             # TypeScript
+yarn test              # Prettier + ESLint
+```
+
+### 2. Docker Deployment Test
+
+```bash
+cd deploy
+docker compose up -d --build
+```
+
+### 3. Browser Test
+
+- Test the new feature works
+- Test in both light and dark mode
+- Test with and without authentication
+- Test keyboard shortcuts don't interfere
+- Test existing features still work
 
 ## Release Process
 

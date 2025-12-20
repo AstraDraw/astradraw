@@ -54,29 +54,82 @@ Before writing any code:
 2. Commit frequently with clear messages
 3. Keep branches in sync conceptually
 
-### Step 3: Test Locally
+### Step 3: Run Checks & Build
 
-**NEVER push to main without testing!**
+**NEVER push to main without passing all checks!**
+
+#### Frontend Checks
 
 ```bash
-# Build each repo
-cd frontend && yarn tsc --noEmit
-cd backend && npm run build
+cd frontend
 
-# Run local Docker deployment
+# 1. TypeScript type checking (REQUIRED)
+yarn test:typecheck
+
+# 2. Prettier formatting check
+yarn test:other
+# Or auto-fix: yarn fix:other
+
+# 3. ESLint code quality
+yarn test:code
+# Or auto-fix: yarn fix:code
+
+# 4. Run all checks at once
+yarn test:all
+
+# 5. Unit tests (if applicable)
+yarn test:app --watch=false
+```
+
+#### Backend Checks
+
+```bash
+cd backend
+
+# 1. Build (includes TypeScript compilation) (REQUIRED)
+npm run build
+
+# 2. Prettier formatting
+npm run format
+
+# 3. ESLint code quality
+npm run lint
+
+# 4. Unit tests (if applicable)
+npm run test
+```
+
+#### Room Service Checks (if modified)
+
+```bash
+cd room-service
+
+# 1. TypeScript build (REQUIRED)
+yarn build
+
+# 2. All checks (prettier + eslint)
+yarn test
+# Or auto-fix: yarn fix
+```
+
+### Step 4: Test with Docker
+
+After all checks pass, test the full deployment:
+
+```bash
 cd deploy
 docker compose up -d --build
 
-# Test in browser
+# Test in browser:
 # - Test the new feature
 # - Test existing features still work
 # - Test in both light and dark mode
 # - Test with and without authentication
 ```
 
-### Step 4: Merge to Main
+### Step 5: Merge to Main
 
-Only after successful testing:
+Only after all checks pass and Docker testing succeeds:
 
 ```bash
 cd frontend
@@ -89,7 +142,7 @@ git checkout main
 git merge feature/user-profile
 ```
 
-### Step 5: Update Changelogs
+### Step 6: Update Changelogs
 
 Add entry to CHANGELOG.md in each affected repo:
 
@@ -103,7 +156,7 @@ Add entry to CHANGELOG.md in each affected repo:
 - Input field keyboard event propagation
 ```
 
-### Step 6: Tag Releases
+### Step 7: Tag Releases
 
 ```bash
 cd frontend
@@ -115,7 +168,7 @@ git tag v0.5.3
 git push origin main --tags
 ```
 
-### Step 7: Update Docker Compose
+### Step 8: Update Docker Compose
 
 Update `deploy/docker-compose.yml` with new image versions:
 
@@ -126,7 +179,7 @@ api:
   image: ghcr.io/astrateam-net/astradraw-storage:0.5.3
 ```
 
-### Step 8: Commit Main Repo
+### Step 9: Commit Main Repo
 
 ```bash
 cd /path/to/astradraw
@@ -140,7 +193,17 @@ git push origin main
 Before pushing to main, verify:
 
 - [ ] Feature branches created in all affected repos
-- [ ] Code compiles without errors (`yarn tsc`, `npm run build`)
+- [ ] **Frontend checks passed** (if modified):
+  - [ ] `yarn test:typecheck` - TypeScript
+  - [ ] `yarn test:other` - Prettier
+  - [ ] `yarn test:code` - ESLint
+- [ ] **Backend checks passed** (if modified):
+  - [ ] `npm run build` - Build/TypeScript
+  - [ ] `npm run format` - Prettier
+  - [ ] `npm run lint` - ESLint
+- [ ] **Room service checks passed** (if modified):
+  - [ ] `yarn build` - TypeScript
+  - [ ] `yarn test` - Prettier + ESLint
 - [ ] Local Docker deployment works (`cd deploy && docker compose up -d --build`)
 - [ ] Feature tested in browser
 - [ ] Existing features still work
@@ -168,19 +231,47 @@ Types:
 
 ## When AI Should Remind About This
 
-Remind user about this workflow when:
-- Starting a new feature implementation
-- About to make changes that affect multiple repos
-- User asks to "push" or "release" without testing
-- User asks to update changelog before testing
+### Before Implementation
 
-Example reminder:
+Remind user to create feature branches:
 ```
-⚠️ **Workflow Check**: Before we proceed, let's:
-1. Create feature branches in the affected repos
-2. After implementation, test with local Docker deployment
-3. Only then update changelogs and push tags
+⚠️ **Workflow Check**: Before we start, should I help create feature branches in the affected repos?
+```
 
-Should I help create the branches first?
+### After Implementation
+
+Before any release actions, run checks:
+```
+✅ **Pre-Release Checklist**: Let's verify everything before releasing:
+
+**Frontend** (if modified):
+\`\`\`bash
+cd frontend && yarn test:typecheck && yarn test:other && yarn test:code
+\`\`\`
+
+**Backend** (if modified):
+\`\`\`bash
+cd backend && npm run build && npm run format && npm run lint
+\`\`\`
+
+**Docker test**:
+\`\`\`bash
+cd deploy && docker compose up -d --build
+\`\`\`
+
+Run these and let me know the results. Only after all pass will we update changelogs and create tags.
+```
+
+### When User Tries to Skip
+
+If user asks to push/release without testing:
+```
+⚠️ **Hold on!** We should run checks first:
+- TypeScript compilation
+- Prettier formatting
+- ESLint code quality
+- Docker deployment test
+
+Want me to list the commands to run?
 ```
 

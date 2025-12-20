@@ -102,14 +102,23 @@ import { listScenes, createScene, getUserProfile } from "../../auth/workspaceApi
 const scenes = await listScenes();
 ```
 
-## Build Commands
+## Build & Check Commands
 
 ```bash
 cd frontend
-yarn install
-yarn start          # Development server
-yarn build:app      # Production build
-yarn tsc --noEmit   # Type check
-yarn prettier --write <files>  # Format
+yarn install              # Install dependencies
+yarn start                # Development server
+yarn build:app:docker     # Production build for Docker
+
+# Required checks before release:
+yarn test:typecheck       # TypeScript type checking
+yarn test:other           # Prettier formatting check
+yarn test:code            # ESLint code quality
+yarn test:all             # Run ALL checks + tests
+
+# Auto-fix commands:
+yarn fix:other            # Auto-fix Prettier
+yarn fix:code             # Auto-fix ESLint
+yarn fix                  # Fix both
 ```
 
