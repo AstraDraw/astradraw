@@ -140,6 +140,102 @@ useEffect(() => {
 - "Just now" → "Только что"
 - Use `{{count}}` for pluralization: "{{count}} мин. назад"
 
+### 8. 🚨 CRITICAL: Infinite Loop in useEffect (API Polling Loop)
+
+**Problem:** The app makes hundreds of API requests per second, causing performance issues and server overload.
+
+**Cause:** A `useEffect` hook has a state variable in its dependency array, but also calls a setter that changes that state (directly or indirectly through callbacks/parent components).
+
+**Common patterns that cause infinite loops:**
+
+#### Pattern 1: Direct state dependency loop
+```typescript
+// ❌ BAD: activeCollectionId in deps, but setActiveCollectionId called inside
+useEffect(() => {
+  loadData().then((data) => {
+    if (!activeCollectionId) {
+      setActiveCollectionId(data.defaultId); // Changes activeCollectionId → re-runs effect
+    }
+  });
+}, [activeCollectionId, setActiveCollectionId]); // ← activeCollectionId causes loop
+```
+
+```typescript
+// ✅ GOOD: Use a ref to track if default was already set
+const hasSetDefaultRef = useRef(false);
+
+useEffect(() => {
+  loadData().then((data) => {
+    if (!hasSetDefaultRef.current) {
+      hasSetDefaultRef.current = true;
+      setActiveCollectionId(data.defaultId);
+    }
+  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [setActiveCollectionId]); // Removed activeCollectionId from deps
+```
+
+#### Pattern 2: Callback chain loop (Parent ↔ Child)
+```typescript
+// ❌ BAD: Child notifies parent on every collections change
+// WorkspaceSidebar.tsx
+useEffect(() => {
+  if (currentWorkspace) {
+    onWorkspaceChange(currentWorkspace, privateCollection?.id);
+  }
+}, [currentWorkspace, collections, onWorkspaceChange]); // ← collections causes loop
+
+// App.tsx - Parent reloads collections when notified
+onWorkspaceChange={(workspace) => {
+  listCollections(workspace.id).then(setCollections); // Updates collections → triggers child effect
+}}
+```
+
+```typescript
+// ✅ GOOD: Only notify parent once per workspace change
+const lastNotifiedWorkspaceRef = useRef<string | null>(null);
+
+useEffect(() => {
+  if (currentWorkspace && lastNotifiedWorkspaceRef.current !== currentWorkspace.id) {
+    lastNotifiedWorkspaceRef.current = currentWorkspace.id;
+    onWorkspaceChange(currentWorkspace, privateCollection?.id);
+  }
+}, [currentWorkspace, collections, onWorkspaceChange]);
+```
+
+#### Pattern 3: Redundant data fetching
+```typescript
+// ❌ BAD: Both parent and child fetch the same data
+// Child already loads collections, but parent also reloads them
+onWorkspaceChange={(workspace) => {
+  listCollections(workspace.id).then(setCollections); // Redundant!
+}}
+```
+
+```typescript
+// ✅ GOOD: Let one component own the data loading
+onWorkspaceChange={(workspace, privateColId) => {
+  setCurrentWorkspace(workspace);
+  setPrivateCollectionId(privateColId);
+  // Don't reload collections - child already loaded them
+}}
+```
+
+**Debugging infinite loops:**
+1. Open browser DevTools → Network tab
+2. Look for repeated requests to the same endpoint
+3. Check the call stack to find which component/effect is triggering
+4. Search for `useEffect` hooks that both depend on and modify the same state
+
+**Prevention checklist for new useEffect hooks:**
+- [ ] Does this effect call any state setters?
+- [ ] Are any of those state variables also in the dependency array?
+- [ ] Does this effect call any callbacks that might update state in parent/sibling components?
+- [ ] Could those state updates cause this effect to re-run?
+- [ ] If yes to any: Use a ref to prevent duplicate executions
+
+**IMPORTANT:** When you see an effect that sets state, ALWAYS check if that state (or derived state) is in the dependency array. If it is, you likely have an infinite loop.
+
 ## Backend Issues
 
 ### 1. Build Fails with "Cannot find module '../auth/jwt-auth.guard'"
