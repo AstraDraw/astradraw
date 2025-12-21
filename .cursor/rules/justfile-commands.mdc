@@ -97,6 +97,27 @@ just disable-dev   # Use production images (removes override file)
 | `just status` | Git status for all repos |
 | `just git-pull` | Pull latest from all repos |
 
+### API Testing
+
+| Command | Description |
+|---------|-------------|
+| `just test-api` | Run backend API tests (default URL: https://10.100.0.10) |
+| `just test-api https://your-domain.com` | Run tests against custom URL |
+| `just test-api-full URL EMAIL PASSWORD` | Run tests with custom super admin credentials |
+
+**When to use `just test-api`:**
+- After implementing backend changes
+- After merging backend branch to main
+- After database migrations
+- Before starting frontend implementation
+
+**Example workflow:**
+```bash
+just fresh-dev          # Fresh start with local builds
+just test-api           # Run all API tests
+# If tests pass, proceed with frontend work
+```
+
 ### Setup & Release
 
 | Command | Description |

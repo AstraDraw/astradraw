@@ -216,12 +216,39 @@ model TeamCollection {
 - `/docs/COLLABORATION_IMPLEMENTATION_PLAN.md` - Implementation details
 - `/docs/ROLES_TEAMS_COLLECTIONS.md` - Permission model details
 
-## Implementation Branch Strategy
+## Implementation Status
 
 | Branch | Repository | Status |
 |--------|------------|--------|
-| `feature/collab-permissions-backend` | `backend/` | Implement first |
-| `feature/collab-permissions-room-service` | `room-service/` | If needed |
-| `feature/collab-permissions-frontend` | `frontend/` | After backend merged |
+| `feature/collab-permissions-backend` | `backend/` | ✅ **MERGED** (Dec 21, 2025) |
+| `feature/collab-permissions-room-service` | `room-service/` | ⏳ If needed |
+| `feature/collab-permissions-frontend` | `frontend/` | 🔜 Ready to start |
+
+### Backend Implementation Complete
+
+The backend is fully implemented and tested. Run `just test-api` to verify:
+- 32 tests pass
+- All workspace types, permissions, and collaboration endpoints work
+- Super admin functionality verified
+
+### Starting Frontend Work
+
+Before starting frontend implementation:
+
+1. **Verify backend is working:**
+   ```bash
+   just fresh-dev
+   just test-api
+   ```
+
+2. **Key files to review:**
+   - `/docs/COLLABORATION_IMPLEMENTATION_PLAN.md` - Part B: Frontend Implementation
+   - `/docs/COLLABORATION.md` - Full system documentation
+
+3. **Frontend tasks (from implementation plan):**
+   - Phase 3: URL routing for workspace scenes
+   - Phase 4: Copy/Move collection UI
+   - Phase 5: Legacy mode separation
+   - Phase 6: Translation keys
 
 **Always:** Backend first, then room service (if needed), then frontend.

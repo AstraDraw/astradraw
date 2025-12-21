@@ -161,6 +161,10 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
       
+      # === Super Admin Configuration ===
+      # Comma-separated list of emails that should be super admins
+      - SUPERADMIN_EMAILS=${SUPERADMIN_EMAILS:-admin@localhost}
+      
       # === Kinescope Configuration (for Talktrack video proxy) ===
       - KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
       - KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}

@@ -40,10 +40,63 @@ Three long-lived feature branches, one per service:
 Before merging any branch to main:
 
 - [ ] Legacy `#room=` links still work (anonymous collaboration)
-- [ ] Existing workspace/scene functionality unchanged
+- [x] Existing workspace/scene functionality unchanged
 - [x] New permission model works as specified
 - [x] All `just check-*` commands pass (backend)
-- [ ] Manual testing with `just fresh-dev`
+- [x] Manual testing with `just fresh-dev`
+- [x] API tests pass (`just test-api`)
+
+---
+
+## Backend Implementation Status ✅ COMPLETE
+
+**Date:** December 21, 2025
+
+The backend implementation is complete and all tests pass. Here's what was implemented:
+
+### Completed Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Super Admin flag (`isSuperAdmin`) | ✅ | Seeded from `SUPERADMIN_EMAILS` env var |
+| Workspace types (`PERSONAL`/`SHARED`) | ✅ | Exposed in all workspace API responses |
+| Collection access levels (`VIEW`/`EDIT`) | ✅ | Full CRUD for team-collection access |
+| Scene collaboration fields | ✅ | `collaborationEnabled`, `roomKeyEncrypted` |
+| Personal workspace restrictions | ✅ | Blocks invites/teams/collaboration |
+| Shared workspace collaboration | ✅ | Full room ID/key generation |
+| Scene access service | ✅ | Centralized permission checks |
+
+### API Endpoints Added/Updated
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v2/workspaces/:id` | GET | Now includes `type` field |
+| `/api/v2/workspace/scenes` | POST | Now returns `collaborationEnabled` |
+| `/api/v2/workspace/scenes/:id/collaborate` | POST | Start collaboration (shared workspaces only) |
+| `/api/v2/workspace/scenes/:id/collaborate` | GET | Get collaboration info |
+| `/api/v2/workspace/by-slug/:slug/scenes/:id` | GET | Access scene with permissions |
+| `/api/v2/workspaces/:id/collections/:id/teams` | POST | Set team access level |
+| `/api/v2/workspaces/:id/collections/:id/teams` | GET | List teams with access |
+| `/api/v2/workspaces/:id/collections/:id/teams/:teamId` | DELETE | Remove team access |
+
+### Test Results
+
+Run `just test-api` to verify the backend:
+
+```
+========================================
+  Test Summary
+========================================
+  Passed:  32
+  Failed:  0
+  Skipped: 0
+========================================
+```
+
+### Next Steps
+
+1. **Frontend Implementation** - See Part B below
+2. **Room Service** - May need updates for permission-aware room joins (Part C)
 
 ---
 
