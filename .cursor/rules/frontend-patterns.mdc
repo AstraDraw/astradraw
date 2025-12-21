@@ -57,6 +57,24 @@ AstraDraw has two main modes controlled by Jotai atoms in `components/Settings/s
 | Dashboard | `"dashboard"` | Dashboard, Collections, Settings pages |
 | Canvas | `"canvas"` | Excalidraw drawing canvas |
 
+### URL-Based Navigation
+
+**All navigation actions update the browser URL.** This ensures:
+- Browser back/forward buttons work correctly
+- Pages can be refreshed without losing context
+- URLs can be shared and bookmarked
+
+URL patterns:
+- Dashboard: `/workspace/{slug}/dashboard`
+- Collection: `/workspace/{slug}/collection/{id}` or `/workspace/{slug}/private`
+- Scene: `/workspace/{slug}/scene/{id}`
+- Settings: `/workspace/{slug}/settings`
+- Members: `/workspace/{slug}/members`
+- Teams: `/workspace/{slug}/teams`
+- Profile: `/profile`
+
+See `/docs/URL_ROUTING.md` for full documentation.
+
 ### Navigation Atoms
 
 ```typescript
@@ -66,17 +84,46 @@ import {
   navigateToDashboardAtom,
   navigateToCollectionAtom,
   navigateToProfileAtom,
+  navigateToSceneAtom,
   activeCollectionIdAtom,
   dashboardViewAtom,
+  currentWorkspaceSlugAtom,
+  currentSceneIdAtom,
 } from "./components/Settings/settingsState";
 
 // Reading current mode
 const appMode = useAtomValue(appModeAtom);
 
 // Navigation actions (use useSetAtom, not useAtom)
+// These automatically push URLs to browser history
 const navigateToCanvas = useSetAtom(navigateToCanvasAtom);
 const navigateToDashboard = useSetAtom(navigateToDashboardAtom);
 const navigateToCollection = useSetAtom(navigateToCollectionAtom);
+```
+
+### URL Router Utilities
+
+For building URLs or parsing the current route:
+
+```typescript
+import {
+  parseUrl,
+  buildSceneUrl,
+  buildDashboardUrl,
+  buildCollectionUrl,
+  navigateTo,
+  type RouteType,
+} from "../../router";
+
+// Parse current URL
+const route = parseUrl(); // Returns RouteType
+
+// Build URLs
+const sceneUrl = buildSceneUrl(workspaceSlug, sceneId);
+const dashboardUrl = buildDashboardUrl(workspaceSlug);
+
+// Navigate programmatically (pushes to history)
+navigateTo(buildSceneUrl(workspaceSlug, sceneId));
 ```
 
 ### Switching from Dashboard to Canvas
@@ -146,13 +193,21 @@ const handleOpenScene = useCallback(async (scene: WorkspaceScene) => {
     appState: sceneData.appState,
   });
   
-  // 3. Set current scene state
+  // 3. Set current scene state (local + Jotai atoms)
   setCurrentSceneId(scene.id);
   setCurrentSceneTitle(scene.title);
+  setCurrentSceneIdAtom(scene.id);
+  setCurrentSceneTitleAtom(scene.title);
   
-  // 4. Switch to canvas mode
+  // 4. Update URL
+  if (currentWorkspace?.slug) {
+    const newUrl = buildSceneUrl(currentWorkspace.slug, scene.id);
+    window.history.pushState({ sceneId: scene.id }, "", newUrl);
+  }
+  
+  // 5. Switch to canvas mode
   navigateToCanvas();
-}, [excalidrawAPI, navigateToCanvas]);
+}, [excalidrawAPI, navigateToCanvas, currentWorkspace]);
 ```
 
 ### Dashboard Views
@@ -170,8 +225,9 @@ Within dashboard mode, different views are controlled by `dashboardViewAtom`:
 
 ### Key Files
 
-- `frontend/excalidraw-app/components/Settings/settingsState.ts` - All navigation atoms
-- `frontend/excalidraw-app/App.tsx` - Main app with mode switching logic
+- `frontend/excalidraw-app/router.ts` - URL routing utilities (parseUrl, buildUrl, navigateTo)
+- `frontend/excalidraw-app/components/Settings/settingsState.ts` - Navigation atoms with URL support
+- `frontend/excalidraw-app/App.tsx` - Main app with URL sync and mode switching
 - `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Sidebar navigation
 - `frontend/excalidraw-app/components/Workspace/WorkspaceMainContent.tsx` - Dashboard content router
 

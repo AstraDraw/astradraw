@@ -277,6 +277,61 @@ onWorkspaceChange={(workspace, privateColId) => {
 
 **IMPORTANT:** When you see an effect that sets state, ALWAYS check if that state (or derived state) is in the dependency array. If it is, you likely have an infinite loop.
 
+### 10. Scene Data Loss When Navigating Between Dashboard and Canvas
+
+**Problem:** Scene data is lost or reset when navigating between dashboard and canvas views.
+
+**Causes:**
+1. **localStorage sync overwrites backend data** - The `syncData` function syncs from localStorage on visibility change, overwriting workspace scene data
+2. **URL doesn't change** - Navigation only changes state, not URL, causing confusion on refresh
+3. **Excalidraw component re-initializes** - When `appMode` changes, the component may remount
+
+**Solution (already implemented):**
+
+1. **localStorage sync guard** - Skip sync when working on a workspace scene:
+```typescript
+const syncData = debounce(() => {
+  if (isTestEnv()) return;
+  
+  // Skip localStorage sync when working on a workspace scene
+  if (currentSceneIdRef.current) return;
+  
+  // ... rest of sync logic for anonymous mode only
+}, SYNC_BROWSER_TABS_TIMEOUT);
+```
+
+2. **URL-based navigation** - All navigation now updates URLs via `history.pushState()`
+
+3. **Jotai atom sync** - Scene state is synced to Jotai atoms (`currentSceneIdAtom`, `currentWorkspaceSlugAtom`)
+
+**See:** `/docs/URL_ROUTING.md` for full URL routing documentation.
+
+### 11. Browser Back/Forward Buttons Not Working
+
+**Problem:** Clicking browser back/forward doesn't navigate correctly in the app.
+
+**Cause:** Navigation only changes React state, not browser history.
+
+**Solution:** All navigation atoms now push URLs and the app listens for `popstate` events:
+
+```typescript
+// In App.tsx
+useEffect(() => {
+  const handlePopState = async (event: PopStateEvent) => {
+    const route = parseUrl();
+    // Update state based on route type
+  };
+  
+  window.addEventListener("popstate", handlePopState);
+  return () => window.removeEventListener("popstate", handlePopState);
+}, [/* deps */]);
+```
+
+**Navigation atoms** (in `settingsState.ts`) automatically push URLs:
+- `navigateToDashboardAtom` → `/workspace/{slug}/dashboard`
+- `navigateToCollectionAtom` → `/workspace/{slug}/collection/{id}`
+- etc.
+
 ## Backend Issues
 
 ### 1. Build Fails with "Cannot find module '../auth/jwt-auth.guard'"
