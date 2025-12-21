@@ -458,6 +458,42 @@ const scenes = await listScenes();
    }
    ```
 
+### 🚨 CRITICAL: Window.__ENV__ Type Declaration
+
+**NEVER duplicate the `Window.__ENV__` type declaration!** It must be declared only once.
+
+**Rules:**
+1. **Single source of truth:** `frontend/excalidraw-app/env.ts` is the ONLY file that should declare `Window.__ENV__`
+2. **Correct type:** Must allow `undefined` values: `Record<string, string | undefined>`
+3. **No inline type casts:** Don't use inline types like `(window as { __ENV__?: Record<string, string> })` - just use `window.__ENV__` directly
+4. **No duplicate declarations:** Never add `declare global { interface Window { __ENV__?: ... } }` in other files
+
+**Correct pattern in `env.ts`:**
+```typescript
+declare global {
+  interface Window {
+    __ENV__?: Record<string, string | undefined>;
+    __BUNDLED_LIBRARIES__?: LibraryItem[];
+  }
+}
+```
+
+**Why `string | undefined`?**
+Environment variables might not be set, so the value can be `undefined`. Using `Record<string, string>` causes TypeScript errors when accessing properties that might not exist.
+
+**TypeScript error if violated:**
+```
+error TS2717: Subsequent property declarations must have the same type.
+Property '__ENV__' must be of type 'Record<string, string> | undefined',
+but here has type '{ [key: string]: string | undefined; } | undefined'.
+```
+
+**Files to check if this error occurs:**
+- `frontend/excalidraw-app/env.ts` - Should be the only file with `declare global { interface Window { __ENV__?: ... } }`
+- `frontend/excalidraw-app/debug/navigationLogger.ts` - Should NOT have duplicate declaration
+- `frontend/excalidraw-app/auth/workspaceApi.ts` - Should NOT have inline type cast
+- `frontend/excalidraw-app/auth/authApi.ts` - Should NOT have inline type cast
+
 ### Adding a New Environment Variable
 
 When adding a new `VITE_*` environment variable:
@@ -483,13 +519,18 @@ When adding a new `VITE_*` environment variable:
        - VITE_MY_NEW_VAR=${MY_NEW_VAR:-default}
    ```
 
-4. **TypeScript** - Extend Window interface if needed:
+4. **TypeScript** - ⚠️ DO NOT add new type declarations! The global `Window.__ENV__` type in `env.ts` already allows any string keys via `Record<string, string | undefined>`. Just use the variable directly:
    ```typescript
+   // ✅ CORRECT - Just use it (already typed in env.ts)
+   if (window.__ENV__?.VITE_MY_NEW_VAR) {
+     // Use the value
+   }
+   
+   // ❌ WRONG - Don't create duplicate type declarations
    declare global {
      interface Window {
        __ENV__?: {
          VITE_MY_NEW_VAR?: string;
-         // ... other vars
        };
      }
    }
