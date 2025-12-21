@@ -90,6 +90,30 @@ docker compose up -d --build
 
 The storage backend will automatically run Prisma migrations on startup.
 
+## Default Workspace Behavior
+
+When a new user registers (via OIDC or local auth):
+
+1. **Personal Workspace** is automatically created:
+   - Name: `"{Username}'s Workspace"` (e.g., "John's Workspace")
+   - User is added as **ADMIN**
+   - Slug derived from email (e.g., `john-doe`)
+
+2. **Private Collection** is created in the workspace:
+   - Name: "Private" with 🔒 icon
+   - `isPrivate: true` - only the owner can see it
+   - All new scenes go here by default
+
+3. **Scene Saving Logic**:
+   - When user creates a scene without selecting a collection → **Private collection**
+   - When user selects a specific collection → That collection
+   - Dashboard view shows all scenes from all accessible collections
+
+Later, the user can:
+- Create additional workspaces (for work, projects, etc.)
+- Be invited to other users' workspaces
+- Create shared collections within workspaces
+
 ## Usage
 
 1. **Sign In**: Click the hamburger menu → "Sign in" → Authenticate with your OIDC provider

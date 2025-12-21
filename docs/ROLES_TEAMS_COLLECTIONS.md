@@ -542,4 +542,8 @@ packages/excalidraw/locales/
 | 2025-12-21 | Initial implementation of roles, teams & collections |
 | 2025-12-21 | Added default workspace creation on user signup |
 | 2025-12-21 | Implemented full-page settings views |
+| 2025-12-21 | Fixed sidebar layout to match reference design (compact workspace header, small nav items, collections section with "+" button, user footer) |
+| 2025-12-21 | Fixed scene creation to use private collection by default when no collection is selected |
+| 2025-12-21 | Personal workspace now named "{Username}'s Workspace" on registration |
+| 2025-12-21 | Added workspace change tracking to ensure scenes are saved to correct workspace's private collection |
 
