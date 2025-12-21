@@ -3,6 +3,7 @@
 # =============================================================================
 deploy/secrets/
 deploy/certs/
+deploy/logs/*.log
 deploy/.env
 deploy/docker-compose.override.yml
 

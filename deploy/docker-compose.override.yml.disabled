@@ -22,6 +22,9 @@ services:
     volumes:
       # Mount pre-bundled libraries
       - ./libraries:/app/libraries
+    environment:
+      # Enable navigation debugging for development
+      - VITE_DEBUG_NAVIGATION=${DEBUG_NAVIGATION:-true}
 
   # Build API backend from local source
   api:
@@ -29,6 +32,13 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     image: astradraw-api:dev
+    environment:
+      # Enable navigation debugging for development
+      - DEBUG_NAVIGATION=${DEBUG_NAVIGATION:-true}
+      - DEBUG_NAVIGATION_LOG_PATH=/logs/navigation.log
+    volumes:
+      # Mount logs directory for navigation debugging
+      - ./logs:/logs
     # Mount source for faster iteration (optional, requires nodemon)
     # volumes:
     #   - ../backend/src:/app/src:ro

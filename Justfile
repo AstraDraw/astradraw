@@ -213,6 +213,14 @@ db-reset:
     cd backend && npx prisma migrate reset
 
 # ============================================
+# TESTING
+# ============================================
+
+# Run interactive scene navigation test
+test-navigation:
+    @cd deploy && node test-scene-navigation.js
+
+# ============================================
 # RELEASE (use with caution)
 # ============================================
 

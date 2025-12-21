@@ -71,6 +71,8 @@ services:
       - VITE_APP_DISABLE_TRACKING=true
       # GIPHY API key for Stickers & GIFs sidebar (get one at https://developers.giphy.com/)
       - VITE_APP_GIPHY_API_KEY=${GIPHY_API_KEY:-}
+      # Debug mode for navigation logging (set to 'true' to enable)
+      - VITE_DEBUG_NAVIGATION=${DEBUG_NAVIGATION:-false}
       # Note: Kinescope API keys are configured in the storage backend service for security
       # The frontend automatically uses the proxy at VITE_APP_HTTP_STORAGE_BACKEND_URL
     networks:
@@ -169,10 +171,16 @@ services:
       - KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
       - KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}
       
+      # === Debug Configuration (Navigation Logging) ===
+      # Set to 'true' to enable navigation debug logging
+      - DEBUG_NAVIGATION=${DEBUG_NAVIGATION:-false}
+      - DEBUG_NAVIGATION_LOG_PATH=/logs/navigation.log
+      
       - PORT=8080
       - LOG_LEVEL=log  # Set to 'log' to see secret loading messages
     volumes:
       - ./secrets:/run/secrets:ro
+      - ./logs:/logs
     networks:
       - astradraw
       - internal

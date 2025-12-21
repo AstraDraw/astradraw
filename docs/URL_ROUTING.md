@@ -11,6 +11,8 @@ This document describes the URL routing architecture for AstraDraw. Proper URL r
 - Clean separation between canvas and dashboard modes
 - Scene data persistence when navigating between views
 
+> **Related:** See [Scene Navigation](./SCENE_NAVIGATION.md) for detailed documentation on how scene loading works, including race condition handling and the "Excalidraw Plus pattern" implementation.
+
 ## URL Structure
 
 ### URL Patterns

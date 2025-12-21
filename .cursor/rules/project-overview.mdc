@@ -62,6 +62,10 @@ Backend connects to:
 - `/docs/ARCHITECTURE.md` - Technical architecture and design decisions
 - `/docs/ROADMAP.md` - Planned features and specifications
 
+**Core Navigation & State:**
+- `/docs/URL_ROUTING.md` - URL routing architecture
+- `/docs/SCENE_NAVIGATION.md` - Scene loading and navigation (Excalidraw Plus pattern)
+
 **Feature Documentation:**
 - `/docs/WORKSPACE.md` - Authentication and scene management
 - `/docs/USER_PROFILE.md` - Profile management

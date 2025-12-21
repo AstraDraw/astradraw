@@ -244,6 +244,75 @@ Within dashboard mode, different views are controlled by `dashboardViewAtom`:
 - `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Sidebar navigation
 - `frontend/excalidraw-app/components/Workspace/WorkspaceMainContent.tsx` - Dashboard content router
 
+### Scene Loading Architecture (Excalidraw Plus Pattern)
+
+**Dashboard-First Architecture:**
+- Authenticated users start in the **dashboard**, not the canvas
+- Canvas only renders when a **specific scene** is being loaded
+- Each scene has a **unique URL** that always loads that scene's data
+- Works like Room Service: URL = specific data
+
+**Critical: initialStatePromiseRef Management**
+
+The `initialStatePromiseRef` holds a promise that Excalidraw waits for on mount. It must be **reset for each scene**:
+
+```typescript
+const loadSceneFromUrl = async (workspaceSlug, sceneId, options) => {
+  const { isInitialLoad = false } = options;
+  
+  // CRITICAL: Reset promise for new scene (not initial load)
+  if (!isInitialLoad) {
+    initialStatePromiseRef.current.promise =
+      resolvablePromise<ExcalidrawInitialDataState | null>();
+  }
+  
+  // Fetch scene data...
+  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
+  
+  // Resolve promise with scene data
+  initialStatePromiseRef.current.promise.resolve({
+    elements: sceneData.elements,
+    appState: sceneData.appState,
+    files: sceneData.files,
+  });
+};
+```
+
+**Race Condition Handling:**
+
+When user rapidly switches scenes, only apply the latest request:
+
+```typescript
+let currentLoadingSceneId: string | null = null;
+
+const loadSceneFromUrl = async (workspaceSlug, sceneId) => {
+  currentLoadingSceneId = sceneId;  // Track current request
+  
+  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
+  
+  // Ignore stale results
+  if (currentLoadingSceneId !== sceneId) {
+    return;  // Another scene was requested, ignore this one
+  }
+  
+  // Apply scene data...
+};
+```
+
+**Loading States:**
+
+```typescript
+const [isLoadingScene, setIsLoadingScene] = useState(false);
+const [sceneDataLoaded, setSceneDataLoaded] = useState(false);
+
+// Show spinner while loading
+if (appMode === "canvas" && isLoadingScene) {
+  return <LoadingSpinner />;
+}
+```
+
+**See:** `/docs/SCENE_NAVIGATION.md` for complete documentation.
+
 ## Localization
 
 **Always add translation keys** for new UI text:
@@ -356,6 +425,99 @@ import { listScenes, createScene, getUserProfile } from "../../auth/workspaceApi
 // All API calls use credentials: "include" for JWT cookies
 const scenes = await listScenes();
 ```
+
+## Environment Variables in Docker
+
+**CRITICAL:** Vite environment variables (`import.meta.env.VITE_*`) are baked in at build time. In Docker, we need runtime configuration.
+
+### How It Works
+
+1. **Build time:** Dockerfile sets placeholder values:
+   ```dockerfile
+   ENV VITE_APP_WS_SERVER_URL=__VITE_APP_WS_SERVER_URL__ \
+       VITE_DEBUG_NAVIGATION=__VITE_DEBUG_NAVIGATION__
+   ```
+
+2. **Runtime:** `docker-entrypoint.sh` creates `/usr/share/nginx/html/env-config.js`:
+   ```javascript
+   window.__ENV__ = {
+     VITE_APP_WS_SERVER_URL: "https://actual-domain.com",
+     VITE_DEBUG_NAVIGATION: "true"
+   };
+   ```
+
+3. **Code access:** Check `window.__ENV__` first, fall back to `import.meta.env`:
+   ```typescript
+   function getEnvVar(name: string, defaultValue: string = ""): string {
+     // Runtime env (Docker) takes precedence
+     if (typeof window !== "undefined" && window.__ENV__?.[name]) {
+       return window.__ENV__[name];
+     }
+     // Fall back to build-time env (Vite dev server)
+     return import.meta.env[name] ?? defaultValue;
+   }
+   ```
+
+### Adding a New Environment Variable
+
+When adding a new `VITE_*` environment variable:
+
+1. **Dockerfile** - Add to build-time ENV block:
+   ```dockerfile
+   ENV VITE_MY_NEW_VAR=__VITE_MY_NEW_VAR__
+   ```
+
+2. **docker-entrypoint.sh** - Add extraction and output:
+   ```bash
+   # In the get_secret section:
+   MY_NEW_VAR=$(get_secret "VITE_MY_NEW_VAR" "default_value")
+   
+   # In the cat > env-config.js section:
+   VITE_MY_NEW_VAR: "${MY_NEW_VAR}",
+   ```
+
+3. **docker-compose.yml** - Add to app service environment:
+   ```yaml
+   app:
+     environment:
+       - VITE_MY_NEW_VAR=${MY_NEW_VAR:-default}
+   ```
+
+4. **TypeScript** - Extend Window interface if needed:
+   ```typescript
+   declare global {
+     interface Window {
+       __ENV__?: {
+         VITE_MY_NEW_VAR?: string;
+         // ... other vars
+       };
+     }
+   }
+   ```
+
+### Example: Checking a Feature Flag
+
+```typescript
+// Helper function pattern
+function isFeatureEnabled(envVar: string): boolean {
+  if (typeof window !== "undefined" && window.__ENV__?.[envVar]) {
+    return window.__ENV__[envVar] === "true";
+  }
+  return import.meta.env[envVar] === "true";
+}
+
+// Usage
+const DEBUG_ENABLED = isFeatureEnabled("VITE_DEBUG_NAVIGATION");
+```
+
+### Files Involved
+
+| File | Purpose |
+|------|---------|
+| `frontend/Dockerfile` | Build-time placeholder ENV vars |
+| `frontend/docker-entrypoint.sh` | Runtime env injection via `window.__ENV__` |
+| `frontend/excalidraw-app/env.ts` | Helper to read env vars (if exists) |
+| `deploy/docker-compose.yml` | Pass env vars to containers |
 
 ## Build & Check Commands
 

@@ -433,6 +433,108 @@ if (initialRoute.type !== "scene") {
 
 **See:** `/docs/URL_ROUTING.md` for full documentation.
 
+### 14. 🚨 CRITICAL: Scene Data Reset When Switching Scenes (initialStatePromiseRef)
+
+**Problem:** When navigating from dashboard to a scene, or between scenes, the canvas shows empty or stale data from a previous scene.
+
+**Root Cause:** The `initialStatePromiseRef` is created once when `App.tsx` mounts and resolved once during initial load. When the user navigates to a different scene:
+1. Excalidraw unmounts (dashboard mode)
+2. User clicks a scene
+3. Excalidraw remounts
+4. Excalidraw receives `initialData={initialStatePromiseRef.current.promise}`
+5. But this promise was already resolved with OLD data from the first scene!
+
+**The Fix (Excalidraw Plus Pattern):**
+
+1. **Reset the promise for each scene load:**
+```typescript
+const loadSceneFromUrl = async (workspaceSlug, sceneId, options) => {
+  const { isInitialLoad = false } = options;
+  
+  // CRITICAL: Reset the promise for new scene
+  if (!isInitialLoad) {
+    initialStatePromiseRef.current.promise =
+      resolvablePromise<ExcalidrawInitialDataState | null>();
+  }
+  
+  // ... fetch scene data ...
+  
+  // Resolve with new scene data
+  initialStatePromiseRef.current.promise.resolve({
+    elements: sceneData.elements,
+    appState: sceneData.appState,
+    files: sceneData.files,
+  });
+};
+```
+
+2. **Handle race conditions (rapid scene switching):**
+```typescript
+let currentLoadingSceneId: string | null = null;
+
+const loadSceneFromUrl = async (workspaceSlug, sceneId) => {
+  currentLoadingSceneId = sceneId;  // Track current request
+  
+  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
+  
+  // If user clicked another scene while loading, ignore this result
+  if (currentLoadingSceneId !== sceneId) {
+    console.log(`Scene ${sceneId} load completed but is stale, ignoring`);
+    return;
+  }
+  
+  // Apply scene data...
+};
+```
+
+3. **Show loading state while fetching:**
+```typescript
+const [isLoadingScene, setIsLoadingScene] = useState(false);
+const [sceneDataLoaded, setSceneDataLoaded] = useState(false);
+
+// In render:
+if (appMode === "canvas" && isLoadingScene) {
+  return <LoadingSpinner />;
+}
+```
+
+**Key Principle:** Each scene URL should load fresh data, like Room Service collaboration rooms. The canvas is a "page" that loads/unloads, not a persistent background component.
+
+**See:** `/docs/SCENE_NAVIGATION.md` for complete documentation.
+
+### 15. Deleted Scene URL Stays in Browser History (Back Button Issue)
+
+**Problem:** After deleting a scene and being redirected to dashboard/another scene, clicking the browser Back button tries to navigate to the deleted scene URL.
+
+**Cause:** Using `navigateTo()` (which uses `pushState`) adds a new history entry. The deleted scene URL remains in history.
+
+**Solution:** Use `replaceUrl()` instead of `navigateTo()` when:
+1. Deleting a scene and switching to another scene
+2. Deleting the last scene and going to dashboard
+3. Handling errors when loading a scene (e.g., scene was deleted)
+
+```typescript
+// In WorkspaceSidebar.tsx - handleDeleteScene
+if (remainingScenes.length > 0) {
+  // Replace deleted scene URL with new scene URL
+  setCurrentSceneId(remainingScenes[0].id);
+  replaceUrl(buildSceneUrl(workspaceSlug, remainingScenes[0].id));
+} else {
+  // Replace deleted scene URL with dashboard URL
+  setAppMode("dashboard");
+  replaceUrl(buildDashboardUrl(workspaceSlug));
+}
+
+// In App.tsx - loadSceneFromUrl error handler
+} catch (error) {
+  // Replace invalid scene URL with dashboard URL
+  setAppMode("dashboard");
+  replaceUrl(buildDashboardUrl(workspaceSlug));
+}
+```
+
+**Rule:** Use `replaceUrl()` when the current URL should be removed from history (deleted content, errors). Use `navigateTo()` for normal navigation where Back button should work.
+
 ## Backend Issues
 
 ### 1. Build Fails with "Cannot find module '../auth/jwt-auth.guard'"
@@ -586,4 +688,86 @@ git push origin v0.5.2 --force
 1. Scene exists in PostgreSQL (metadata)
 2. Scene data exists in MinIO (actual content)
 3. Storage key matches between both
+
+## 🔧 Navigation Debug Tool
+
+### When to Suggest Debug Mode
+
+**Suggest enabling navigation debug mode when the user reports:**
+- Scene data not loading or showing wrong content
+- Canvas showing empty when opening a scene
+- Browser back/forward not working correctly
+- Scenes loading twice or not at all
+- URL not matching displayed content
+- "Failed to open scene" errors
+- App freezing or making many API calls (infinite loop suspected)
+
+### How to Enable
+
+Tell the user:
+
+```
+This looks like a navigation/scene loading issue. Let's enable debug logging to see what's happening:
+
+1. Add to `deploy/.env`:
+   \`\`\`
+   DEBUG_NAVIGATION=true
+   \`\`\`
+
+2. Restart containers:
+   \`\`\`bash
+   just restart
+   \`\`\`
+
+3. Reproduce the issue in the browser
+
+4. Share the log file:
+   \`\`\`bash
+   cat deploy/logs/navigation.log
+   \`\`\`
+
+The logs will show exactly what navigation events are firing and in what order.
+```
+
+### How to Analyze Logs
+
+The log file is NDJSON format (one JSON per line). Key events to look for:
+
+| Issue | Look For |
+|-------|----------|
+| Scene not loading | `SCENE_LOAD_START` without `SCENE_LOAD_COMPLETE` |
+| Wrong scene data | Multiple `SCENE_LOAD_START` for different scenes |
+| Infinite loop | Repeating pattern of same events |
+| Back button broken | `NAV_URL_PUSH` instead of `NAV_URL_REPLACE` after delete |
+| Stale data | `SCENE_LOAD_STALE` appearing unexpectedly |
+
+### Parse Logs with jq
+
+```bash
+# Get all scene load events
+cat deploy/logs/navigation.log | jq 'select(.event | startswith("SCENE_LOAD"))'
+
+# Get events for a specific scene
+cat deploy/logs/navigation.log | jq 'select(.sceneId == "abc123")'
+
+# Count events by type
+cat deploy/logs/navigation.log | jq -s 'group_by(.event) | map({event: .[0].event, count: length})'
+```
+
+### How to Disable
+
+After debugging:
+
+```bash
+# Remove or set to false in deploy/.env
+DEBUG_NAVIGATION=false
+
+# Restart
+just restart
+
+# Clear old logs (optional)
+rm deploy/logs/navigation.log
+```
+
+**See:** `/docs/DEBUG_NAVIGATION.md` for complete documentation (enable/disable, log format, all events, jq commands).
 
