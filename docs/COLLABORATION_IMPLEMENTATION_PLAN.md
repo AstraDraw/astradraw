@@ -95,7 +95,7 @@ Run `just test-api` to verify the backend:
 
 ### Next Steps
 
-1. **Frontend Implementation** - See Part B below
+1. ✅ **Frontend Implementation** - COMPLETE (December 21, 2025)
 2. **Room Service** - May need updates for permission-aware room joins (Part C)
 
 ---
@@ -699,7 +699,7 @@ io.use(async (socket, next) => {
 
 ---
 
-# Part C: Frontend Implementation
+# Part C: Frontend Implementation ✅ COMPLETE
 
 > **Branch:** `feature/collab-permissions-frontend`
 > **Repository:** `frontend/`
@@ -707,9 +707,41 @@ io.use(async (socket, next) => {
 > Start only after Part A is merged to main.
 > Rebase on updated backend before beginning work.
 
+**Status:** ✅ COMPLETE (December 21, 2025)
+
+**Commit:** `ad520df` - feat: implement frontend collaboration permissions (Phase 3-6)
+
+### Implementation Summary
+
+All frontend phases (3-6) have been completed:
+
+- ✅ Phase 3: URL Routing for workspace scenes
+- ✅ Phase 4: Copy/Move Collections UI
+- ✅ Phase 5: Legacy Mode Separation
+- ✅ Phase 6: Translation Keys
+
+**Files Created:**
+- `excalidraw-app/data/workspaceSceneLoader.ts` - Scene loading with permissions
+- `excalidraw-app/components/Workspace/CopyMoveDialog.tsx` - Copy/move dialog
+- `excalidraw-app/components/Workspace/CopyMoveDialog.scss` - Dialog styles
+
+**Files Modified:**
+- `excalidraw-app/App.tsx` - URL routing and scene loading
+- `excalidraw-app/share/ShareDialog.tsx` - Workspace-aware sharing
+- `excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Copy/move options
+- `excalidraw-app/components/Workspace/FullModeNav.tsx` - Collaboration indicators
+- `excalidraw-app/auth/workspaceApi.ts` - New API endpoints
+- `packages/excalidraw/locales/en.json` - English translations
+- `packages/excalidraw/locales/ru-RU.json` - Russian translations
+
+**All Checks Pass:**
+- ✅ TypeScript compilation
+- ✅ Prettier formatting
+- ✅ ESLint code quality
+
 ---
 
-## Phase 3: Frontend URL Routing
+## Phase 3: Frontend URL Routing ✅
 
 ### 3.1 Add Scene Route
 
@@ -963,7 +995,7 @@ const handleOpenScene = useCallback(async (scene: WorkspaceScene) => {
 
 ---
 
-## Phase 4: Copy/Move Collections
+## Phase 4: Copy/Move Collections ✅
 
 ### 4.1 Backend Endpoints
 
@@ -1216,7 +1248,7 @@ export const CopyMoveDialog: React.FC<CopyMoveDialogProps> = ({
 
 ---
 
-## Phase 5: Legacy Mode Separation
+## Phase 5: Legacy Mode Separation ✅
 
 ### 5.1 Anonymous Board Entry Point
 
@@ -1265,7 +1297,7 @@ When in legacy mode:
 
 ---
 
-## Phase 6: Translation Keys
+## Phase 6: Translation Keys ✅
 
 **File:** `frontend/packages/excalidraw/locales/en.json`
 
