@@ -18,7 +18,7 @@ The Workspace feature allows users to save, organize, and access their drawings 
 
 ## User Interface Modes
 
-AstraDraw has three main UI modes:
+AstraDraw has two main UI modes:
 
 ### 1. Canvas Mode (Drawing)
 When you open a scene, you're in canvas mode:
@@ -28,24 +28,32 @@ When you open a scene, you're in canvas mode:
 - "Dashboard" link to return to dashboard
 
 ### 2. Dashboard Mode
-The central hub for managing your scenes:
+The central hub for managing your scenes and settings. The dashboard has multiple views accessible from the sidebar:
+
+**Dashboard Home** (`dashboardView: "home"`):
 - **Recently Modified by You**: Grid of scenes you've recently edited
 - **Recently Visited by You**: Grid of scenes you've recently viewed
 - **Team Members**: Shows active collaborators (placeholder)
-- Full navigation sidebar (FullModeNav) with:
-  - Workspace selector
-  - Quick search
-  - Dashboard, Workspace settings, Team members links
-  - Collections list
-  - User profile
 
-### 3. Collection Mode
-When you click a collection in the sidebar:
+**Collection View** (`dashboardView: "collection"`):
 - Collection header with icon and name
 - Sort options (Last created / Last modified)
 - Import scenes and Create scene buttons
 - Scene grid showing all scenes in that collection
 - Empty state with call-to-action when no scenes exist
+
+**Settings Views** (integrated into dashboard):
+- **Profile** (`dashboardView: "profile"`): User profile, avatar, display name
+- **Workspace Settings** (`dashboardView: "workspace"`): Workspace name, icon, danger zone
+- **Team Members** (`dashboardView: "members"`): Invite members, manage roles
+- **Teams & Collections** (`dashboardView: "teams-collections"`): Manage teams and collections
+
+All views share the full navigation sidebar (FullModeNav) with:
+- Workspace selector
+- Quick search
+- Dashboard, Profile, Workspace settings, Team members, Teams & Collections links
+- Collections list
+- User profile footer
 
 ## Architecture
 
@@ -66,11 +74,15 @@ When you click a collection in the sidebar:
 │  │  │  - Recently     │  │  - Scene grid                │   │  │
 │  │  │    visited      │  │  - Empty state               │   │  │
 │  │  └─────────────────┘  └──────────────────────────────┘   │  │
+│  │  ┌─────────────────┐  ┌──────────────────────────────┐   │  │
+│  │  │   ProfilePage   │  │   WorkspaceSettingsPage      │   │  │
+│  │  │   MembersPage   │  │   TeamsCollectionsPage       │   │  │
+│  │  └─────────────────┘  └──────────────────────────────┘   │  │
 │  └──────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────┐  ┌──────────────────────────────────┐   │
-│  │  SettingsLayout  │  │        SceneCardGrid            │   │
-│  │  (Full-page)     │  │  (Reusable scene display)       │   │
-│  └──────────────────┘  └──────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    SceneCardGrid                          │   │
+│  │              (Reusable scene display)                     │   │
+│  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
