@@ -317,40 +317,58 @@ All routes are handled by the React app since nginx serves `index.html` for any 
 
 ### "Failed to open scene" When Clicking Scene from Dashboard
 
+> ⚠️ **Work in Progress (December 2025)**: This fix is functional but needs further testing across all scenarios (collections, teams, different navigation paths). The approach is correct but edge cases may exist.
+
 **Problem**: After creating a new scene and returning to the dashboard, clicking on the scene shows "Failed to open scene" error and the URL doesn't update (stays at `/workspace/{slug}/dashboard`).
 
-**Cause**: The scene loading logic was split between multiple places:
-1. `navigateToSceneAtom` pushed the URL and set atoms
-2. `handlePopState` caught the URL change but didn't load the scene data
-3. Child components (DashboardView, CollectionView) had their own `handleOpenScene` that called a parent callback
-4. The parent callback (`handleOpenScene` in App.tsx) tried to load scene data but used the wrong API
+**Root Causes Identified**:
+1. **Infinite loop bug**: `handleUrlRoute` called navigation atoms that pushed URLs, triggering `popstate`, which called `handleUrlRoute` again → stack overflow
+2. **Scene loading not triggered**: `handlePopState` didn't set `appMode` to canvas or call scene loading
+3. **Initial URL not handled**: Page load with dashboard URL showed canvas instead of dashboard
+4. Scene loading logic was fragmented across multiple components
 
-**Solution** (implemented December 2025):
-1. **Centralized scene loading** in `App.tsx` via `loadSceneFromUrl()` function
-2. **Stored in ref** (`loadSceneFromUrlRef`) so `handlePopState` can access it
-3. **Updated `handlePopState`** to call `loadSceneFromUrlRef.current()` when navigating to scene URLs
-4. **Removed `onOpenScene` prop** from DashboardView, CollectionView, WorkspaceSidebar, WorkspaceMainContent
-5. **Components now use `navigateToSceneAtom` directly** - URL change triggers scene loading via popstate
+**Current Fix** (December 2025):
 
-**Key code in App.tsx:**
+1. **`handleUrlRoute` now sets state directly** - no URL pushing to avoid infinite loops:
 ```typescript
-// Ref to hold the scene loading function
-const loadSceneFromUrlRef = useRef<((workspaceSlug: string, sceneId: string, options?: {...}) => Promise<boolean>) | null>(null);
+case "dashboard":
+  setAppMode("dashboard");  // Direct state set, NOT navigateToDashboard()
+  setDashboardView("home");
+  break;
+```
 
-// In the main useEffect:
-const loadSceneFromUrl = async (workspaceSlug, sceneId, options) => {
-  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
-  // Update canvas, set state, start collaboration...
-};
-loadSceneFromUrlRef.current = loadSceneFromUrl;
-
-// In handlePopState:
-if (route.type === "scene" && currentSceneIdRef.current !== route.sceneId) {
-  await loadSceneFromUrlRef.current(route.workspaceSlug, route.sceneId, { roomKeyFromHash });
+2. **`handlePopState` sets canvas mode before loading scenes**:
+```typescript
+if (route.type === "scene") {
+  setAppMode("canvas");  // Switch UI immediately
+  setCurrentWorkspaceSlugAtom(route.workspaceSlug);
+  if (loadSceneFromUrlRef.current) {
+    await loadSceneFromUrlRef.current(route.workspaceSlug, route.sceneId);
+  }
 }
 ```
 
-**Why this pattern?**
-- `loadSceneFromUrl` is defined inside a `useEffect` because it needs access to `excalidrawAPI`, `collabAPI`, etc.
-- These APIs are not available during initial render, only after Excalidraw mounts
-- Using a ref allows `handlePopState` (in a different useEffect) to call the function after it's defined
+3. **Initial URL handling on page load**:
+```typescript
+const initialRoute = parseUrl();
+if (initialRoute.type !== "scene") {
+  handleUrlRoute(initialRoute);  // Sets dashboard mode for dashboard URLs
+}
+```
+
+4. **Centralized scene loading** via `loadSceneFromUrl()` in `App.tsx`, stored in ref
+
+**Key Principle**: URL navigation should be one-way:
+- **User action** → Navigation atom → Push URL → Dispatch popstate
+- **Popstate handler** → Parse URL → Set state directly (NO URL push)
+
+**Testing Needed**:
+- [ ] Dashboard → Scene → Back button
+- [ ] Collection view → Scene → Back button
+- [ ] Private collection → Scene
+- [ ] Teams/Collections page navigation
+- [ ] Profile page navigation
+- [ ] Settings pages navigation
+- [ ] Direct URL access to all route types
+- [ ] Browser refresh on each route type
+- [ ] Creating new scenes from different contexts

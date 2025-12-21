@@ -181,6 +181,8 @@ const handleCollectionClick = useCallback((collectionId: string) => {
 
 ### Opening an Existing Scene
 
+> ⚠️ **Work in Progress (December 2025)**: This pattern is functional but needs further testing across all navigation scenarios.
+
 **IMPORTANT:** Scene loading is centralized in `App.tsx`. Child components should NOT load scene data directly. Instead, they use `navigateToSceneAtom` which triggers URL-based navigation.
 
 ```typescript
@@ -208,14 +210,18 @@ const handleOpenScene = useCallback(
 **How it works:**
 1. `navigateToSceneAtom` sets Jotai atoms and calls `navigateTo()` with the scene URL
 2. `navigateTo()` pushes URL and dispatches a `popstate` event
-3. `handlePopState` in `App.tsx` catches the event and calls `loadSceneFromUrlRef.current()`
+3. `handlePopState` in `App.tsx` sets `appMode("canvas")` and calls `loadSceneFromUrlRef.current()`
 4. `loadSceneFromUrl()` fetches scene data, updates canvas, and handles collaboration
 
+**Key principle - One-Way URL Flow:**
+- **User action** → Navigation atom → Push URL → Dispatch popstate
+- **Popstate handler** → Parse URL → Set state directly (**NO URL push**)
+
 **Why this pattern?**
+- Prevents infinite loops (popstate handlers must not push URLs)
 - Single source of truth for scene loading logic
 - Browser back/forward buttons work correctly
 - No duplicate API calls
-- Collaboration is properly initialized
 
 ### Dashboard Views
 

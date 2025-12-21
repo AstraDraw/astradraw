@@ -66,4 +66,3 @@ Implement Part B (Phases 3-6) of the collaboration permissions frontend: workspa
 6. **Styles & Misc**
 
 - Add SCSS for `CopyMoveDialog` with `--ui-font` root var (per workspace style rule) and dark-mode variables.
-- Verify share dialog and workspace UI state updates don’t regress collaboration toggles.

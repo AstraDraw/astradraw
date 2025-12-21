@@ -181,7 +181,50 @@ useEffect(() => {
 - After creating, renaming, duplicating, or deleting scenes
 - When data is modified in one component but displayed in another
 
-### 9. 🚨 CRITICAL: Infinite Loop in useEffect (API Polling Loop)
+### 9. 🚨 CRITICAL: Infinite Loop in URL Navigation (Stack Overflow)
+
+**Problem:** App crashes with "Maximum call stack size exceeded" when navigating or on page load.
+
+**Cause:** Navigation atoms push URLs via `navigateTo()`, which dispatches `popstate`, which triggers `handlePopState`, which calls a navigation atom again → infinite recursion.
+
+**Example of the bug:**
+```typescript
+// In handlePopState (called on popstate event):
+const handlePopState = () => {
+  const route = parseUrl();
+  if (route.type === "dashboard") {
+    navigateToDashboard();  // ❌ This pushes URL → triggers popstate → infinite loop!
+  }
+};
+
+// navigateToDashboard internally does:
+navigateTo(buildDashboardUrl(slug));  // Dispatches popstate event!
+```
+
+**Solution - One-Way URL Flow:**
+```typescript
+// In handlePopState - set state DIRECTLY, don't push URLs:
+const handlePopState = () => {
+  const route = parseUrl();
+  if (route.type === "dashboard") {
+    setAppMode("dashboard");    // ✅ Direct state set
+    setDashboardView("home");   // ✅ No URL push
+  }
+};
+```
+
+**Rule:** `handlePopState` and `handleUrlRoute` should NEVER call navigation atoms that push URLs. They should only set state atoms directly.
+
+**When to use navigation atoms (that push URLs):**
+- User clicks a button/link
+- Programmatic navigation from user action
+
+**When to set state directly (no URL push):**
+- `handlePopState` (browser back/forward)
+- `handleUrlRoute` (processing URL changes)
+- Initial URL parsing on page load
+
+### 10. 🚨 CRITICAL: Infinite Loop in useEffect (API Polling Loop)
 
 **Problem:** The app makes hundreds of API requests per second, causing performance issues and server overload.
 
@@ -277,7 +320,7 @@ onWorkspaceChange={(workspace, privateColId) => {
 
 **IMPORTANT:** When you see an effect that sets state, ALWAYS check if that state (or derived state) is in the dependency array. If it is, you likely have an infinite loop.
 
-### 10. Scene Data Loss When Navigating Between Dashboard and Canvas
+### 11. Scene Data Loss When Navigating Between Dashboard and Canvas
 
 **Problem:** Scene data is lost or reset when navigating between dashboard and canvas views.
 
@@ -306,7 +349,7 @@ const syncData = debounce(() => {
 
 **See:** `/docs/URL_ROUTING.md` for full URL routing documentation.
 
-### 11. Browser Back/Forward Buttons Not Working
+### 12. Browser Back/Forward Buttons Not Working
 
 **Problem:** Clicking browser back/forward doesn't navigate correctly in the app.
 
@@ -332,42 +375,61 @@ useEffect(() => {
 - `navigateToCollectionAtom` → `/workspace/{slug}/collection/{id}`
 - etc.
 
-### 12. "Failed to open scene" When Clicking Scene from Dashboard
+### 13. "Failed to open scene" When Clicking Scene from Dashboard
 
-**Problem:** After creating a new scene and returning to the dashboard, clicking on the scene shows "Failed to open scene" error and the URL doesn't update.
+> ⚠️ **Work in Progress**: This fix is functional but needs further testing across all navigation scenarios.
 
-**Cause:** Scene loading logic was fragmented:
-1. `navigateToSceneAtom` pushed URL but didn't load scene data
-2. `handlePopState` caught URL changes but didn't call scene loading
-3. Child components had their own `handleOpenScene` that called parent callbacks
-4. The parent callback used wrong API (`getSceneData` instead of `loadWorkspaceScene`)
+**Problem:** After creating a new scene and returning to the dashboard, clicking on the scene shows "Failed to open scene" error or resets the canvas instead of loading the scene.
 
-**Solution (December 2025):**
-1. **Centralized scene loading** in `App.tsx` via `loadSceneFromUrl()` function
-2. **Stored in ref** so `handlePopState` can call it
-3. **Removed `onOpenScene` prop** from child components
-4. **Components use `navigateToSceneAtom` directly**
+**Root Causes:**
+1. **Infinite loop**: `handleUrlRoute` called navigation atoms that pushed URLs → triggered `popstate` → called `handleUrlRoute` again → stack overflow
+2. **Scene not loading**: `handlePopState` didn't set `appMode` or call scene loading function
+3. **Initial URL ignored**: Page load with `/workspace/{slug}/dashboard` showed canvas instead of dashboard
 
+**Current Fix (December 2025):**
+
+1. **`handleUrlRoute` sets state directly** - avoids infinite loops:
 ```typescript
-// In DashboardView, CollectionView, WorkspaceSidebar:
-const navigateToScene = useSetAtom(navigateToSceneAtom);
-const currentWorkspaceSlug = useAtomValue(currentWorkspaceSlugAtom);
+// WRONG - causes infinite loop:
+case "dashboard":
+  navigateToDashboard();  // Pushes URL → triggers popstate → loop!
 
-const handleOpenScene = useCallback(
-  (scene: WorkspaceScene) => {
-    if (currentWorkspaceSlug) {
-      navigateToScene({
-        workspaceSlug: currentWorkspaceSlug,
-        sceneId: scene.id,
-        title: scene.title,
-      });
-    }
-  },
-  [navigateToScene, currentWorkspaceSlug],
-);
+// CORRECT - direct state manipulation:
+case "dashboard":
+  setAppMode("dashboard");
+  setDashboardView("home");
+  // No URL push - we're already at the correct URL from popstate
 ```
 
-**Key insight:** The URL is the single source of truth. Clicking a scene pushes a URL, which triggers `popstate`, which loads the scene. This ensures browser navigation works correctly.
+2. **`handlePopState` sets canvas mode before loading**:
+```typescript
+if (route.type === "scene") {
+  setAppMode("canvas");  // Switch UI immediately
+  if (loadSceneFromUrlRef.current) {
+    await loadSceneFromUrlRef.current(workspaceSlug, sceneId);
+  }
+}
+```
+
+3. **Initial URL handling on mount**:
+```typescript
+const initialRoute = parseUrl();
+if (initialRoute.type !== "scene") {
+  handleUrlRoute(initialRoute);  // Sets correct mode for dashboard URLs
+}
+```
+
+**Key Principle - One-Way URL Flow:**
+- **User action** → Navigation atom → Push URL → Dispatch popstate
+- **Popstate handler** → Parse URL → Set state directly (**NO URL push**)
+
+**Testing Checklist:**
+- [ ] Dashboard → Scene → Back
+- [ ] Collection → Scene → Back  
+- [ ] Private collection navigation
+- [ ] Settings pages navigation
+- [ ] Direct URL access
+- [ ] Browser refresh on each route
 
 **See:** `/docs/URL_ROUTING.md` for full documentation.
 
