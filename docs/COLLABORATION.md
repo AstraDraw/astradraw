@@ -299,13 +299,23 @@ Top-right corner shows connected collaborators:
 - [x] Workspace/team/collection permission model
 - [x] Scene CRUD with collections
 
-### Planned (See COLLABORATION_IMPLEMENTATION_PLAN.md)
+### Backend Completed (December 21, 2025)
 
-- [ ] Workspace types (PERSONAL vs SHARED)
-- [ ] Scene direct URLs (`/workspace/{slug}/scene/{id}`)
-- [ ] Permission-based collaboration access
-- [ ] Copy/Move collections between workspaces
-- [ ] Super admin role
+- [x] Workspace types (PERSONAL vs SHARED)
+- [x] Scene direct URLs (`/workspace/by-slug/{slug}/scenes/{id}`)
+- [x] Permission-based collaboration access (`SceneAccessService`)
+- [x] Copy/Move collections between workspaces
+- [x] Super admin role (`isSuperAdmin` + `SUPERADMIN_EMAILS`)
+- [x] Room key encryption/decryption
+- [x] Collection access levels (VIEW / EDIT)
+
+### Frontend Pending
+
+- [ ] URL routing for workspace scene URLs
+- [ ] UI for workspace type selection
+- [ ] UI for collaboration toggle per scene
+- [ ] Copy/Move collection dialogs
+- [ ] Permission-aware Share dialog
 
 ---
 
