@@ -1,0 +1,227 @@
+---
+description: "Collaboration system architecture, permissions, and patterns for AstraDraw"
+alwaysApply: false
+globs:
+  - "frontend/excalidraw-app/collab/**"
+  - "frontend/excalidraw-app/share/**"
+  - "frontend/excalidraw-app/data/httpStorage.ts"
+  - "backend/src/workspace/**"
+  - "backend/src/workspaces/**"
+  - "backend/src/collections/**"
+  - "backend/src/teams/**"
+  - "room-service/**"
+---
+
+# Collaboration System Rules
+
+This rule describes the collaboration system architecture and key decisions for AstraDraw.
+
+## Two Collaboration Modes
+
+AstraDraw has two distinct collaboration modes:
+
+| Mode | URL Pattern | Auth Required | Use Case |
+|------|-------------|---------------|----------|
+| **Workspace Collaboration** | `/workspace/{slug}/scene/{id}#key={roomKey}` | Yes | Team collaboration |
+| **Legacy Anonymous** | `/#room={roomId},{roomKey}` | No | Quick sharing, backward compat |
+
+**Important:** These modes must remain separate. Never mix them.
+
+## Workspace Types
+
+```prisma
+enum WorkspaceType {
+  PERSONAL  // Auto-created for each user, NO collaboration
+  SHARED    // Explicitly created, supports teams & collaboration
+}
+```
+
+**Key Rule:** Personal workspaces NEVER allow:
+- Inviting members
+- Creating teams
+- Collaboration on scenes
+
+## Permission Chain
+
+Access to a scene is determined by this chain:
+
+```
+User → WorkspaceMember (role) → TeamMember → Team → TeamCollection (accessLevel) → Collection → Scene
+```
+
+### Access Levels
+
+```prisma
+enum CollectionAccessLevel {
+  VIEW  // Can see scenes, join rooms read-only
+  EDIT  // Can edit scenes, full collaboration
+}
+```
+
+### Scene Access Result
+
+```typescript
+interface SceneAccessResult {
+  canView: boolean;        // Can load and see the scene
+  canEdit: boolean;        // Can modify scene content
+  canCollaborate: boolean; // Can join real-time collaboration
+}
+```
+
+## Key Backend Patterns
+
+### SceneAccessService
+
+Always use `SceneAccessService.checkAccess(sceneId, userId)` before:
+- Loading scene data
+- Starting collaboration
+- Modifying scene
+
+```typescript
+// CORRECT
+const access = await this.sceneAccessService.checkAccess(sceneId, user.id);
+if (!access.canView) {
+  throw new ForbiddenException('Access denied');
+}
+
+// WRONG - Don't check just ownership
+if (scene.userId !== user.id) {
+  throw new ForbiddenException('Access denied');
+}
+```
+
+### Workspace Type Guards
+
+When creating workspace-related resources, always check workspace type:
+
+```typescript
+// In workspaces.service.ts
+async inviteMember(workspaceId: string, ...) {
+  const workspace = await this.prisma.workspace.findUnique({ where: { id: workspaceId } });
+  
+  if (workspace.type === 'PERSONAL') {
+    throw new ForbiddenException('Cannot invite members to a personal workspace');
+  }
+  // ... proceed with invite
+}
+```
+
+### Room Key Storage
+
+Room keys are encrypted server-side in `Scene.roomKeyEncrypted`. 
+
+**Never:**
+- Log room keys
+- Return room keys to users without permission check
+- Store room keys in plain text
+
+## Key Frontend Patterns
+
+### URL Detection
+
+In `App.tsx`, detect URL patterns in this order:
+
+```typescript
+// 1. Check for workspace scene URL
+const sceneMatch = pathname.match(/^\/workspace\/([^/]+)\/scene\/([^/#]+)/);
+if (sceneMatch) {
+  // Load workspace scene with permission check
+}
+
+// 2. Check for legacy room URL
+const roomMatch = hash.match(/^#room=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/);
+if (roomMatch) {
+  // Load legacy anonymous room
+}
+
+// 3. Default to dashboard/workspace view
+```
+
+### Collaboration State
+
+When opening a workspace scene:
+
+```typescript
+// 1. Load scene with access check
+const { scene, data, access } = await loadWorkspaceScene(slug, sceneId);
+
+// 2. Update canvas
+excalidrawAPI.updateScene({ elements: data.elements });
+
+// 3. Update URL (without page reload)
+window.history.pushState({}, '', `/workspace/${slug}/scene/${sceneId}`);
+
+// 4. Join collaboration if enabled AND user has access
+if (access.canCollaborate && scene.collaborationEnabled) {
+  const creds = await getCollaborationCredentials(scene.id);
+  if (creds) {
+    collabAPI.startCollaboration(creds);
+  }
+}
+```
+
+### Share Dialog Behavior
+
+| Workspace Type | Scene Location | Share Options |
+|----------------|----------------|---------------|
+| Personal | Any collection | No sharing (show "Move to shared workspace" hint) |
+| Shared | Private collection | Owner can share |
+| Shared | Team collection | "Enable collaboration" button |
+
+## Database Schema Key Fields
+
+### Scene Model
+
+```prisma
+model Scene {
+  // ... existing fields
+  
+  roomId               String?   // Collaboration room ID
+  roomKeyEncrypted     String?   // Encrypted with server key
+  collaborationEnabled Boolean   @default(true)
+}
+```
+
+### Workspace Model
+
+```prisma
+model Workspace {
+  // ... existing fields
+  
+  type WorkspaceType @default(PERSONAL)
+}
+```
+
+### TeamCollection Model
+
+```prisma
+model TeamCollection {
+  // ... existing fields
+  
+  accessLevel CollectionAccessLevel @default(EDIT)
+}
+```
+
+## Common Mistakes to Avoid
+
+1. **Don't bypass permission checks** - Always use `SceneAccessService`
+2. **Don't allow collaboration in personal workspaces** - Check workspace type
+3. **Don't mix URL patterns** - Keep workspace and legacy modes separate
+4. **Don't store room keys unencrypted** - Use `roomKeyEncrypted` field
+5. **Don't return room key without checking `canCollaborate`** - VIEW users shouldn't get edit access
+
+## Related Documentation
+
+- `/docs/COLLABORATION.md` - Full system documentation
+- `/docs/COLLABORATION_IMPLEMENTATION_PLAN.md` - Implementation details
+- `/docs/ROLES_TEAMS_COLLECTIONS.md` - Permission model details
+
+## Implementation Branch Strategy
+
+| Branch | Repository | Status |
+|--------|------------|--------|
+| `feature/collab-permissions-backend` | `backend/` | Implement first |
+| `feature/collab-permissions-room-service` | `room-service/` | If needed |
+| `feature/collab-permissions-frontend` | `frontend/` | After backend merged |
+
+**Always:** Backend first, then room service (if needed), then frontend.
