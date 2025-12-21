@@ -181,34 +181,41 @@ const handleCollectionClick = useCallback((collectionId: string) => {
 
 ### Opening an Existing Scene
 
+**IMPORTANT:** Scene loading is centralized in `App.tsx`. Child components should NOT load scene data directly. Instead, they use `navigateToSceneAtom` which triggers URL-based navigation.
+
 ```typescript
-// Example: Opening a scene from dashboard or sidebar
-const handleOpenScene = useCallback(async (scene: WorkspaceScene) => {
-  // 1. Load scene data from backend
-  const sceneData = await getSceneData(scene.id);
-  
-  // 2. Update canvas with scene data
-  excalidrawAPI.updateScene({
-    elements: sceneData.elements,
-    appState: sceneData.appState,
-  });
-  
-  // 3. Set current scene state (local + Jotai atoms)
-  setCurrentSceneId(scene.id);
-  setCurrentSceneTitle(scene.title);
-  setCurrentSceneIdAtom(scene.id);
-  setCurrentSceneTitleAtom(scene.title);
-  
-  // 4. Update URL
-  if (currentWorkspace?.slug) {
-    const newUrl = buildSceneUrl(currentWorkspace.slug, scene.id);
-    window.history.pushState({ sceneId: scene.id }, "", newUrl);
-  }
-  
-  // 5. Switch to canvas mode
-  navigateToCanvas();
-}, [excalidrawAPI, navigateToCanvas, currentWorkspace]);
+// In DashboardView, CollectionView, or WorkspaceSidebar:
+import { useSetAtom, useAtomValue } from "../../app-jotai";
+import { navigateToSceneAtom, currentWorkspaceSlugAtom } from "../Settings/settingsState";
+
+const navigateToScene = useSetAtom(navigateToSceneAtom);
+const currentWorkspaceSlug = useAtomValue(currentWorkspaceSlugAtom);
+
+const handleOpenScene = useCallback(
+  (scene: WorkspaceScene) => {
+    if (currentWorkspaceSlug) {
+      navigateToScene({
+        workspaceSlug: currentWorkspaceSlug,
+        sceneId: scene.id,
+        title: scene.title,
+      });
+    }
+  },
+  [navigateToScene, currentWorkspaceSlug],
+);
 ```
+
+**How it works:**
+1. `navigateToSceneAtom` sets Jotai atoms and calls `navigateTo()` with the scene URL
+2. `navigateTo()` pushes URL and dispatches a `popstate` event
+3. `handlePopState` in `App.tsx` catches the event and calls `loadSceneFromUrlRef.current()`
+4. `loadSceneFromUrl()` fetches scene data, updates canvas, and handles collaboration
+
+**Why this pattern?**
+- Single source of truth for scene loading logic
+- Browser back/forward buttons work correctly
+- No duplicate API calls
+- Collaboration is properly initialized
 
 ### Dashboard Views
 

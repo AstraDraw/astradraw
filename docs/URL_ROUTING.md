@@ -160,16 +160,29 @@ useEffect(() => {
 
 ### Navigation from Dashboard to Scene
 
+The navigation flow uses URL-driven state management. When a user clicks on a scene card, the navigation atom pushes a URL change, which triggers the `popstate` handler to load the scene.
+
 ```
-User clicks scene card
-  → handleOpenScene(scene)
-    → Load scene data from backend
-    → Update Excalidraw canvas
-    → setCurrentSceneId(scene.id)
-    → setCurrentSceneIdAtom(scene.id)
-    → window.history.pushState() with scene URL
-    → navigateToCanvas()
+User clicks scene card (DashboardView, CollectionView, or WorkspaceSidebar)
+  → navigateToSceneAtom({ workspaceSlug, sceneId, title })
+    → Sets Jotai atoms (currentSceneIdAtom, currentSceneTitleAtom, appModeAtom)
+    → Calls navigateTo(buildSceneUrl(workspaceSlug, sceneId))
+      → pushState + dispatch popstate event
+        → handlePopState catches the event
+          → parseUrl() detects route.type === "scene"
+          → Calls loadSceneFromUrlRef.current(workspaceSlug, sceneId)
+            → loadWorkspaceScene() fetches scene metadata + data from API
+            → Updates Excalidraw canvas with scene elements
+            → Sets local state (currentSceneId, currentSceneTitle, etc.)
+            → Starts collaboration if scene has roomId and user has access
+            → navigateToCanvas() switches to canvas mode
 ```
+
+**Key points:**
+- Scene loading is centralized in `loadSceneFromUrl()` function in `App.tsx`
+- The function is stored in a ref (`loadSceneFromUrlRef`) so it can be called from `handlePopState`
+- Components (DashboardView, CollectionView, WorkspaceSidebar) don't load scene data directly
+- They only call `navigateToSceneAtom` which triggers the URL change
 
 ### Navigation from Scene to Dashboard
 
@@ -187,11 +200,15 @@ User clicks "Dashboard" in sidebar
 ```
 User clicks browser back button
   → popstate event fires
-  → handlePopState callback
+  → handlePopState callback in App.tsx
     → parseUrl() to get route type
-    → Update Jotai atoms based on route
-    → If scene route: load scene data
-    → If dashboard route: show dashboard
+    → If scene route AND sceneId changed:
+      → setCurrentWorkspaceSlugAtom(route.workspaceSlug)
+      → navigateToCanvas()
+      → loadSceneFromUrlRef.current(workspaceSlug, sceneId)
+        → Full scene loading (same as clicking scene card)
+    → If dashboard route:
+      → handleUrlRoute(route) updates dashboard state
 ```
 
 ## localStorage Sync Guard
@@ -245,12 +262,13 @@ All routes are handled by the React app since nginx serves `index.html` for any 
 
 | File | Purpose |
 |------|---------|
-| `excalidraw-app/router.ts` | URL routing utilities |
+| `excalidraw-app/router.ts` | URL routing utilities (parseUrl, buildUrl, navigateTo) |
 | `excalidraw-app/components/Settings/settingsState.ts` | Navigation atoms with URL support |
-| `excalidraw-app/App.tsx` | URL sync hook, scene loading, state management |
-| `excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` | Sidebar navigation using router |
-| `excalidraw-app/components/Workspace/DashboardView.tsx` | Dashboard with scene navigation |
-| `excalidraw-app/components/Workspace/CollectionView.tsx` | Collection view with scene navigation |
+| `excalidraw-app/App.tsx` | URL sync hook, scene loading via `loadSceneFromUrl()`, state management |
+| `excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` | Sidebar navigation, uses `navigateToSceneAtom` directly |
+| `excalidraw-app/components/Workspace/DashboardView.tsx` | Dashboard with scene navigation, uses `navigateToSceneAtom` directly |
+| `excalidraw-app/components/Workspace/CollectionView.tsx` | Collection view with scene navigation, uses `navigateToSceneAtom` directly |
+| `excalidraw-app/components/Workspace/WorkspaceMainContent.tsx` | Dashboard content router, renders view based on `dashboardViewAtom` |
 | `excalidraw-app/components/Workspace/FullModeNav.tsx` | Full navigation with collection click handlers |
 
 ## Testing Checklist
@@ -296,3 +314,43 @@ All routes are handled by the React app since nginx serves `index.html` for any 
 **Problem**: Browser back button doesn't navigate correctly.
 
 **Solution**: Added `popstate` event listener in `App.tsx` that parses the URL and updates app state accordingly.
+
+### "Failed to open scene" When Clicking Scene from Dashboard
+
+**Problem**: After creating a new scene and returning to the dashboard, clicking on the scene shows "Failed to open scene" error and the URL doesn't update (stays at `/workspace/{slug}/dashboard`).
+
+**Cause**: The scene loading logic was split between multiple places:
+1. `navigateToSceneAtom` pushed the URL and set atoms
+2. `handlePopState` caught the URL change but didn't load the scene data
+3. Child components (DashboardView, CollectionView) had their own `handleOpenScene` that called a parent callback
+4. The parent callback (`handleOpenScene` in App.tsx) tried to load scene data but used the wrong API
+
+**Solution** (implemented December 2025):
+1. **Centralized scene loading** in `App.tsx` via `loadSceneFromUrl()` function
+2. **Stored in ref** (`loadSceneFromUrlRef`) so `handlePopState` can access it
+3. **Updated `handlePopState`** to call `loadSceneFromUrlRef.current()` when navigating to scene URLs
+4. **Removed `onOpenScene` prop** from DashboardView, CollectionView, WorkspaceSidebar, WorkspaceMainContent
+5. **Components now use `navigateToSceneAtom` directly** - URL change triggers scene loading via popstate
+
+**Key code in App.tsx:**
+```typescript
+// Ref to hold the scene loading function
+const loadSceneFromUrlRef = useRef<((workspaceSlug: string, sceneId: string, options?: {...}) => Promise<boolean>) | null>(null);
+
+// In the main useEffect:
+const loadSceneFromUrl = async (workspaceSlug, sceneId, options) => {
+  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
+  // Update canvas, set state, start collaboration...
+};
+loadSceneFromUrlRef.current = loadSceneFromUrl;
+
+// In handlePopState:
+if (route.type === "scene" && currentSceneIdRef.current !== route.sceneId) {
+  await loadSceneFromUrlRef.current(route.workspaceSlug, route.sceneId, { roomKeyFromHash });
+}
+```
+
+**Why this pattern?**
+- `loadSceneFromUrl` is defined inside a `useEffect` because it needs access to `excalidrawAPI`, `collabAPI`, etc.
+- These APIs are not available during initial render, only after Excalidraw mounts
+- Using a ref allows `handlePopState` (in a different useEffect) to call the function after it's defined

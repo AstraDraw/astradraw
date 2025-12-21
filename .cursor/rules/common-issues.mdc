@@ -332,6 +332,45 @@ useEffect(() => {
 - `navigateToCollectionAtom` → `/workspace/{slug}/collection/{id}`
 - etc.
 
+### 12. "Failed to open scene" When Clicking Scene from Dashboard
+
+**Problem:** After creating a new scene and returning to the dashboard, clicking on the scene shows "Failed to open scene" error and the URL doesn't update.
+
+**Cause:** Scene loading logic was fragmented:
+1. `navigateToSceneAtom` pushed URL but didn't load scene data
+2. `handlePopState` caught URL changes but didn't call scene loading
+3. Child components had their own `handleOpenScene` that called parent callbacks
+4. The parent callback used wrong API (`getSceneData` instead of `loadWorkspaceScene`)
+
+**Solution (December 2025):**
+1. **Centralized scene loading** in `App.tsx` via `loadSceneFromUrl()` function
+2. **Stored in ref** so `handlePopState` can call it
+3. **Removed `onOpenScene` prop** from child components
+4. **Components use `navigateToSceneAtom` directly**
+
+```typescript
+// In DashboardView, CollectionView, WorkspaceSidebar:
+const navigateToScene = useSetAtom(navigateToSceneAtom);
+const currentWorkspaceSlug = useAtomValue(currentWorkspaceSlugAtom);
+
+const handleOpenScene = useCallback(
+  (scene: WorkspaceScene) => {
+    if (currentWorkspaceSlug) {
+      navigateToScene({
+        workspaceSlug: currentWorkspaceSlug,
+        sceneId: scene.id,
+        title: scene.title,
+      });
+    }
+  },
+  [navigateToScene, currentWorkspaceSlug],
+);
+```
+
+**Key insight:** The URL is the single source of truth. Clicking a scene pushes a URL, which triggers `popstate`, which loads the scene. This ensures browser navigation works correctly.
+
+**See:** `/docs/URL_ROUTING.md` for full documentation.
+
 ## Backend Issues
 
 ### 1. Build Fails with "Cannot find module '../auth/jwt-auth.guard'"

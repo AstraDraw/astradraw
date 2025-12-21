@@ -966,9 +966,15 @@ const WorkspaceSceneShare = ({
 
 **File:** `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx`
 
+> **⚠️ OUTDATED (December 2025):** This pattern has been replaced with centralized scene loading.
+> Scene loading is now handled in `App.tsx` via `loadSceneFromUrl()` function.
+> Components use `navigateToSceneAtom` instead of loading scenes directly.
+> See `/docs/URL_ROUTING.md` for the current implementation.
+
 When opening a scene, update the URL:
 
 ```typescript
+// OLD PATTERN - DO NOT USE
 const handleOpenScene = useCallback(async (scene: WorkspaceScene) => {
   // Load scene data
   const sceneData = await getSceneData(scene.id);
@@ -1001,6 +1007,23 @@ const handleOpenScene = useCallback(async (scene: WorkspaceScene) => {
     }
   }
 }, [excalidrawAPI, currentWorkspace, navigateToCanvas, collabAPI]);
+
+// NEW PATTERN (December 2025) - Use this instead:
+const navigateToScene = useSetAtom(navigateToSceneAtom);
+const currentWorkspaceSlug = useAtomValue(currentWorkspaceSlugAtom);
+
+const handleOpenScene = useCallback(
+  (scene: WorkspaceScene) => {
+    if (currentWorkspaceSlug) {
+      navigateToScene({
+        workspaceSlug: currentWorkspaceSlug,
+        sceneId: scene.id,
+        title: scene.title,
+      });
+    }
+  },
+  [navigateToScene, currentWorkspaceSlug],
+);
 ```
 
 ---
