@@ -140,7 +140,48 @@ useEffect(() => {
 - "Just now" → "Только что"
 - Use `{{count}}` for pluralization: "{{count}} мин. назад"
 
-### 8. 🚨 CRITICAL: Infinite Loop in useEffect (API Polling Loop)
+### 8. Data Not Updating Across Components (Cross-Component State Sync)
+
+**Problem:** Data created/updated in one component (e.g., sidebar) doesn't appear in another component (e.g., TeamsCollectionsPage) without a page refresh.
+
+**Cause:** Multiple components have their own local state and fetch data independently. When one component modifies data, others don't know about it.
+
+**Solution:** Use Jotai refresh trigger atoms for cross-component communication:
+
+```typescript
+// In settingsState.ts - already defined
+export const collectionsRefreshAtom = atom(0);
+export const triggerCollectionsRefreshAtom = atom(null, (get, set) => {
+  set(collectionsRefreshAtom, get(collectionsRefreshAtom) + 1);
+});
+
+// In component that modifies data (e.g., sidebar)
+const triggerCollectionsRefresh = useSetAtom(triggerCollectionsRefreshAtom);
+
+const handleCreateCollection = async () => {
+  await createCollection(...);
+  setLocalCollections(prev => [...prev, newCollection]);
+  triggerCollectionsRefresh(); // Notify other components
+};
+
+// In component that displays data (e.g., TeamsCollectionsPage)
+const collectionsRefresh = useAtomValue(collectionsRefreshAtom);
+
+useEffect(() => {
+  loadData();
+}, [loadData, collectionsRefresh]); // Re-fetch when refresh is triggered
+```
+
+**Available refresh atoms:**
+- `collectionsRefreshAtom` / `triggerCollectionsRefreshAtom` - For collection changes
+- `scenesRefreshAtom` / `triggerScenesRefreshAtom` - For scene changes
+
+**When to use:**
+- After creating, updating, or deleting collections from sidebar
+- After creating, renaming, duplicating, or deleting scenes
+- When data is modified in one component but displayed in another
+
+### 9. 🚨 CRITICAL: Infinite Loop in useEffect (API Polling Loop)
 
 **Problem:** The app makes hundreds of API requests per second, causing performance issues and server overload.
 
@@ -289,7 +330,46 @@ docker compose up -d
 docker compose logs -f api
 ```
 
-### 2. Git Detects Subfolders as Embedded Repos
+### 2. 🚨 CRITICAL: Code Changes Not Being Applied (Docker Build Cache)
+
+**Problem:** You make code changes, rebuild the Docker container, but the changes don't appear in the running application. Checkboxes don't work, new features are missing, etc.
+
+**Cause:** Docker caches build layers. If the `package.json` and other early-stage files haven't changed, Docker reuses cached layers including the `yarn build` step, which means your source code changes are ignored.
+
+**Symptoms:**
+- Code changes don't appear after `just up-dev` or `just fresh-dev`
+- You see `CACHED` next to build steps in Docker output:
+  ```
+  #38 [app build 12/12] RUN yarn build:app:docker
+  #38 CACHED
+  ```
+- Event handlers (onClick, onChange) don't fire
+- New components or features don't appear
+
+**Solution:** Force rebuild without cache:
+```bash
+# Rebuild a specific service without cache
+just rebuild app
+
+# Or rebuild all without cache
+just build-no-cache
+
+# Then restart
+just restart
+```
+
+**When to use `--no-cache`:**
+- After making TypeScript/React code changes that aren't appearing
+- When debugging "code should work but doesn't"
+- After switching git branches
+- When Docker shows `CACHED` for the build step
+
+**Prevention:**
+- Always check Docker build output for `CACHED` on the build step
+- If you see `CACHED` on the `yarn build` step, your changes weren't included
+- Use `just rebuild app` instead of `just up-dev` when actively developing
+
+### 3. Git Detects Subfolders as Embedded Repos
 
 **Cause:** `frontend/`, `backend/`, `room-service/` have their own `.git` folders.
 

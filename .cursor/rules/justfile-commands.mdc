@@ -43,6 +43,8 @@ just disable-dev   # Use production images (removes override file)
 | `just up-dev` | Start with local builds |
 | `just fresh-dev` | Fresh start with local builds |
 | `just build` | Build local images without starting |
+| `just build-no-cache` | Build without Docker cache (use when changes aren't applied) |
+| `just rebuild app` | Rebuild and restart a specific service without cache |
 | `just enable-dev` | Enable local build mode |
 | `just disable-dev` | Disable local build mode |
 

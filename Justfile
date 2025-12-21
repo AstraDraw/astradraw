@@ -28,6 +28,17 @@ build:
     @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
     cd deploy && docker compose build
 
+# Build local images without Docker cache (use when changes aren't being picked up)
+build-no-cache:
+    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
+    cd deploy && docker compose build --no-cache
+
+# Build and restart a specific service without cache
+rebuild service:
+    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
+    cd deploy && docker compose build --no-cache {{service}}
+    cd deploy && docker compose up -d {{service}}
+
 # Stop all services
 down:
     cd deploy && docker compose down

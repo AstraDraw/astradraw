@@ -61,6 +61,35 @@ export function getEnv(): ImportMetaEnv {
 
 The `docker-entrypoint.sh` creates `/usr/share/nginx/html/env-config.js` with `window.__ENV__` and injects it into `index.html`.
 
+**State Management (Jotai):**
+
+The frontend uses Jotai atoms for global state management. Key patterns:
+
+1. **Navigation atoms** (`settingsState.ts`): Control app mode (canvas/dashboard), dashboard views, and active collection.
+
+2. **Refresh trigger atoms**: Allow cross-component communication for data synchronization:
+   ```typescript
+   // When a collection is created/updated/deleted in one component,
+   // other components can subscribe to refresh their data
+   export const collectionsRefreshAtom = atom(0);
+   export const triggerCollectionsRefreshAtom = atom(null, (get, set) => {
+     set(collectionsRefreshAtom, get(collectionsRefreshAtom) + 1);
+   });
+   
+   // Same pattern for scenes
+   export const scenesRefreshAtom = atom(0);
+   export const triggerScenesRefreshAtom = atom(null, (get, set) => {
+     set(scenesRefreshAtom, get(scenesRefreshAtom) + 1);
+   });
+   ```
+
+3. **Usage pattern**:
+   - Component A creates/updates data → calls `triggerCollectionsRefresh()`
+   - Component B subscribes to `collectionsRefreshAtom` in its `useEffect` dependencies
+   - Component B re-fetches data when the atom value changes
+
+This pattern avoids prop drilling and allows any component to notify others about data changes.
+
 ### Backend (`backend/`)
 
 NestJS API for authentication, workspace management, and storage.
