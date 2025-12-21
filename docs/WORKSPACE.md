@@ -6,25 +6,71 @@ The Workspace feature allows users to save, organize, and access their drawings 
 
 - **User Authentication**: Sign in with SSO (OIDC) or local email/password
 - **Multi-Workspace Support**: Create and switch between multiple workspaces
-- **Scene Management**: Save, open, and delete scenes organized in collections
+- **Dashboard View**: Central hub showing recently modified and visited scenes
+- **Collection Views**: Browse scenes organized by collection in the main content area
+- **Scene Management**: Save, open, rename, duplicate, and delete scenes
 - **Collections**: Organize scenes into folders with team-based access control
 - **Teams & Roles**: Collaborate with team members using ADMIN/MEMBER/VIEWER roles
-- **Left Sidebar**: Quick access to collections and scenes
+- **Navigation Sidebar**: Quick access to dashboard, settings, and collections
 - **Auto-save**: Scene data is automatically saved with change detection
 
 > **See also:** [Roles, Teams & Collections](./ROLES_TEAMS_COLLECTIONS.md) for detailed access control documentation.
+
+## User Interface Modes
+
+AstraDraw has three main UI modes:
+
+### 1. Canvas Mode (Drawing)
+When you open a scene, you're in canvas mode:
+- Full drawing canvas with Excalidraw tools
+- Minimal sidebar navigation (BoardModeNav)
+- "Start Drawing" button to create new scenes
+- "Dashboard" link to return to dashboard
+
+### 2. Dashboard Mode
+The central hub for managing your scenes:
+- **Recently Modified by You**: Grid of scenes you've recently edited
+- **Recently Visited by You**: Grid of scenes you've recently viewed
+- **Team Members**: Shows active collaborators (placeholder)
+- Full navigation sidebar (FullModeNav) with:
+  - Workspace selector
+  - Quick search
+  - Dashboard, Workspace settings, Team members links
+  - Collections list
+  - User profile
+
+### 3. Collection Mode
+When you click a collection in the sidebar:
+- Collection header with icon and name
+- Sort options (Last created / Last modified)
+- Import scenes and Create scene buttons
+- Scene grid showing all scenes in that collection
+- Empty state with call-to-action when no scenes exist
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Frontend (Vite)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
-│  │ AuthProvider │  │WorkspaceSidebar│  │   ExcalidrawWrapper  │ │
-│  └──────────────┘  └──────────────┘  └───────────────────────┘ │
-│                    ┌──────────────┐                             │
-│                    │SettingsLayout│  (Full-page settings)       │
-│                    └──────────────┘                             │
+│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │ AuthProvider │  │ WorkspaceSidebar │  │ ExcalidrawWrapper│  │
+│  └──────────────┘  │  ├─ BoardModeNav │  └──────────────────┘  │
+│                    │  └─ FullModeNav  │                         │
+│                    └──────────────────┘                         │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              WorkspaceMainContent (Router)                │  │
+│  │  ┌─────────────────┐  ┌──────────────────────────────┐   │  │
+│  │  │  DashboardView  │  │      CollectionView          │   │  │
+│  │  │  - Recently     │  │  - Collection header         │   │  │
+│  │  │    modified     │  │  - Sort options              │   │  │
+│  │  │  - Recently     │  │  - Scene grid                │   │  │
+│  │  │    visited      │  │  - Empty state               │   │  │
+│  │  └─────────────────┘  └──────────────────────────────┘   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────┐  ┌──────────────────────────────────┐   │
+│  │  SettingsLayout  │  │        SceneCardGrid            │   │
+│  │  (Full-page)     │  │  (Reusable scene display)       │   │
+│  └──────────────────┘  └──────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
