@@ -236,6 +236,20 @@ git-pull:
     cd room-service && git pull origin main
 
 # ============================================
+# API TESTING
+# ============================================
+
+# Run backend API tests (requires running services)
+test-api url="https://10.100.0.10":
+    chmod +x deploy/test-backend-api.sh
+    deploy/test-backend-api.sh {{url}}
+
+# Run API tests with custom super admin credentials
+test-api-full url="https://10.100.0.10" admin_email="admin@localhost" admin_pass="admin":
+    chmod +x deploy/test-backend-api.sh
+    SUPERADMIN_EMAIL={{admin_email}} SUPERADMIN_PASSWORD={{admin_pass}} deploy/test-backend-api.sh {{url}}
+
+# ============================================
 # SETUP
 # ============================================
 
