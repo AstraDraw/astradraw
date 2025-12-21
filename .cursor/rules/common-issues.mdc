@@ -41,19 +41,69 @@ alwaysApply: true
 }
 ```
 
-### 4. Auto-save Not Working
+### 4. Auto-save Status Stuck on "Unsaved Changes"
 
-**Solution:** Implement debounced save with change detection:
+**Problem:** The save status indicator shows "Unsaved changes" (or "Несохранённые изменения") even after data is successfully saved to the backend.
+
+**Root Cause:** Excalidraw's `onChange` callback fires continuously (~100+ times per second) for every render/state change, not just actual user edits. If you blindly set `hasUnsavedChanges=true` on every `onChange`, it immediately resets the status back to "pending" even after a successful save.
+
+**Solution:** Compare serialized scene data before marking as unsaved:
+
 ```typescript
-const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-const lastSavedDataRef = useRef<string>("");
+const lastSavedDataRef = useRef<string | null>(null);
 
-// Compare serialized data to detect changes
-const currentData = JSON.stringify(elements);
-if (currentData !== lastSavedDataRef.current) {
-  setHasUnsavedChanges(true);
+// In onChange callback:
+if (currentSceneId && !collabAPI?.isCollaborating()) {
+  const files = excalidrawAPI?.getFiles() || {};
+  const currentData = JSON.stringify({
+    type: "excalidraw",
+    version: 2,
+    source: window.location.href,
+    elements,
+    appState: {
+      viewBackgroundColor: appState.viewBackgroundColor,
+      gridSize: appState.gridSize,
+    },
+    files: files,
+  });
+  
+  // Only set unsaved if data ACTUALLY changed from last save
+  if (lastSavedDataRef.current !== currentData) {
+    setHasUnsavedChanges(true);
+  }
 }
+
+// In performSave, after successful save:
+lastSavedDataRef.current = dataString;
+setHasUnsavedChanges(false);
+setSaveStatus("saved");
 ```
+
+**Additional Fix - Initialize on Scene Load:**
+
+When loading an existing scene, initialize `lastSavedDataRef` with the loaded data to prevent false "unsaved" status:
+
+```typescript
+// After loading scene and calling excalidrawAPI.updateScene()
+const loadedSceneData = JSON.stringify({
+  type: "excalidraw",
+  version: 2,
+  source: window.location.href,
+  elements: sceneWithCollaborators.elements || [],
+  appState: {
+    viewBackgroundColor: sceneWithCollaborators.appState?.viewBackgroundColor,
+    gridSize: sceneWithCollaborators.appState?.gridSize,
+  },
+  files: sceneWithCollaborators.files || {},
+});
+lastSavedDataRef.current = loadedSceneData;
+setHasUnsavedChanges(false);
+setSaveStatus("saved");
+```
+
+**Key Insight:** The `onChange` callback is NOT a reliable indicator of user edits - it fires for ANY state change including internal Excalidraw updates. Always compare actual data to detect real changes.
+
+**See:** `/docs/AUTOSAVE.md` for complete implementation details.
 
 ### 5. Fonts Look Like Times New Roman in Dashboard/Workspace Components
 
