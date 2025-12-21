@@ -244,39 +244,49 @@ Within dashboard mode, different views are controlled by `dashboardViewAtom`:
 - `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Sidebar navigation
 - `frontend/excalidraw-app/components/Workspace/WorkspaceMainContent.tsx` - Dashboard content router
 
-### Scene Loading Architecture (Excalidraw Plus Pattern)
+### Scene Loading Architecture (CSS Hide/Show Pattern)
 
-**Dashboard-First Architecture:**
-- Authenticated users start in the **dashboard**, not the canvas
-- Canvas only renders when a **specific scene** is being loaded
-- Each scene has a **unique URL** that always loads that scene's data
-- Works like Room Service: URL = specific data
+> ⚠️ **CRITICAL:** Read `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` before modifying mode switching code!
 
-**Critical: initialStatePromiseRef Management**
+**CSS Hide/Show Pattern:**
+- Both Dashboard and Canvas are **always mounted**
+- CSS `display: none` toggles visibility (no unmount/remount)
+- Excalidraw state is preserved when switching modes
+- Scene data is loaded via `excalidrawAPI.updateScene()`
 
-The `initialStatePromiseRef` holds a promise that Excalidraw waits for on mount. It must be **reset for each scene**:
-
+**Why NOT conditional rendering:**
 ```typescript
-const loadSceneFromUrl = async (workspaceSlug, sceneId, options) => {
-  const { isInitialLoad = false } = options;
-  
-  // CRITICAL: Reset promise for new scene (not initial load)
-  if (!isInitialLoad) {
-    initialStatePromiseRef.current.promise =
-      resolvablePromise<ExcalidrawInitialDataState | null>();
-  }
-  
-  // Fetch scene data...
-  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
-  
-  // Resolve promise with scene data
-  initialStatePromiseRef.current.promise.resolve({
-    elements: sceneData.elements,
-    appState: sceneData.appState,
-    files: sceneData.files,
-  });
-};
+// ❌ WRONG - causes Excalidraw to unmount/remount, losing state
+if (appMode === "dashboard") {
+  return <Dashboard />;
+}
+return <Excalidraw />;
+
+// ✅ CORRECT - CSS Hide/Show, Excalidraw always mounted
+return (
+  <>
+    <div style={{ display: appMode === "dashboard" ? "block" : "none" }}>
+      <Dashboard />
+    </div>
+    <div 
+      style={{ display: appMode === "canvas" ? "block" : "none" }}
+      inert={appMode !== "canvas" ? true : undefined}
+    >
+      <Excalidraw 
+        handleKeyboardGlobally={appMode === "canvas"}
+        autoFocus={appMode === "canvas"}
+      />
+    </div>
+  </>
+);
 ```
+
+**Scene Loading Flow:**
+1. User clicks scene → `navigateToSceneAtom` pushes URL
+2. `handlePopState` sets `appMode("canvas")` (CSS shows the canvas)
+3. `loadSceneFromUrl()` fetches data
+4. `excalidrawAPI.updateScene()` loads data into already-mounted Excalidraw
+5. Scene appears with all drawings ✅
 
 **Race Condition Handling:**
 
@@ -295,23 +305,12 @@ const loadSceneFromUrl = async (workspaceSlug, sceneId) => {
     return;  // Another scene was requested, ignore this one
   }
   
-  // Apply scene data...
+  // Apply scene data via updateScene (Excalidraw is already mounted)
+  excalidrawAPI.updateScene({ elements, appState, files });
 };
 ```
 
-**Loading States:**
-
-```typescript
-const [isLoadingScene, setIsLoadingScene] = useState(false);
-const [sceneDataLoaded, setSceneDataLoaded] = useState(false);
-
-// Show spinner while loading
-if (appMode === "canvas" && isLoadingScene) {
-  return <LoadingSpinner />;
-}
-```
-
-**See:** `/docs/SCENE_NAVIGATION.md` for complete documentation.
+**See:** `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for complete documentation.
 
 ## Localization
 

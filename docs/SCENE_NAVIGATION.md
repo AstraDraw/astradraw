@@ -2,43 +2,53 @@
 
 ## Overview
 
-This document describes the scene navigation architecture in AstraDraw, implementing the "Excalidraw Plus pattern" where the dashboard is the main application and the canvas is loaded on-demand for specific scenes.
+This document describes the scene navigation architecture in AstraDraw, using the **CSS Hide/Show pattern** where both dashboard and canvas are always mounted, with CSS controlling visibility.
 
-> **Status:** Implementation complete, testing in progress (December 2025)
+> **Status:** Implementation complete (December 2025)  
+> **Critical Reference:** See `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for why this pattern is used
 
 ## Core Concept
 
-**Dashboard-First Architecture:**
-- When authenticated, users start in the **dashboard** (not the canvas)
-- The canvas only renders when a **specific scene** is being viewed
-- Each scene has a **unique URL** that always loads that scene's data
-- Navigation between scenes works like navigating between web pages
+**CSS Hide/Show Pattern:**
+- Both Dashboard and Canvas components are **always mounted**
+- CSS `display: none` toggles visibility based on `appMode`
+- Excalidraw **never unmounts**, preserving all state
+- Scene data is loaded via `excalidrawAPI.updateScene()`
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    AstraDraw Application                    │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│   Dashboard (Main Application)                              │
-│   ├── Collections list                                      │
-│   ├── Scene cards                                           │
-│   ├── Settings pages                                        │
-│   └── Profile                                               │
+│  ┌─────────────────────┐    ┌─────────────────────┐        │
+│  │  Dashboard Content  │    │     Excalidraw      │        │
+│  │  (always mounted)   │    │  (always mounted)   │        │
+│  │                     │    │                     │        │
+│  │  display: block ◄───┼────┼── Dashboard mode    │        │
+│  │  display: none  ◄───┼────┼── Canvas mode       │        │
+│  └─────────────────────┘    └─────────────────────┘        │
 │                                                             │
-│         ↓ Click scene / Create scene                        │
-│                                                             │
-│   Canvas (Loaded on demand)                                 │
-│   ├── Excalidraw component mounted                          │
-│   ├── Scene data fetched from backend                       │
-│   ├── Sidebar shows collection's scenes                     │
-│   └── URL reflects current scene                            │
-│                                                             │
+│  Both components stay in DOM - only visibility changes      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Why NOT Conditional Rendering
+
+The original implementation used conditional rendering, which caused **data loss**:
+
+```tsx
+// ❌ OLD BUGGY PATTERN - DO NOT USE
+if (appMode === "dashboard") {
+  return <Dashboard />;  // Excalidraw UNMOUNTS here!
+}
+return <Excalidraw />;   // Excalidraw REMOUNTS with stale data
+```
+
+When Excalidraw unmounts/remounts, all internal state is lost. See `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for the full explanation.
+
 ## URL Structure
 
-Each scene has a permanent, unique URL:
+Each view has a permanent, unique URL:
 
 | View | URL Pattern | Example |
 |------|-------------|---------|
@@ -50,44 +60,38 @@ Each scene has a permanent, unique URL:
 
 ## How Scene Loading Works
 
-### The Problem We Solved
-
-Previously, the Excalidraw canvas was always mounted in the background, and a single `initialStatePromiseRef` was created once and resolved once. This caused:
-
-1. **Race condition:** When navigating from dashboard to scene, the canvas would render with stale data before new scene data loaded
-2. **Data mixing:** Rapid scene switching could cause data from different scenes to mix
-3. **URL desync:** The URL wouldn't always reflect the actual scene being displayed
-
-### The Solution
+### Current Implementation (CSS Hide/Show)
 
 ```
-User clicks scene card (or navigates via URL)
+User clicks scene card
          │
          ▼
 ┌─────────────────────────────────────┐
-│  1. Set loading state               │
-│     isLoadingScene = true           │
-│     sceneDataLoaded = false         │
+│  1. navigateToSceneAtom called      │
+│     - Sets currentSceneIdAtom       │
+│     - Sets appModeAtom("canvas")    │
+│     - Pushes URL via navigateTo()   │
 └─────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│  2. Reset initialStatePromiseRef    │
-│     Create NEW promise              │
-│     (Old promise is abandoned)      │
+│  2. CSS shows canvas                │
+│     display: none → display: block  │
+│     (Excalidraw was already mounted)│
 └─────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│  3. Track request ID                │
+│  3. handlePopState fires            │
+│     - Parses URL                    │
+│     - Calls loadSceneFromUrl()      │
+└─────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  4. Track request ID                │
 │     currentLoadingSceneId = sceneId │
 │     (For race condition handling)   │
-└─────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│  4. Show loading spinner            │
-│     Canvas NOT rendered yet         │
 └─────────────────────────────────────┘
          │
          ▼
@@ -105,23 +109,27 @@ User clicks scene card (or navigates via URL)
          │
          ▼
 ┌─────────────────────────────────────┐
-│  7. Resolve promise with scene data │
-│     initialStatePromiseRef.resolve  │
+│  7. Update canvas via API           │
+│     excalidrawAPI.updateScene({     │
+│       elements, appState, files     │
+│     })                              │
 └─────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│  8. Update canvas                   │
-│     excalidrawAPI.updateScene()     │
-│     sceneDataLoaded = true          │
-└─────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│  9. Render Excalidraw               │
-│     Canvas shows correct scene      │
+│  8. Scene is displayed              │
+│     Canvas shows correct content ✅  │
 └─────────────────────────────────────┘
 ```
+
+### Key Difference from Old Pattern
+
+| Aspect | Old Pattern | CSS Hide/Show |
+|--------|-------------|---------------|
+| Excalidraw lifecycle | Unmounts on dashboard, remounts on canvas | Always mounted |
+| Scene loading | Reset `initialStatePromiseRef`, resolve with data | Call `updateScene()` directly |
+| State preservation | Lost on mode switch | Preserved |
+| Loading UI | Early return with spinner | Overlay on top of canvas |
 
 ### Race Condition Handling
 
@@ -138,26 +146,37 @@ Scene A data arrives → Check: "scene-a" !== "scene-b"
                        Result: IGNORED (stale request)
                        
 Scene B data arrives → Check: "scene-b" === "scene-b"
-                       Result: APPLIED (current request)
+                       Result: APPLIED via updateScene()
 ```
 
 ## Key Components
 
-### State Variables (App.tsx)
+### CSS Hide/Show Structure (App.tsx)
 
-```typescript
-// Loading states
-const [isLoadingScene, setIsLoadingScene] = useState(false);
-const [sceneDataLoaded, setSceneDataLoaded] = useState(false);
-
-// Scene tracking
-const [currentSceneId, setCurrentSceneId] = useState<string | null>(null);
-const currentSceneIdRef = useRef<string | null>(null);
-
-// Initial data promise (reset for each scene)
-const initialStatePromiseRef = useRef<{
-  promise: ResolvablePromise<ExcalidrawInitialDataState | null>;
-}>({ promise: null! });
+```tsx
+return (
+  <>
+    {/* Dashboard - always mounted, hidden when in canvas mode */}
+    <div 
+      style={{ display: appMode === "dashboard" ? "block" : "none" }}
+      aria-hidden={appMode !== "dashboard"}
+    >
+      <WorkspaceMainContent />
+    </div>
+    
+    {/* Canvas - ALWAYS MOUNTED, hidden when in dashboard mode */}
+    <div 
+      style={{ display: appMode === "canvas" ? "block" : "none" }}
+      aria-hidden={appMode !== "canvas"}
+      inert={appMode !== "canvas" ? true : undefined}
+    >
+      <Excalidraw 
+        handleKeyboardGlobally={appMode === "canvas"}
+        autoFocus={appMode === "canvas"}
+      />
+    </div>
+  </>
+);
 ```
 
 ### Navigation Atoms (settingsState.ts)
@@ -167,7 +186,7 @@ const initialStatePromiseRef = useRef<{
 export const navigateToDashboardAtom = atom(null, (get, set) => {
   set(appModeAtom, "dashboard");
   set(dashboardViewAtom, "home");
-  set(currentSceneIdAtom, null);        // Clear scene
+  set(currentSceneIdAtom, null);
   set(currentSceneTitleAtom, "Untitled");
   // Push URL...
 });
@@ -181,26 +200,28 @@ export const navigateToSceneAtom = atom(null, (get, set, params) => {
 });
 ```
 
-### Conditional Rendering (App.tsx)
+### Scene Loading (App.tsx)
 
 ```typescript
-// Show loading spinner while scene is being fetched
-const shouldShowSceneLoading =
-  appMode === "canvas" &&
-  !isLegacyMode &&
-  (isLoadingScene || (!sceneDataLoaded && currentSceneId));
-
-if (shouldShowSceneLoading) {
-  return <LoadingSpinner />;
-}
-
-// Show dashboard when in dashboard mode
-if (appMode === "dashboard" && !isLegacyMode) {
-  return <Dashboard />;
-}
-
-// Show canvas only when scene data is loaded
-return <Excalidraw initialData={initialStatePromiseRef.current.promise} />;
+const loadSceneFromUrl = async (workspaceSlug: string, sceneId: string) => {
+  // Track current request for race condition handling
+  currentLoadingSceneId = sceneId;
+  
+  // Fetch scene data
+  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
+  
+  // Ignore stale requests
+  if (currentLoadingSceneId !== sceneId) {
+    return;
+  }
+  
+  // Update already-mounted Excalidraw via API
+  excalidrawAPI.updateScene({
+    elements: loaded.data.elements || [],
+    appState: loaded.data.appState || {},
+    files: loaded.data.files || {},
+  });
+};
 ```
 
 ## Scene Deletion Behavior
@@ -217,31 +238,7 @@ When a scene is deleted:
 
 **Critical: Using `replaceUrl` instead of `navigateTo`**
 
-When deleting a scene, we use `replaceUrl()` instead of `navigateTo()` (which uses `pushState`). This **replaces** the deleted scene URL in browser history rather than adding a new entry. This prevents the browser Back button from returning to the deleted scene URL.
-
-```typescript
-const handleDeleteScene = async (sceneId: string) => {
-  await deleteSceneApi(sceneId);
-  const remainingScenes = scenes.filter((s) => s.id !== sceneId);
-  
-  if (currentSceneId === sceneId) {
-    if (remainingScenes.length > 0) {
-      // Use replaceUrl to replace deleted scene URL in history
-      setCurrentSceneId(remainingScenes[0].id);
-      setCurrentSceneTitle(remainingScenes[0].title);
-      replaceUrl(buildSceneUrl(workspaceSlug, remainingScenes[0].id));
-    } else {
-      // Use replaceUrl to replace deleted scene URL with dashboard
-      setAppMode("dashboard");
-      setDashboardView("home");
-      setCurrentSceneId(null);
-      replaceUrl(buildDashboardUrl(workspaceSlug));
-    }
-  }
-};
-```
-
-**Same for error handling:** When a scene fails to load (e.g., deleted scene accessed via Back button), we also use `replaceUrl` to redirect to dashboard without leaving the invalid URL in history.
+When deleting a scene, we use `replaceUrl()` to **replace** the deleted scene URL in browser history rather than adding a new entry. This prevents the browser Back button from returning to the deleted scene URL.
 
 ## Anonymous Mode
 
@@ -252,37 +249,16 @@ For unauthenticated users, the original Excalidraw behavior is preserved:
 - Data stored in localStorage
 - No backend scene management
 
-```typescript
-const [isLegacyMode, setIsLegacyMode] = useState<boolean>(() => {
-  const params = new URLSearchParams(window.location.search);
-  return (
-    params.get("mode") === "anonymous" ||
-    !!window.location.hash.match(LEGACY_ROOM_PATTERN)
-  );
-});
-```
-
 ## Files Involved
 
 | File | Purpose |
 |------|---------|
-| `App.tsx` | Main component, scene loading logic, conditional rendering |
+| `App.tsx` | CSS Hide/Show structure, scene loading via `updateScene()` |
 | `settingsState.ts` | Navigation atoms, app mode state |
 | `router.ts` | URL parsing and building |
 | `WorkspaceSidebar.tsx` | Scene list, deletion with fallback |
 | `workspaceSceneLoader.ts` | Backend API for loading scene data |
-
-## Comparison with Room Service
-
-| Aspect | Room Service (Collaboration) | Workspace Scenes |
-|--------|------------------------------|------------------|
-| URL | `/#room={roomId},{roomKey}` | `/workspace/{slug}/scene/{id}` |
-| Data source | WebSocket real-time sync | Backend API fetch |
-| State | Shared between collaborators | Personal (unless collaborating) |
-| Persistence | Room server | PostgreSQL + MinIO |
-| Switching | Connect to different room | Fetch different scene data |
-
-Both work the same conceptually: **URL = specific data**. Navigating to a URL loads that specific content.
+| `index.scss` | CSS for canvas container and pointer-events blocking |
 
 ## Testing Checklist
 
@@ -297,16 +273,11 @@ Both work the same conceptually: **URL = specific data**. Navigating to a URL lo
 - [ ] Anonymous mode still works
 - [ ] Creating new scene works correctly
 - [ ] URL always reflects current view
-
-## Known Issues / Future Improvements
-
-1. **Initial load optimization:** Could preload scene data while showing loading spinner
-2. **Scene caching:** Could cache recently viewed scenes to speed up back navigation
-3. **Optimistic UI:** Could show scene card thumbnail while full data loads
+- [ ] Keyboard shortcuts only work when canvas is visible
+- [ ] Dashboard inputs don't trigger canvas shortcuts
 
 ## Related Documentation
 
+- [CRITICAL: CSS Hide/Show Fix](./CRITICAL_CSS_HIDE_SHOW_FIX.md) - Why this pattern is critical
 - [URL Routing](./URL_ROUTING.md) - Full URL routing documentation
-- [Workspace](./WORKSPACE.md) - Workspace and scene management
-- [Architecture](./ARCHITECTURE.md) - Overall system architecture
-
+- [Scene Navigation Tests](./SCENE_NAVIGATION_TESTS.md) - Test scenarios

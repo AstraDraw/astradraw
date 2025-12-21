@@ -322,32 +322,40 @@ onWorkspaceChange={(workspace, privateColId) => {
 
 ### 11. Scene Data Loss When Navigating Between Dashboard and Canvas
 
-**Problem:** Scene data is lost or reset when navigating between dashboard and canvas views.
+> ✅ **SOLVED** - See `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for the complete solution.
 
-**Causes:**
-1. **localStorage sync overwrites backend data** - The `syncData` function syncs from localStorage on visibility change, overwriting workspace scene data
-2. **URL doesn't change** - Navigation only changes state, not URL, causing confusion on refresh
-3. **Excalidraw component re-initializes** - When `appMode` changes, the component may remount
+**Problem:** Scene data was lost or reset when navigating between dashboard and canvas views.
 
-**Solution (already implemented):**
+**Root Cause:** The original code used conditional rendering (`if (appMode === "dashboard") return <Dashboard />`) which caused Excalidraw to unmount/remount when switching modes, losing all state.
 
-1. **localStorage sync guard** - Skip sync when working on a workspace scene:
+**Solution: CSS Hide/Show Pattern**
+
+Instead of conditional rendering, both Dashboard and Canvas are **always mounted** and CSS `display: none` toggles visibility:
+
 ```typescript
-const syncData = debounce(() => {
-  if (isTestEnv()) return;
-  
-  // Skip localStorage sync when working on a workspace scene
-  if (currentSceneIdRef.current) return;
-  
-  // ... rest of sync logic for anonymous mode only
-}, SYNC_BROWSER_TABS_TIMEOUT);
+// ✅ CORRECT - CSS Hide/Show (current implementation)
+return (
+  <>
+    <div style={{ display: appMode === "dashboard" ? "block" : "none" }}>
+      <WorkspaceMainContent />
+    </div>
+    <div 
+      style={{ display: appMode === "canvas" ? "block" : "none" }}
+      inert={appMode !== "canvas" ? true : undefined}
+    >
+      <Excalidraw />
+    </div>
+  </>
+);
 ```
 
-2. **URL-based navigation** - All navigation now updates URLs via `history.pushState()`
+**Key safeguards:**
+- `display: none` - Hides visually
+- `inert` attribute - Prevents all user interaction when hidden
+- `handleKeyboardGlobally={appMode === "canvas"}` - Disables keyboard when hidden
+- `body.excalidraw-disabled` class - Additional CSS hook
 
-3. **Jotai atom sync** - Scene state is synced to Jotai atoms (`currentSceneIdAtom`, `currentWorkspaceSlugAtom`)
-
-**See:** `/docs/URL_ROUTING.md` for full URL routing documentation.
+**See:** `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for complete documentation.
 
 ### 12. Browser Back/Forward Buttons Not Working
 
@@ -433,74 +441,26 @@ if (initialRoute.type !== "scene") {
 
 **See:** `/docs/URL_ROUTING.md` for full documentation.
 
-### 14. 🚨 CRITICAL: Scene Data Reset When Switching Scenes (initialStatePromiseRef)
+### 14. ✅ SOLVED: Scene Data Reset When Switching Scenes
 
-**Problem:** When navigating from dashboard to a scene, or between scenes, the canvas shows empty or stale data from a previous scene.
+> ✅ **SOLVED** by CSS Hide/Show Pattern - Excalidraw no longer unmounts/remounts.
 
-**Root Cause:** The `initialStatePromiseRef` is created once when `App.tsx` mounts and resolved once during initial load. When the user navigates to a different scene:
-1. Excalidraw unmounts (dashboard mode)
-2. User clicks a scene
-3. Excalidraw remounts
-4. Excalidraw receives `initialData={initialStatePromiseRef.current.promise}`
-5. But this promise was already resolved with OLD data from the first scene!
+**Original Problem:** When navigating from dashboard to a scene, the canvas showed empty or stale data.
 
-**The Fix (Excalidraw Plus Pattern):**
+**Root Cause:** Conditional rendering caused Excalidraw to unmount when switching to dashboard, losing all state.
 
-1. **Reset the promise for each scene load:**
-```typescript
-const loadSceneFromUrl = async (workspaceSlug, sceneId, options) => {
-  const { isInitialLoad = false } = options;
-  
-  // CRITICAL: Reset the promise for new scene
-  if (!isInitialLoad) {
-    initialStatePromiseRef.current.promise =
-      resolvablePromise<ExcalidrawInitialDataState | null>();
-  }
-  
-  // ... fetch scene data ...
-  
-  // Resolve with new scene data
-  initialStatePromiseRef.current.promise.resolve({
-    elements: sceneData.elements,
-    appState: sceneData.appState,
-    files: sceneData.files,
-  });
-};
-```
+**Solution:** CSS Hide/Show Pattern (see issue #11 above and `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md`).
 
-2. **Handle race conditions (rapid scene switching):**
-```typescript
-let currentLoadingSceneId: string | null = null;
+Since Excalidraw is **always mounted**, we simply use `excalidrawAPI.updateScene()` to load new scene data - no need to reset `initialStatePromiseRef` for subsequent loads.
 
-const loadSceneFromUrl = async (workspaceSlug, sceneId) => {
-  currentLoadingSceneId = sceneId;  // Track current request
-  
-  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
-  
-  // If user clicked another scene while loading, ignore this result
-  if (currentLoadingSceneId !== sceneId) {
-    console.log(`Scene ${sceneId} load completed but is stale, ignoring`);
-    return;
-  }
-  
-  // Apply scene data...
-};
-```
+**Current scene loading flow:**
+1. User clicks scene in dashboard/sidebar
+2. `navigateToSceneAtom` pushes URL
+3. `handlePopState` sets `appMode("canvas")` (shows the already-mounted Excalidraw)
+4. `loadSceneFromUrl()` fetches data and calls `excalidrawAPI.updateScene()`
+5. Scene data appears immediately ✅
 
-3. **Show loading state while fetching:**
-```typescript
-const [isLoadingScene, setIsLoadingScene] = useState(false);
-const [sceneDataLoaded, setSceneDataLoaded] = useState(false);
-
-// In render:
-if (appMode === "canvas" && isLoadingScene) {
-  return <LoadingSpinner />;
-}
-```
-
-**Key Principle:** Each scene URL should load fresh data, like Room Service collaboration rooms. The canvas is a "page" that loads/unloads, not a persistent background component.
-
-**See:** `/docs/SCENE_NAVIGATION.md` for complete documentation.
+**Race condition handling** is still important for rapid scene switching - track `currentLoadingSceneId` and ignore stale results.
 
 ### 15. Deleted Scene URL Stays in Browser History (Back Button Issue)
 

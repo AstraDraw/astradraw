@@ -11,7 +11,8 @@ This document describes the URL routing architecture for AstraDraw. Proper URL r
 - Clean separation between canvas and dashboard modes
 - Scene data persistence when navigating between views
 
-> **Related:** See [Scene Navigation](./SCENE_NAVIGATION.md) for detailed documentation on how scene loading works, including race condition handling and the "Excalidraw Plus pattern" implementation.
+> **Related:** See [Scene Navigation](./SCENE_NAVIGATION.md) for scene loading architecture  
+> **Critical:** See [CSS Hide/Show Fix](./CRITICAL_CSS_HIDE_SHOW_FIX.md) for why both dashboard and canvas are always mounted
 
 ## URL Structure
 
@@ -293,84 +294,42 @@ All routes are handled by the React app since nginx serves `index.html` for any 
 
 ### Scene Data Loss
 
-**Problem**: Scene data is lost when navigating between dashboard and canvas.
+> ✅ **SOLVED** - See `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md`
 
-**Causes**:
-1. localStorage sync overwrites backend data
-2. URL doesn't change, causing state confusion
-3. Excalidraw component re-initializes
+**Problem**: Scene data was lost when navigating between dashboard and canvas.
 
-**Solution**: 
-- Added localStorage sync guard for workspace scenes
-- All navigation now updates URLs
-- State is derived from URL on popstate
+**Root Cause**: Conditional rendering (`if (appMode === "dashboard") return <Dashboard />`) caused Excalidraw to unmount/remount, losing all state.
+
+**Solution**: CSS Hide/Show pattern - both dashboard and canvas are always mounted, CSS `display: none` toggles visibility. Excalidraw never unmounts.
 
 ### URL Not Updating
 
 **Problem**: URL stays the same when navigating between views.
 
-**Solution**: All navigation atoms now call `navigateTo()` which uses `history.pushState()` and dispatches a `popstate` event.
+**Solution**: All navigation atoms call `navigateTo()` which uses `history.pushState()` and dispatches a `popstate` event.
 
 ### Browser Back Not Working
 
 **Problem**: Browser back button doesn't navigate correctly.
 
-**Solution**: Added `popstate` event listener in `App.tsx` that parses the URL and updates app state accordingly.
+**Solution**: `popstate` event listener in `App.tsx` parses the URL and updates app state accordingly.
 
 ### "Failed to open scene" When Clicking Scene from Dashboard
 
-> ⚠️ **Work in Progress (December 2025)**: This fix is functional but needs further testing across all scenarios (collections, teams, different navigation paths). The approach is correct but edge cases may exist.
+> ✅ **SOLVED** - Fixed by CSS Hide/Show pattern and proper URL handling
 
-**Problem**: After creating a new scene and returning to the dashboard, clicking on the scene shows "Failed to open scene" error and the URL doesn't update (stays at `/workspace/{slug}/dashboard`).
+**Problem**: Clicking a scene from dashboard showed "Failed to open scene" error.
 
-**Root Causes Identified**:
-1. **Infinite loop bug**: `handleUrlRoute` called navigation atoms that pushed URLs, triggering `popstate`, which called `handleUrlRoute` again → stack overflow
-2. **Scene loading not triggered**: `handlePopState` didn't set `appMode` to canvas or call scene loading
-3. **Initial URL not handled**: Page load with dashboard URL showed canvas instead of dashboard
-4. Scene loading logic was fragmented across multiple components
+**Root Causes Were**:
+1. Excalidraw unmounting/remounting caused state loss
+2. `handleUrlRoute` called navigation atoms that pushed URLs → infinite loop
+3. Scene loading logic was fragmented
 
-**Current Fix** (December 2025):
+**Solution**:
+1. **CSS Hide/Show pattern** - Excalidraw stays mounted, no state loss
+2. **`handleUrlRoute` sets state directly** - no URL pushing to avoid loops
+3. **Centralized scene loading** via `loadSceneFromUrl()` using `excalidrawAPI.updateScene()`
 
-1. **`handleUrlRoute` now sets state directly** - no URL pushing to avoid infinite loops:
-```typescript
-case "dashboard":
-  setAppMode("dashboard");  // Direct state set, NOT navigateToDashboard()
-  setDashboardView("home");
-  break;
-```
-
-2. **`handlePopState` sets canvas mode before loading scenes**:
-```typescript
-if (route.type === "scene") {
-  setAppMode("canvas");  // Switch UI immediately
-  setCurrentWorkspaceSlugAtom(route.workspaceSlug);
-  if (loadSceneFromUrlRef.current) {
-    await loadSceneFromUrlRef.current(route.workspaceSlug, route.sceneId);
-  }
-}
-```
-
-3. **Initial URL handling on page load**:
-```typescript
-const initialRoute = parseUrl();
-if (initialRoute.type !== "scene") {
-  handleUrlRoute(initialRoute);  // Sets dashboard mode for dashboard URLs
-}
-```
-
-4. **Centralized scene loading** via `loadSceneFromUrl()` in `App.tsx`, stored in ref
-
-**Key Principle**: URL navigation should be one-way:
+**Key Principle**: URL navigation is one-way:
 - **User action** → Navigation atom → Push URL → Dispatch popstate
 - **Popstate handler** → Parse URL → Set state directly (NO URL push)
-
-**Testing Needed**:
-- [ ] Dashboard → Scene → Back button
-- [ ] Collection view → Scene → Back button
-- [ ] Private collection → Scene
-- [ ] Teams/Collections page navigation
-- [ ] Profile page navigation
-- [ ] Settings pages navigation
-- [ ] Direct URL access to all route types
-- [ ] Browser refresh on each route type
-- [ ] Creating new scenes from different contexts
