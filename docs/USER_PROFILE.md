@@ -8,6 +8,7 @@ The user profile feature allows authenticated users to:
 - View and edit their display name
 - Upload and manage their profile picture (avatar)
 - View their email address
+- View their role (Super Admin or User)
 - Sign out of the application
 
 ## Architecture
@@ -78,12 +79,13 @@ Get the current user's profile.
   "email": "user@example.com",
   "name": "John Doe",
   "avatarUrl": "data:image/jpeg;base64,/9j/4AAQ...",
+  "isSuperAdmin": false,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-15T12:30:00.000Z"
 }
 ```
 
-**Note:** The `passwordHash` field is never included in the response.
+**Note:** The `passwordHash` field is never included in the response. The `isSuperAdmin` field indicates whether the user has super admin privileges (set via `SUPERADMIN_EMAILS` environment variable).
 
 ### PUT /api/v2/users/me
 
@@ -159,11 +161,39 @@ A user can be linked to both local auth and SSO:
 
 ## Frontend Components
 
-### UserProfileDialog
+### ProfilePage
+
+Location: `frontend/excalidraw-app/components/Settings/ProfilePage.tsx`
+
+A full-page profile view with a two-column layout (inspired by Excalidraw+):
+
+1. **Profile Picture Section**
+   - Current avatar or initials placeholder (centered)
+   - "Edit" link to upload new image
+
+2. **Profile Name Section**
+   - Display name with person icon
+   - Edit button for inline editing
+   - Description text explaining the field
+
+3. **Account Email Section**
+   - Read-only email display with envelope icon
+   - Description text
+
+4. **Role Section**
+   - Shield icon with role badge
+   - "Super Admin" (purple badge) or "User" (gray badge)
+   - Description explaining role and permissions
+
+5. **Sign Out Section**
+   - Full-width purple button
+   - Description text
+
+### UserProfileDialog (Legacy)
 
 Location: `frontend/excalidraw-app/components/Workspace/UserProfileDialog.tsx`
 
-A modal dialog that displays:
+A modal dialog version of the profile (used in some contexts):
 1. **Avatar Section**
    - Current avatar or initials placeholder
    - Click to upload new image
@@ -323,11 +353,14 @@ The profile dialog fully supports dark mode through CSS variables:
 - `src/users/users.controller.ts` - API endpoints
 - `src/users/users.service.ts` - Business logic
 - `src/users/users.module.ts` - Module definition
+- `src/auth/auth.controller.ts` - Auth endpoints (returns `isSuperAdmin`)
 - `prisma/schema.prisma` - Database schema
 
 ### Frontend (`frontend/`)
-- `excalidraw-app/components/Workspace/UserProfileDialog.tsx` - Dialog component
-- `excalidraw-app/components/Workspace/UserProfileDialog.scss` - Styles
+- `excalidraw-app/components/Settings/ProfilePage.tsx` - Profile page component
+- `excalidraw-app/components/Settings/ProfilePage.scss` - Profile page styles
+- `excalidraw-app/components/Workspace/UserProfileDialog.tsx` - Dialog component (legacy)
+- `excalidraw-app/components/Workspace/UserProfileDialog.scss` - Dialog styles
 - `excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Integration
 - `excalidraw-app/auth/workspaceApi.ts` - API functions
 - `packages/excalidraw/locales/*.json` - Translations
