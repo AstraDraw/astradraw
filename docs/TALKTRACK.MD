@@ -152,7 +152,88 @@ CREATE TABLE "talktrack_recordings" (
 - Frame rate: 30 fps
 - Bitrate: 2.5 Mbps
 
+## Important Implementation Details
+
+### Singleton Pattern & Component Lifecycle
+
+The `TalktrackRecorder` uses a **singleton pattern** to maintain a single recorder instance across the app. This is important to understand when working with the dashboard/canvas mode switching:
+
+```typescript
+// TalktrackRecorder.ts
+let recorderInstance: TalktrackRecorder | null = null;
+
+export function getTalktrackRecorder(): TalktrackRecorder {
+  if (!recorderInstance) {
+    recorderInstance = new TalktrackRecorder();
+  }
+  return recorderInstance;
+}
+
+export function disposeTalktrackRecorder(): void {
+  if (recorderInstance) {
+    recorderInstance.dispose();
+    recorderInstance = null;  // CRITICAL: Reset the singleton reference
+  }
+}
+```
+
+**Why this matters:** When switching between dashboard mode and canvas mode (e.g., switching collections), the `TalktrackManager` component unmounts. If `dispose()` is called without resetting the singleton reference, the next mount will return a broken instance with null DOM elements.
+
+**Rule:** Always use `disposeTalktrackRecorder()` instead of calling `dispose()` directly on the instance.
+
+### Workspace Sidebar & Canvas Size
+
+The recording captures the Excalidraw canvas at its current size. If the **left workspace sidebar** is open when recording starts, the canvas is narrower, which causes **black bars** on the sides of the recorded video.
+
+**Solution implemented:** When recording starts, the `TalktrackManager`:
+1. Closes the workspace sidebar via `onCloseWorkspaceSidebar` callback
+2. Waits 300ms for the sidebar animation to complete
+3. Then captures the canvas dimensions for the compositor
+
+```typescript
+// TalktrackManager.tsx - startRecording()
+onCloseWorkspaceSidebar?.();
+await new Promise((resolve) => setTimeout(resolve, 300));
+await recorderRef.current.prepare({ ... });
+```
+
+**Props chain:** `App.tsx` → `AppSidebar` → `TalktrackManager`
+
+### Canvas Compositing
+
+The compositor canvas handles several concerns:
+
+1. **Background fill** - Canvas is filled with white before drawing to prevent transparent areas showing as black in the video
+2. **Resolution scaling** - Uses CSS display size (via `getBoundingClientRect()`) capped at 1080p to avoid huge file sizes
+3. **High-DPI handling** - Source canvas may have `devicePixelRatio` scaling; compositor handles this via proper `drawImage()` parameters
+
+```typescript
+// Fill with white background first
+ctx.fillStyle = "#ffffff";
+ctx.fillRect(0, 0, width, height);
+
+// Draw with proper source/destination dimensions
+ctx.drawImage(staticCanvas, 0, 0, srcWidth, srcHeight, 0, 0, width, height);
+```
+
 ## Troubleshooting
+
+### "Compositor canvas not initialized" error
+
+**Cause:** The `TalktrackRecorder` singleton was disposed but not reset. This happens when:
+1. User opens a scene → `TalktrackManager` mounts → recorder created
+2. User goes to dashboard → `TalktrackManager` unmounts → `dispose()` called
+3. User opens another scene → `getTalktrackRecorder()` returns broken instance
+
+**Solution:** Ensure `disposeTalktrackRecorder()` is used in the cleanup effect, not `recorderRef.current?.dispose()`.
+
+### Black bars on sides of recording
+
+**Cause:** The workspace sidebar (left) was open when recording started, making the canvas narrower.
+
+**Solution:** The sidebar should auto-close when recording starts. If it doesn't:
+1. Check that `onCloseWorkspaceSidebar` prop is passed through `App.tsx` → `AppSidebar` → `TalktrackManager`
+2. Try a hard refresh (Cmd+Shift+R / Ctrl+Shift+R) to clear cached JavaScript
 
 ### "Kinescope not configured" message
 
@@ -175,9 +256,65 @@ Make sure both `KINESCOPE_API_KEY` and `KINESCOPE_PROJECT_ID` are set in your `.
 - The recording quality depends on your canvas size and content complexity
 - Camera PIP is rendered at 15% of canvas width by default
 - For best results, avoid rapid panning/zooming during recording
+- Maximum resolution is capped at 1920x1080 to keep file sizes reasonable
 
 ## Dependencies
 
 - **Browser APIs**: `MediaRecorder`, `getUserMedia`, `captureStream`, `AudioContext`
 - **External**: Kinescope API for video hosting
 - **NPM**: `@kinescope/player-iframe-api-loader` (optional, for enhanced playback control)
+
+---
+
+## Future Improvements
+
+### Per-Workspace/Collection Kinescope Project IDs
+
+Currently, all Talktrack recordings are uploaded to a single Kinescope project defined by the global `KINESCOPE_PROJECT_ID` environment variable. This works for single-tenant deployments but doesn't scale for multi-tenant scenarios.
+
+**Planned implementation:**
+
+1. **Database schema changes:**
+   ```prisma
+   model Workspace {
+     // ... existing fields
+     kinescopeProjectId  String?  // Optional override for this workspace
+   }
+   
+   model Collection {
+     // ... existing fields
+     kinescopeProjectId  String?  // Optional override for this collection
+   }
+   ```
+
+2. **Project ID resolution order:**
+   - Collection's `kinescopeProjectId` (if set)
+   - Workspace's `kinescopeProjectId` (if set)
+   - Global `KINESCOPE_PROJECT_ID` from environment (fallback)
+
+3. **Backend changes:**
+   - `TalktrackService` should resolve the project ID based on the scene's collection/workspace
+   - API endpoint for uploading should accept or look up the correct project ID
+
+4. **Frontend changes:**
+   - `kinescopeApi.ts` should receive the project ID from the backend rather than reading from `window.__ENV__`
+   - Or: fetch the project ID from a new API endpoint before upload
+
+5. **Admin UI:**
+   - Add Kinescope Project ID field to Workspace Settings page
+   - Optionally add to Collection settings (for fine-grained control)
+
+**Use cases:**
+- Different teams/departments have separate Kinescope projects for billing
+- Separate projects for different clients in agency setups
+- Compliance requirements for data isolation
+
+---
+
+## Changelog
+
+| Date | Changes |
+|------|---------|
+| 2025-12-21 | Fixed singleton pattern to properly reset on component unmount (prevents "Compositor canvas not initialized" error) |
+| 2025-12-21 | Added auto-close of workspace sidebar before recording to prevent black bars |
+| 2025-12-21 | Improved canvas compositing: white background fill, proper resolution scaling |
