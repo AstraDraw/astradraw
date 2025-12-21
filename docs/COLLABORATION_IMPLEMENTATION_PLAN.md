@@ -96,7 +96,7 @@ Run `just test-api` to verify the backend:
 ### Next Steps
 
 1. ✅ **Frontend Implementation** - COMPLETE (December 21, 2025)
-2. **Room Service** - May need updates for permission-aware room joins (Part C)
+2. ✅ **Room Service** - No code changes required; backend-issued roomId/roomKey already gate access (see Part B)
 
 ---
 
@@ -641,23 +641,33 @@ None - all functionality implemented and tested locally.
 > Can be done in parallel with Part A or immediately after.
 > Only needed if we add permission checks at the WebSocket layer.
 
+**Status (Dec 21, 2025):** No room-service code changes required. Backend already enforces permissions when issuing `roomId`/`roomKey`; room service remains a stateless relay.
+
 ---
 
 ## Phase 2.5: Room Service Permission Awareness (Optional)
 
 The current room service is stateless - it just relays messages between clients. 
 
-**Option A: Keep room service stateless (Recommended for now)**
-- Permission checks happen at the backend API level
-- Room service continues to relay messages without auth
-- Simpler implementation, less risk
+**Option A: Keep room service stateless (Chosen for v1)**
+- Permission checks happen at the backend API level (`SceneAccessService`, collaboration endpoints)
+- Room service continues to relay messages without auth; possession of `roomId` + `roomKey` is required to meaningfully participate
+- Simpler implementation, less risk; aligns with existing Excalidraw behavior
 
 **Option B: Add permission checks to room service**
 - Room service validates JWT on connection
 - Checks with backend API if user can join room
 - More secure but more complex
 
-For initial implementation, we recommend **Option A**. The backend's `startCollaboration` and `getCollaborationInfo` endpoints already enforce permissions - users can only get room credentials if they have access.
+For initial implementation, we **keep Option A**. The backend's `startCollaboration` and `getCollaborationInfo` endpoints already enforce permissions—users can only obtain room credentials if they have access.
+
+**Behavior when permissions change mid-session**
+- A user who already joined a room stays connected for that session.
+- On reload/reconnect (or any fresh credential request), backend re-runs `SceneAccessService`; if access is revoked, the user cannot obtain `roomId`/`roomKey` and cannot rejoin.
+
+**Audit logging (lightweight, recommended)**
+- Log successful joins: timestamp, `roomId`, `userId` or `anonymous` (legacy), mode (workspace vs legacy).
+- Do not log drawing data or room keys.
 
 If Option B is needed later, the room service changes would be:
 
@@ -695,7 +705,7 @@ io.use(async (socket, next) => {
 });
 ```
 
-**Decision:** Start with Option A. Add Option B if security audit requires it.
+**Decision:** Stay with Option A for v1. Add Option B only if security audit requires defense-in-depth. If added later, prefer short-lived signed join tokens and periodic revalidation rather than persistent sessions.
 
 ---
 
