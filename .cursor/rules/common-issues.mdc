@@ -74,15 +74,71 @@ if (currentData !== lastSavedDataRef.current) {
 ```
 
 **Files that need this pattern** (if they're outside `.excalidraw`):
-- `DashboardView.scss`
-- `CollectionView.scss`
-- `SceneCardGrid.scss`
-- `WorkspaceSidebar.scss` (already has it)
-- `SceneCard.scss` (already has it)
-- `LoginDialog.scss` (already has it)
-- Any new workspace/settings components
+- `DashboardView.scss` ✅
+- `CollectionView.scss` ✅
+- `SceneCardGrid.scss` ✅
+- `WorkspaceSidebar.scss` ✅
+- `SceneCard.scss` ✅
+- `LoginDialog.scss` ✅
+- `UserProfileDialog.scss` ✅
+- `ProfilePage.scss` ✅
+- `WorkspaceSettingsPage.scss` ✅
+- `MembersPage.scss` ✅
+- `TeamsCollectionsPage.scss` ✅
+- `EmojiPicker.scss` ✅
+- **Any new workspace/settings/dashboard components**
+
+**IMPORTANT:** When creating a new component in `excalidraw-app/components/` that renders outside the main `.excalidraw` container (e.g., Settings pages, Workspace components, dialogs), ALWAYS add the `--ui-font` definition at the root of its SCSS file.
 
 **Also avoid:** Using `font-family: "Virgil", cursive, var(--ui-font)` which falls back to cursive/serif fonts. Use `var(--ui-font)` directly or inherit from parent.
+
+### 6. Dropdown/Context Menu Not Closing on Outside Click
+
+**Problem:** Context menus or dropdowns don't close when clicking outside them.
+
+**Solution:** Use `useRef` and `useEffect` with a `mousedown` event listener:
+```typescript
+const menuRef = useRef<HTMLDivElement>(null);
+const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpen(null);
+    }
+  };
+
+  if (menuOpen) {
+    document.addEventListener("mousedown", handleClickOutside);
+  }
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, [menuOpen]);
+
+// In JSX:
+<div ref={menuOpen === itemId ? menuRef : null}>
+  {/* menu content */}
+</div>
+```
+
+### 7. Hardcoded Strings Not Translated
+
+**Problem:** Some UI text appears in English even when Russian locale is selected.
+
+**Cause:** Hardcoded strings in components instead of using `t()` function.
+
+**Solution:** 
+1. Search for hardcoded strings in the component
+2. Add translation keys to both `en.json` and `ru-RU.json`
+3. Replace hardcoded strings with `t("key.path")`
+
+**Russian localization tips:**
+- Don't translate word-for-word; adapt to natural Russian phrasing
+- "by You" → "Автор: Вы" (not "от Вас")
+- "Just now" → "Только что"
+- Use `{{count}}` for pluralization: "{{count}} мин. назад"
 
 ## Backend Issues
 

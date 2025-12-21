@@ -17,9 +17,11 @@ frontend/
 │   ├── auth/                 # Authentication (AuthProvider, workspaceApi)
 │   ├── components/           # Custom components
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog, UserProfile
+│   │   ├── Settings/         # ProfilePage, MembersPage, TeamsCollectionsPage
+│   │   ├── EmojiPicker/      # Emoji picker for collection icons
 │   │   ├── Talktrack/        # Recording feature
 │   │   ├── Presentation/     # Slideshow mode
-│   │   ├── Stickers/         # GIPHY integration
+│   │   ├── Stickers/         # GIPHY integration (twemojiApi for EmojiPicker)
 │   │   └── AppSidebar.tsx    # Main sidebar with tabs
 │   ├── pens/                 # Custom pen presets
 │   └── App.tsx               # Main app component
@@ -215,6 +217,64 @@ import { t } from "@excalidraw/excalidraw/i18n";
     background: var(--island-bg-color, #232329);
   }
 }
+```
+
+### Creating New Components Outside `.excalidraw`
+
+**CRITICAL:** Components in `excalidraw-app/components/` (Workspace, Settings, EmojiPicker, etc.) render outside the main `.excalidraw` container and don't inherit global CSS variables.
+
+**Always add this at the root of new component SCSS files:**
+
+```scss
+.my-new-component {
+  // Define --ui-font locally since component is outside .excalidraw container
+  --ui-font: Assistant, system-ui, BlinkMacSystemFont, -apple-system, Segoe UI,
+    Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--ui-font);
+
+  // ... rest of styles
+}
+```
+
+**Why?** Without this, text falls back to Times New Roman or other serif fonts.
+
+## Reusable UI Patterns
+
+### Emoji Picker
+
+Use the `EmojiPicker` component for icon selection:
+
+```typescript
+import { EmojiPicker } from "../EmojiPicker";
+
+<EmojiPicker
+  value={selectedEmoji}      // Current emoji or empty string
+  onSelect={setSelectedEmoji} // Callback when emoji selected
+/>
+```
+
+Features: category tabs, search, frequently used, random, remove button.
+
+### Click-Outside Handler for Menus
+
+For dropdowns/context menus that should close on outside click:
+
+```typescript
+const menuRef = useRef<HTMLDivElement>(null);
+const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpen(null);
+    }
+  };
+
+  if (menuOpen) {
+    document.addEventListener("mousedown", handleClickOutside);
+  }
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, [menuOpen]);
 ```
 
 ## API Calls

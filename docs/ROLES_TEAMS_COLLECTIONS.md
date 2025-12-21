@@ -166,7 +166,7 @@ A folder for organizing scenes:
 model Collection {
   id          String   @id @default(cuid())
   name        String
-  icon        String?  // Emoji or icon identifier
+  icon        String?  // Emoji selected via EmojiPicker
   color       String?
   
   isPrivate   Boolean  @default(false)  // Only owner can see
@@ -182,6 +182,20 @@ model Collection {
   updatedAt   DateTime @updatedAt
 }
 ```
+
+#### Collection Icons (Emoji Picker)
+
+Collections can have an emoji icon selected via the `EmojiPicker` component:
+
+- **Category Tabs**: Smileys, People, Animals, Food, Travel, Activities, Objects, Symbols, Flags
+- **Search**: Debounced search across all emojis
+- **Frequently Used**: Shows popular emojis at the top
+- **Random**: Pick a random emoji
+- **Remove**: Clear the icon (shows "+" placeholder)
+
+The emoji picker is used in:
+- Create Collection dialog (sidebar and Teams & Collections page)
+- Edit Collection dialog (from collection context menu)
 
 ### InviteLink
 

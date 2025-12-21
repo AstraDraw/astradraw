@@ -10,9 +10,12 @@ The Workspace feature allows users to save, organize, and access their drawings 
 - **Collection Views**: Browse scenes organized by collection in the main content area
 - **Scene Management**: Save, open, rename, duplicate, and delete scenes
 - **Collections**: Organize scenes into folders with team-based access control
+  - Emoji picker for collection icons (category tabs, search, frequently used)
+  - Edit collection name and icon from context menu
 - **Teams & Roles**: Collaborate with team members using ADMIN/MEMBER/VIEWER roles
 - **Navigation Sidebar**: Quick access to dashboard, settings, and collections
 - **Auto-save**: Scene data is automatically saved with change detection
+- **Localization**: Full Russian translation support including time formats
 
 > **See also:** [Roles, Teams & Collections](./ROLES_TEAMS_COLLECTIONS.md) for detailed access control documentation.
 
@@ -21,11 +24,11 @@ The Workspace feature allows users to save, organize, and access their drawings 
 AstraDraw has two main UI modes:
 
 ### 1. Canvas Mode (Drawing)
-When you open a scene, you're in canvas mode:
+When you open a scene or create a new one, you're in canvas mode:
 - Full drawing canvas with Excalidraw tools
-- Minimal sidebar navigation (BoardModeNav)
-- "Start Drawing" button to create new scenes
+- Minimal sidebar navigation (BoardModeNav) showing scenes from active collection
 - "Dashboard" link to return to dashboard
+- Scene list with the current scene highlighted
 
 ### 2. Dashboard Mode
 The central hub for managing your scenes and settings. The dashboard has multiple views accessible from the sidebar:
@@ -52,8 +55,35 @@ All views share the full navigation sidebar (FullModeNav) with:
 - Workspace selector
 - Quick search
 - Dashboard, Profile, Workspace settings, Team members, Teams & Collections links
-- Collections list
+- Collections list with context menu (Create Scene, Edit, Delete)
 - User profile footer
+
+## Navigation Flow
+
+### Creating a New Scene from Collection Context Menu
+
+When a user creates a new scene from a collection's context menu:
+
+1. **Scene Creation**: Backend creates the scene in the specified collection
+2. **Canvas Preparation**: Canvas is reset for the new scene
+3. **State Updates**:
+   - `currentSceneId` and `currentSceneTitle` are set
+   - `activeCollectionId` is set to the collection where scene was created
+4. **Sidebar Behavior**: Sidebar stays open and switches to "board" mode
+5. **Mode Switch**: App switches from dashboard to canvas mode
+6. **Result**: User sees the canvas with sidebar showing the collection's scenes, new scene highlighted
+
+This ensures continuity - the user can immediately start drawing while seeing their new scene in the collection's scene list.
+
+### Opening an Existing Scene
+
+When a user clicks on a scene card:
+
+1. **Data Loading**: Scene data is fetched from backend
+2. **Canvas Update**: Canvas is populated with scene elements and app state
+3. **State Updates**: `currentSceneId` and `currentSceneTitle` are set
+4. **Mode Switch**: App switches to canvas mode
+5. **Sidebar**: Switches to "board" mode showing scenes from the active collection
 
 ## Architecture
 
