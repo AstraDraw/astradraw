@@ -57,7 +57,7 @@ services:
   # Excalidraw Frontend
   app:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.49
+    image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.51
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
@@ -124,7 +124,7 @@ services:
   # AstraDraw API (authentication, workspace, storage)
   api:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-api:0.7.1
+    image: ghcr.io/astrateam-net/astradraw-api:0.7.2
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
