@@ -55,6 +55,35 @@ if (currentData !== lastSavedDataRef.current) {
 }
 ```
 
+### 5. Fonts Look Like Times New Roman in Dashboard/Workspace Components
+
+**Problem:** Text in dashboard, collection views, or scene cards appears in a serif font (Times New Roman) instead of the UI font (Assistant).
+
+**Cause:** Components outside the `.excalidraw` container don't inherit the `--ui-font` CSS variable. The variable is defined in `.excalidraw` class but workspace components (DashboardView, CollectionView, SceneCardGrid, etc.) are rendered outside this container.
+
+**Solution:** Define `--ui-font` locally in each SCSS file for components outside `.excalidraw`:
+```scss
+.dashboard-view {
+  // Define --ui-font locally since component is outside .excalidraw container
+  --ui-font: Assistant, system-ui, BlinkMacSystemFont, -apple-system, Segoe UI,
+    Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--ui-font);
+
+  // ... rest of styles
+}
+```
+
+**Files that need this pattern** (if they're outside `.excalidraw`):
+- `DashboardView.scss`
+- `CollectionView.scss`
+- `SceneCardGrid.scss`
+- `WorkspaceSidebar.scss` (already has it)
+- `SceneCard.scss` (already has it)
+- `LoginDialog.scss` (already has it)
+- Any new workspace/settings components
+
+**Also avoid:** Using `font-family: "Virgil", cursive, var(--ui-font)` which falls back to cursive/serif fonts. Use `var(--ui-font)` directly or inherit from parent.
+
 ## Backend Issues
 
 ### 1. Build Fails with "Cannot find module '../auth/jwt-auth.guard'"

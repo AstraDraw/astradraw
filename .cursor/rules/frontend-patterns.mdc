@@ -46,6 +46,133 @@ excalidrawAPI.updateScene({ elements, appState });
 excalidrawAPI.scrollToContent(element, { animate: true });
 ```
 
+## App Mode & Navigation (Dashboard ↔ Canvas)
+
+AstraDraw has two main modes controlled by Jotai atoms in `components/Settings/settingsState.ts`:
+
+| Mode | `appModeAtom` Value | What's Displayed |
+|------|---------------------|------------------|
+| Dashboard | `"dashboard"` | Dashboard, Collections, Settings pages |
+| Canvas | `"canvas"` | Excalidraw drawing canvas |
+
+### Navigation Atoms
+
+```typescript
+import {
+  appModeAtom,
+  navigateToCanvasAtom,
+  navigateToDashboardAtom,
+  navigateToCollectionAtom,
+  navigateToProfileAtom,
+  activeCollectionIdAtom,
+  dashboardViewAtom,
+} from "./components/Settings/settingsState";
+
+// Reading current mode
+const appMode = useAtomValue(appModeAtom);
+
+// Navigation actions (use useSetAtom, not useAtom)
+const navigateToCanvas = useSetAtom(navigateToCanvasAtom);
+const navigateToDashboard = useSetAtom(navigateToDashboardAtom);
+const navigateToCollection = useSetAtom(navigateToCollectionAtom);
+```
+
+### Switching from Dashboard to Canvas
+
+**CRITICAL:** When creating a new scene or opening a scene from the dashboard, you MUST call `navigateToCanvas()` to switch to canvas mode. Otherwise, the app stays in dashboard mode and the canvas is not visible.
+
+```typescript
+// Example: Creating a new scene from a collection's context menu
+const handleNewScene = useCallback(async (collectionId?: string) => {
+  // 1. Create the scene in backend (with the collection ID!)
+  const scene = await createScene({ title, collectionId });
+  
+  // 2. Reset and prepare the canvas
+  excalidrawAPI.resetScene();
+  
+  // 3. Set current scene state
+  setCurrentSceneId(scene.id);
+  setCurrentSceneTitle(title);
+  
+  // 4. IMPORTANT: Set the active collection so sidebar shows scenes from this collection
+  if (collectionId) {
+    setActiveCollectionId(collectionId);
+  }
+  
+  // 5. Keep sidebar open to show the new scene in the collection's scene list
+  setWorkspaceSidebarOpen(true);
+  
+  // 6. Switch to canvas mode - sidebar auto-switches to "board" mode
+  navigateToCanvas();
+  
+  // 7. Save initial scene data
+  await updateSceneData(scene.id, blob);
+}, [excalidrawAPI, navigateToCanvas, setActiveCollectionId]);
+```
+
+**Key behavior:** When creating a scene from a collection:
+- The scene is created in that specific collection
+- The sidebar stays open showing the collection's scenes (in "board" mode)
+- The new scene appears in the scene list and is selected
+- User can immediately start drawing on the canvas
+
+### Switching from Canvas to Dashboard
+
+```typescript
+// Example: Going back to dashboard
+const handleBackToDashboard = useCallback(() => {
+  navigateToDashboard();
+}, [navigateToDashboard]);
+
+// Example: Opening a specific collection
+const handleCollectionClick = useCallback((collectionId: string) => {
+  navigateToCollection(collectionId);
+}, [navigateToCollection]);
+```
+
+### Opening an Existing Scene
+
+```typescript
+// Example: Opening a scene from dashboard or sidebar
+const handleOpenScene = useCallback(async (scene: WorkspaceScene) => {
+  // 1. Load scene data from backend
+  const sceneData = await getSceneData(scene.id);
+  
+  // 2. Update canvas with scene data
+  excalidrawAPI.updateScene({
+    elements: sceneData.elements,
+    appState: sceneData.appState,
+  });
+  
+  // 3. Set current scene state
+  setCurrentSceneId(scene.id);
+  setCurrentSceneTitle(scene.title);
+  
+  // 4. Switch to canvas mode
+  navigateToCanvas();
+}, [excalidrawAPI, navigateToCanvas]);
+```
+
+### Dashboard Views
+
+Within dashboard mode, different views are controlled by `dashboardViewAtom`:
+
+| View | Value | Component |
+|------|-------|-----------|
+| Home | `"home"` | `DashboardView` |
+| Collection | `"collection"` | `CollectionView` |
+| Profile | `"profile"` | `ProfilePage` |
+| Workspace Settings | `"workspace"` | `WorkspaceSettingsPage` |
+| Team Members | `"members"` | `MembersPage` |
+| Teams & Collections | `"teams-collections"` | `TeamsCollectionsPage` |
+
+### Key Files
+
+- `frontend/excalidraw-app/components/Settings/settingsState.ts` - All navigation atoms
+- `frontend/excalidraw-app/App.tsx` - Main app with mode switching logic
+- `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Sidebar navigation
+- `frontend/excalidraw-app/components/Workspace/WorkspaceMainContent.tsx` - Dashboard content router
+
 ## Localization
 
 **Always add translation keys** for new UI text:
