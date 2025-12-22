@@ -587,6 +587,105 @@ rm -rf prisma/migrations/*
 npx prisma migrate dev --name init
 ```
 
+## Development Environment Issues
+
+### 1. 🚨 CRITICAL: Use `just dev` for Daily Development
+
+**Problem:** Developer uses `just up-dev` or `just fresh-dev` for implementing features, causing slow iteration cycles.
+
+**Why it's wrong:** Docker builds take 1-5 minutes. Every code change requires a rebuild.
+
+**Solution:** Use `just dev` for daily development:
+```bash
+just dev          # Start with hot-reload
+just dev-status   # Check status
+just dev-stop     # Stop when done
+```
+
+**Benefits of `just dev`:**
+- CSS changes appear instantly (no refresh needed)
+- React changes hot-reload in ~100ms
+- Backend auto-restarts on TypeScript changes
+- No Docker rebuilds needed
+
+**When to use Docker (`just up-dev`):**
+- Testing Dockerfile changes
+- Testing docker-entrypoint.sh
+- Pre-release verification
+
+### 2. "Bad Gateway" at https://draw.local
+
+**Problem:** Browser shows "Bad Gateway" when accessing https://draw.local
+
+**Cause:** One or more native services are not running.
+
+**Solution:** Check and restart:
+```bash
+just dev-status   # See what's running
+just dev-stop     # Stop everything
+just dev          # Start fresh
+```
+
+### 3. Changes Not Appearing (Hot-Reload)
+
+**Problem:** Made CSS/React changes but they don't appear in browser.
+
+**Checklist:**
+1. Is `just dev` running? Check with `just dev-status`
+2. Are you accessing `https://draw.local` (not `localhost:3000`)?
+3. Try hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
+4. Check terminal for compilation errors
+
+**If using Docker instead of `just dev`:**
+- Switch to `just dev` for instant updates
+- Or rebuild: `just rebuild app`
+
+### 4. Port Already in Use
+
+**Problem:** Error "address already in use" when starting services.
+
+**Solution:**
+```bash
+just dev-stop     # Stops all services and kills processes
+
+# Or manually kill specific ports:
+lsof -ti:3000 | xargs kill -9  # Frontend
+lsof -ti:8080 | xargs kill -9  # Backend
+lsof -ti:3002 | xargs kill -9  # Room
+```
+
+### 5. Authentication Not Working in Dev
+
+**Problem:** Can sign in but dashboard shows "Not authenticated".
+
+**Cause:** Accessing via `localhost:3000` instead of `https://draw.local`. Cookies are domain-specific.
+
+**Solution:** Always use `https://draw.local` for testing authentication.
+
+### 6. "draw.local" Not Accessible / ERR_NAME_NOT_RESOLVED
+
+**Problem:** Browser shows "This site can't be reached" or "ERR_NAME_NOT_RESOLVED" for https://draw.local
+
+**Cause:** `draw.local` is not in your `/etc/hosts` file.
+
+**Solution:** Add the hosts entry:
+
+**macOS / Linux:**
+```bash
+sudo sh -c 'echo "127.0.0.1 draw.local" >> /etc/hosts'
+```
+
+**Windows (run as Administrator):**
+```powershell
+Add-Content -Path C:\Windows\System32\drivers\etc\hosts -Value "127.0.0.1 draw.local"
+```
+
+**Verify:**
+```bash
+ping draw.local
+# Should show: PING draw.local (127.0.0.1)
+```
+
 ## Docker Issues
 
 ### 1. Running Docker Commands

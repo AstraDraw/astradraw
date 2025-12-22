@@ -55,7 +55,23 @@ Backend connects to:
 5. **Stickers & GIFs** - GIPHY integration
 6. **Libraries** - Pre-bundled shape collections
 
+## Development Quick Start
+
+**For daily development with hot-reload:**
+```bash
+just dev          # Start everything
+just dev-status   # Check status
+just dev-stop     # Stop when done
+```
+
+Access the app at `https://draw.local`
+
+**See:** `/docs/DEVELOPMENT.md` for full development guide.
+
 ## Documentation
+
+**Development:**
+- `/docs/DEVELOPMENT.md` - **Development guide with hot-reload setup**
 
 **Architecture & Setup:**
 - `/CONTRIBUTING.md` - How to set up for development

@@ -20,7 +20,7 @@
 services:
   # Traefik reverse proxy
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6.5
     command:
       - "--api.dashboard=true"
       # Uncomment for debugging:

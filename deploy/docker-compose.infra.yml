@@ -1,0 +1,155 @@
+# Astradraw - Infrastructure Only (for Hybrid Development)
+#
+# This docker-compose file sets up ONLY the infrastructure services:
+# - Traefik proxy (routes to host machine for native services)
+# - PostgreSQL database
+# - MinIO (S3-compatible object storage)
+#
+# Use this for hybrid development where frontend/backend/room run natively
+# with hot-reload while infrastructure runs in Docker.
+#
+# Usage:
+#   1. Start infrastructure: just up-infra
+#   2. Run native services in separate terminals:
+#      - just dev-frontend  (Vite at :5173)
+#      - just dev-backend   (NestJS at :8080)
+#      - just dev-room      (Socket.io at :3002)
+#   3. Access at: https://draw.local (or your APP_DOMAIN)
+
+services:
+  # Traefik reverse proxy - routes to host machine for native services
+  traefik:
+    image: traefik:v3.6.5
+    command:
+      - "--api.dashboard=true"
+      # Uncomment for debugging:
+      # - "--api.insecure=true"
+      # - "--log.level=DEBUG"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      # Uncomment for Traefik dashboard:
+      # - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/traefik/certs:ro
+      # Use dev config that routes to host machine
+      - ./traefik-dynamic-dev.yml:/etc/traefik/dynamic/config.yml:ro
+    networks:
+      - astradraw
+    extra_hosts:
+      # Allow Traefik to reach host machine services
+      - "host.docker.internal:host-gateway"
+
+  # MinIO - S3-compatible Object Storage
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      - MINIO_ROOT_USER_FILE=/run/secrets/minio_access_key
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_secret_key
+    volumes:
+      - minio_data:/data
+      - ./secrets:/run/secrets:ro
+    networks:
+      - astradraw
+      - internal
+    ports:
+      # Expose MinIO ports for native backend access
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./secrets:/run/secrets:ro
+    networks:
+      - astradraw
+      - internal
+    ports:
+      # Expose PostgreSQL for native backend access
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-excalidraw} -d $${POSTGRES_DB:-excalidraw}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin (Database Admin UI - Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@localhost}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - astradraw
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin-secure.rule=Host(`db.${APP_DOMAIN:-draw.local}`)"
+      - "traefik.http.routers.pgadmin-secure.entrypoints=websecure"
+      - "traefik.http.routers.pgadmin-secure.tls=true"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+    depends_on:
+      - postgres
+    profiles:
+      - admin  # Only start with: docker compose --profile admin up
+
+  # Dex - Lightweight OIDC Provider for Testing
+  dex:
+    image: ghcr.io/dexidp/dex:v2.38.0
+    restart: unless-stopped
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    volumes:
+      - ./dex-config.yaml:/etc/dex/config.yaml:ro
+    networks:
+      - astradraw
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dex-secure.rule=Host(`${APP_DOMAIN:-draw.local}`) && PathPrefix(`/dex`)"
+      - "traefik.http.routers.dex-secure.entrypoints=websecure"
+      - "traefik.http.routers.dex-secure.tls=true"
+      - "traefik.http.routers.dex-secure.priority=110"
+      - "traefik.http.services.dex.loadbalancer.server.port=5556"
+      - "traefik.http.routers.dex.rule=Host(`${APP_DOMAIN:-draw.local}`) && PathPrefix(`/dex`)"
+      - "traefik.http.routers.dex.entrypoints=web"
+      # Use middleware from file config (@file suffix)
+      - "traefik.http.routers.dex.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.dex.priority=110"
+    profiles:
+      - oidc  # Only start with: docker compose --profile oidc up
+
+networks:
+  astradraw:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  minio_data:
+

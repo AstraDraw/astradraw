@@ -7,22 +7,65 @@ alwaysApply: true
 
 This project uses [just](https://github.com/casey/just) for common commands. **Always prefer `just` commands over writing full shell commands.**
 
-## Deployment Modes
+## 🚀 IMPORTANT: Development Workflow
 
-AstraDraw supports two deployment modes:
-
-| Mode | Description | Command |
-|------|-------------|---------|
-| **Production** | Uses pre-built images from GHCR | `just up` |
-| **Development** | Builds from local source code | `just up-dev` |
-
-Check current mode: `just mode`
-
-### Switching Modes
+**For daily development, ALWAYS use `just dev`** - this provides instant hot-reloading for CSS and React changes.
 
 ```bash
-just enable-dev    # Enable local builds (creates override file)
-just disable-dev   # Use production images (removes override file)
+just dev          # Start development environment
+just dev-status   # Check if everything is running
+just dev-stop     # Stop everything
+```
+
+**Only use Docker (`just up-dev`) when:**
+- Testing Dockerfile changes
+- Testing docker-entrypoint.sh changes
+- Final verification before release
+
+## Development Modes
+
+AstraDraw supports three modes:
+
+| Mode | Command | Use Case |
+|------|---------|----------|
+| **Hybrid Dev** | `just dev` | Daily development with hot-reload ⭐ |
+| **Docker Dev** | `just up-dev` | Testing Docker images |
+| **Production** | `just up` | Running GHCR production images |
+
+### Hybrid Development (Recommended for Daily Work)
+
+```bash
+just dev          # Starts everything with hot-reload
+```
+
+This runs:
+- **Native (hot-reload):** Frontend, Backend, Room Service
+- **Docker:** PostgreSQL, MinIO, Traefik, Dex
+
+**Hot-reload behavior:**
+| Change | Behavior |
+|--------|----------|
+| CSS/SCSS | Instant update in browser |
+| React components | Instant re-render, state preserved |
+| Backend TypeScript | Auto-restart (~2 seconds) |
+| Prisma schema | Run `cd backend && npx prisma migrate dev` |
+
+### Docker Development (Only for Docker Testing)
+
+```bash
+just up-dev       # Build and run Docker images locally
+just fresh-dev    # Fresh start with local builds
+```
+
+### Switching Between Modes
+
+```bash
+just dev-stop     # Stop hybrid dev
+just up-dev       # Switch to Docker dev
+
+# Or vice versa:
+just down         # Stop Docker
+just dev          # Start hybrid dev
 ```
 
 ## Quick Reference
@@ -76,12 +119,16 @@ just disable-dev   # Use production images (removes override file)
 | `just check-room` | Build + Prettier + ESLint |
 | `just fix-all` | Auto-fix formatting issues |
 
-### Development
+### Hybrid Development (Daily Use)
 
 | Command | Description |
 |---------|-------------|
-| `just dev-frontend` | Start frontend dev server |
-| `just dev-backend` | Start backend dev server |
+| `just dev` | **Start everything with hot-reload** ⭐ |
+| `just dev-stop` | Stop all services |
+| `just dev-status` | Check status of all services |
+| `just dev-frontend` | Start only frontend (manual mode) |
+| `just dev-backend` | Start only backend (manual mode) |
+| `just dev-room` | Start only room service (manual mode) |
 | `just install` | Install all dependencies |
 
 ### Database
@@ -130,72 +177,97 @@ just test-api           # Run all API tests
 
 ## AI Usage Guidelines
 
-### When to use which deployment command
+### 🚨 CRITICAL: When User is Implementing Features
+
+**ALWAYS ensure `just dev` is running** before the user starts coding. Ask:
+
+```
+Before we start, is your dev environment running? 
+Run `just dev-status` to check, or `just dev` to start it.
+```
+
+**Why?** With `just dev`:
+- CSS changes appear instantly in browser
+- React changes hot-reload without refresh
+- No Docker rebuilds needed
+- Much faster development cycle
+
+### When to use which command
 
 | Scenario | Command |
 |----------|---------|
-| Testing a new GHCR image release | `just fresh` |
-| Developing/debugging local changes | `just up-dev` or `just fresh-dev` |
-| Quick restart after config change | `just restart` |
-| Checking if production images work | `just up-prod` |
+| **Daily development** | `just dev` ⭐ |
+| Implementing CSS/UI changes | `just dev` (hot-reload!) |
+| Implementing React components | `just dev` (hot-reload!) |
+| Implementing backend changes | `just dev` (auto-restart!) |
+| Testing Dockerfile changes | `just up-dev` or `just fresh-dev` |
+| Testing docker-entrypoint.sh | `just up-dev` or `just fresh-dev` |
+| Testing GHCR production images | `just fresh` |
+| Pre-release verification | `just fresh-dev` then `just fresh` |
 
 ### Example AI Responses
 
-❌ **Bad** (verbose):
+**When user asks to implement a feature:**
+
+❌ **Bad** (starts Docker build):
 ```
-cd deploy && docker compose down -v
-docker volume rm astradraw_postgres_data astradraw_minio_data
-cd deploy && docker compose up -d
+Let me rebuild the Docker images to test this...
+just fresh-dev
 ```
 
-✅ **Good** (concise):
+✅ **Good** (uses hot-reload):
 ```
-just fresh
-```
-
-❌ **Bad**:
-```
-cd deploy && docker compose -f docker-compose.yml up -d
+Make sure `just dev` is running, then I'll make the changes.
+The CSS/React updates will appear instantly in your browser.
 ```
 
-✅ **Good**:
+**When user reports changes not appearing:**
+
+❌ **Bad** (rebuilds everything):
 ```
-just up-prod
+Let's rebuild: just fresh-dev
 ```
 
-❌ **Bad**:
+✅ **Good** (checks environment first):
 ```
-cd frontend && yarn test:typecheck && yarn test:other && yarn test:code
-cd backend && npm run build && npm run format && npm run lint
-```
-
-✅ **Good**:
-```
-just check-all
+Run `just dev-status` to check if services are running.
+If using `just dev`, try a browser hard refresh (Cmd+Shift+R).
+If using Docker, then yes: `just rebuild app`
 ```
 
 ### Workflow Examples
 
-**Testing a new feature with local builds:**
+**Starting daily development:**
 ```bash
-just check-all        # Run all checks first
-just fresh-dev        # Fresh start with local builds
-just logs-api         # Check API logs
+just dev              # Start with hot-reload
+just dev-status       # Verify everything is running
+# Open https://draw.local
+# Make changes - they appear instantly!
 ```
 
-**Testing production images after release:**
+**When done for the day:**
 ```bash
-just disable-dev      # Ensure using production mode
-just pull             # Pull latest images
-just fresh            # Fresh start
+just dev-stop         # Stop everything
 ```
 
-**Switching between modes:**
+**Before creating a release:**
 ```bash
-just mode             # Check current mode
-just enable-dev       # Switch to local builds
-just up-dev           # Start with local builds
-# ... test ...
-just disable-dev      # Switch back to production
-just up               # Start with GHCR images
+just dev-stop         # Stop hybrid dev
+just check-all        # Run all checks
+just fresh-dev        # Test Docker build
+# Test in browser
+just fresh            # Test production images
+# If all good, proceed with release
+```
+
+**Debugging "changes not appearing":**
+```bash
+just dev-status       # Check what's running
+
+# If using just dev:
+# - Hard refresh browser (Cmd+Shift+R)
+# - Check terminal for errors
+
+# If using Docker:
+just rebuild app      # Rebuild without cache
 ```

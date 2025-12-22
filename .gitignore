@@ -19,6 +19,15 @@ room-service/
 # =============================================================================
 # Logs
 *.log
+*_logs.txt
+
+# Temporary files/folders
+temp_for_prod_reference/
+temp/
+*.tmp
+
+# Cursor plans (auto-generated)
+.cursor/plans/
 
 # macOS
 .DS_Store
