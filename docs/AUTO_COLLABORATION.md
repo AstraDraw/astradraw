@@ -106,14 +106,40 @@ The auto-collaboration feature encrypts room keys before storing them in the dat
 # Room keys are encrypted with JWT_SECRET automatically
 
 # Option 2: Use separate secret (optional)
+# Generate with any length (will be hashed with SHA-256):
+openssl rand -base64 32 > deploy/secrets/room_key_secret
+
 # In deploy/.env:
 ROOM_KEY_SECRET=your_separate_secret
 
-# Or via Docker secrets:
-echo "your_separate_secret" > deploy/secrets/room_key_secret
-# And in docker-compose.yml:
+# Or via Docker secrets in docker-compose.yml:
 # - ROOM_KEY_SECRET_FILE=/run/secrets/room_key_secret
 ```
+
+### Understanding Key Types
+
+There are TWO different keys in the collaboration system:
+
+| Key | Length | Purpose | Who generates |
+|-----|--------|---------|---------------|
+| **ROOM_KEY_SECRET** | Any length | Encrypts room keys at rest in database | Admin (you) |
+| **Room Key** | Exactly 22 chars | End-to-end encryption between collaborators | Backend (automatic) |
+
+**Why 22 characters for room keys?**
+
+The frontend uses Web Crypto API with AES-128-GCM, which requires exactly 16 bytes. When encoded as base64url, 16 bytes = 22 characters.
+
+```typescript
+// Backend generates room keys like this:
+import { randomBytes } from 'crypto';
+const roomKey = randomBytes(16).toString('base64url'); // Always 22 chars
+```
+
+> ⚠️ **Common Error:** If room keys are the wrong length, you'll see:
+> ```
+> DataError: The JWK "k" member did not include the right length of key data
+> ```
+> This is handled automatically by the backend - you don't need to worry about it.
 
 ---
 

@@ -85,6 +85,14 @@ The backend automatically reads secrets from `/run/secrets/` (mounted from `./se
 
 **Note:** `ROOM_KEY_SECRET` is **optional**. If not set, the system uses `JWT_SECRET` for room key encryption. You only need a separate `ROOM_KEY_SECRET` if you want to rotate `JWT_SECRET` without invalidating existing collaboration rooms.
 
+**Key Generation:**
+```bash
+# Generate room_key_secret (any length, will be hashed with SHA-256)
+openssl rand -base64 32 > secrets/room_key_secret
+```
+
+> ⚠️ **Important:** This secret encrypts room keys stored in the database. It can be any length string. The actual room keys (used for end-to-end encryption) are automatically generated as 22-character strings (16 bytes base64url) to meet AES-128-GCM requirements.
+
 ### External Services
 
 | Secret File | Environment Variable | Description |

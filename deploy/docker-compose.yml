@@ -174,9 +174,16 @@ services:
       - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       
       # === Room Key Secret (for auto-collaboration encryption) ===
-      # Optional: If not set, JWT_SECRET is used for room key encryption
+      # Optional: If not set, JWT_SECRET is used for room key encryption.
       # Use a separate secret if you want to rotate JWT_SECRET without
-      # invalidating existing collaboration rooms
+      # invalidating existing collaboration rooms.
+      #
+      # IMPORTANT: This secret can be ANY length string - it's hashed with SHA-256
+      # before use. Generate with: openssl rand -base64 32
+      #
+      # Note: This is NOT the room key itself (which must be exactly 22 chars).
+      # This secret encrypts room keys at rest in the database.
+      #
       # - ROOM_KEY_SECRET_FILE=/run/secrets/room_key_secret
       - ROOM_KEY_SECRET=${ROOM_KEY_SECRET:-}
       
