@@ -3,8 +3,9 @@
 
 # The base path of dex and the external name of the OpenID Connect service.
 # This is the canonical URL that all clients MUST use to refer to dex.
-# Change APP_DOMAIN to match your .env configuration
-issuer: https://auth.10.100.0.10/dex
+# NOTE: Cannot use subdomains on IP addresses (e.g., auth.10.100.0.10 is INVALID)
+# Use either a real domain or the IP directly with a path prefix
+issuer: https://draw.local/dex
 
 # The storage configuration determines where dex stores its state.
 # For testing, we use in-memory storage (data is lost on restart)
@@ -39,8 +40,8 @@ staticClients:
     # Redirect URIs - where Dex will send users after authentication
     # Update APP_DOMAIN to match your environment
     redirectURIs:
-      - https://10.100.0.10/api/v2/auth/callback
-      - http://10.100.0.10/api/v2/auth/callback
+      - https://draw.local/api/v2/auth/callback
+      - http://draw.local/api/v2/auth/callback
       - http://localhost:3000/api/v2/auth/callback
       - http://localhost:5173/api/v2/auth/callback
 
@@ -56,14 +57,14 @@ staticPasswords:
   # Test Admin User
   # Password: admin123
   - email: admin@example.com
-    hash: $2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W
+    hash: "$2a$10$.ensyBy4xJoa7NxGzmT67e1.YPi9nmq5mOVKV/ZOY801gi1MMEoIC"
     username: admin
     userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
   
   # Test Regular User
   # Password: user123
   - email: user@example.com
-    hash: $2a$10$XVMN/Fid.q1BqYPS0M6/k.FRIv6Ra5S4XPpE6IxGKzGFgVELHPHDi
+    hash: "$2a$10$AwqJgHRtnVX8Ky/NWm2omeYLU5sIdGkCx8Ie3i8f9mEGEaRWX/nfq"
     username: testuser
     userID: "41331323-6f44-45e6-b3b9-2c4b60c02be5"
 

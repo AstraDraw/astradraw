@@ -128,7 +128,7 @@ services:
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
-      # Storage backend selection: 's3' (MinIO/S3) or 'keyv' (PostgreSQL/MongoDB)
+      # Storage backend selection: 's3' (MinIO/S3) or 'ke For example, right here we even have an example of, uh, of wow. Try to, if you want to understand what the problem is, andyv' (PostgreSQL/MongoDB)
       - STORAGE_BACKEND=${STORAGE_BACKEND:-s3}
       
       # === S3/MinIO Configuration (when STORAGE_BACKEND=s3) ===
@@ -309,15 +309,11 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      # Supports both direct env vars and _FILE suffix for Docker secrets
-      # Option 1: Use secrets (recommended)
+      # Use Docker secrets for credentials (files in ./secrets/)
+      # Create secrets: echo "value" > secrets/postgres_user etc.
       - POSTGRES_USER_FILE=/run/secrets/postgres_user
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - POSTGRES_DB_FILE=/run/secrets/postgres_db
-      # Option 2: Use direct env vars (fallback, reads from .env)
-      - POSTGRES_USER=${POSTGRES_USER:-excalidraw}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
-      - POSTGRES_DB=${POSTGRES_DB:-excalidraw}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./secrets:/run/secrets:ro
@@ -367,15 +363,17 @@ services:
       - astradraw
     labels:
       - "traefik.enable=true"
-      # HTTPS routing for Dex
-      - "traefik.http.routers.dex-secure.rule=Host(`auth.${APP_DOMAIN}`)"
+      # HTTPS routing for Dex at /dex path (path-based, works with IP addresses)
+      - "traefik.http.routers.dex-secure.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/dex`)"
       - "traefik.http.routers.dex-secure.entrypoints=websecure"
       - "traefik.http.routers.dex-secure.tls=true"
+      - "traefik.http.routers.dex-secure.priority=110"
       - "traefik.http.services.dex.loadbalancer.server.port=5556"
       # HTTP redirect
-      - "traefik.http.routers.dex.rule=Host(`auth.${APP_DOMAIN}`)"
+      - "traefik.http.routers.dex.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/dex`)"
       - "traefik.http.routers.dex.entrypoints=web"
       - "traefik.http.routers.dex.middlewares=redirect-to-https"
+      - "traefik.http.routers.dex.priority=110"
     profiles:
       - oidc  # Only start with: docker-compose --profile oidc up
 
