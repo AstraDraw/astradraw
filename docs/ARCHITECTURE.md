@@ -385,20 +385,31 @@ const ALLOW_SAME_ORIGIN = new Set([
 
 ### Backend
 
+All sensitive configuration supports Docker secrets via the `_FILE` suffix. See [Docker Secrets](./DOCKER_SECRETS.md) for complete documentation.
+
 | Variable | Description | Supports `_FILE` |
 |----------|-------------|------------------|
 | `STORAGE_BACKEND` | `s3` or `keyv` | ❌ |
 | `PORT` | Server port | ✅ |
 | `JWT_SECRET` | JWT signing secret | ✅ |
-| `S3_ENDPOINT` | S3/MinIO endpoint | ✅ |
+| `S3_ENDPOINT` | S3/MinIO endpoint | ❌ |
 | `S3_ACCESS_KEY` | S3 access key | ✅ |
 | `S3_SECRET_KEY` | S3 secret key | ✅ |
-| `S3_BUCKET` | S3 bucket name | ✅ |
+| `S3_BUCKET` | S3 bucket name | ❌ |
 | `DATABASE_URL` | PostgreSQL connection | ✅ |
-| `OIDC_ISSUER_URL` | OIDC provider URL | ❌ |
-| `OIDC_INTERNAL_URL` | Internal OIDC URL (Docker) | ❌ |
-| `OIDC_CLIENT_ID` | OIDC client ID | ❌ |
+| `POSTGRES_USER` | Database username | ✅ |
+| `POSTGRES_PASSWORD` | Database password | ✅ |
+| `POSTGRES_DB` | Database name | ✅ |
+| `POSTGRES_HOST` | Database host | ❌ |
+| `POSTGRES_PORT` | Database port | ❌ |
+| `OIDC_ISSUER_URL` | OIDC provider URL | ✅ |
+| `OIDC_INTERNAL_URL` | Internal OIDC URL (Docker) | ✅ |
+| `OIDC_CLIENT_ID` | OIDC client ID | ✅ |
 | `OIDC_CLIENT_SECRET` | OIDC client secret | ✅ |
+| `ADMIN_PASSWORD` | Default admin password | ✅ |
+| `SUPERADMIN_EMAILS` | Super admin emails | ✅ |
+| `KINESCOPE_API_KEY` | Kinescope API key | ✅ |
+| `KINESCOPE_PROJECT_ID` | Kinescope project ID | ✅ |
 
 ## Key Design Decisions
 
@@ -419,6 +430,8 @@ const ALLOW_SAME_ORIGIN = new Set([
 
 ## Related Documentation
 
+- [Docker Secrets](./DOCKER_SECRETS.md) - Secure credential management
+- [SSO / OIDC Setup](./SSO_OIDC_SETUP.md) - Single Sign-On configuration
 - [Workspace & Auth](./WORKSPACE.md) - Authentication and scene management
 - [Talktrack](./TALKTRACK.MD) - Video recording feature
 - [Presentation Mode](./PRESENTATION_MODE.md) - Slideshow functionality

@@ -22,11 +22,19 @@ deploy/
 │   ├── server.crt
 │   └── server.key
 ├── secrets/                        # Docker secrets (gitignored)
-│   ├── minio_access_key
-│   └── minio_secret_key
+│   ├── postgres_user               # Database username
+│   ├── postgres_password           # Database password
+│   ├── postgres_db                 # Database name
+│   ├── jwt_secret                  # JWT signing key
+│   ├── minio_access_key            # MinIO access key
+│   ├── minio_secret_key            # MinIO secret key
+│   ├── oidc_client_secret          # OIDC client secret (if using)
+│   └── superadmin_emails           # Super admin emails (optional)
 └── libraries/                      # Excalidraw shape libraries
     └── *.excalidrawlib
 ```
+
+> **See also:** `/docs/DOCKER_SECRETS.md` for complete secrets documentation.
 
 ## Running the Application
 
@@ -163,9 +171,57 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ## Creating Secrets
 
+All sensitive configuration supports Docker secrets via the `_FILE` suffix.
+See `/docs/DOCKER_SECRETS.md` for complete documentation.
+
+### Quick Setup
+
 ```bash
 cd deploy
 mkdir -p secrets
+
+# Database credentials
+echo "excalidraw" > secrets/postgres_user
+openssl rand -base64 32 > secrets/postgres_password
+echo "excalidraw" > secrets/postgres_db
+
+# JWT secret (required)
+openssl rand -base64 32 > secrets/jwt_secret
+
+# MinIO credentials
 echo "minioadmin" > secrets/minio_access_key
 openssl rand -base64 32 > secrets/minio_secret_key
 ```
+
+### External PostgreSQL
+
+To use an external PostgreSQL server:
+
+```bash
+# Set host/port in .env
+POSTGRES_HOST=10.1.125.55
+POSTGRES_PORT=5000
+
+# Create secrets
+echo "db_user" > secrets/postgres_user
+echo "db_password" > secrets/postgres_password
+echo "db_name" > secrets/postgres_db
+
+# Start without built-in postgres
+docker compose up -d --scale postgres=0
+```
+
+### Supported Secrets
+
+| Secret File | Environment Variable | Description |
+|-------------|---------------------|-------------|
+| `postgres_user` | `POSTGRES_USER_FILE` | Database username |
+| `postgres_password` | `POSTGRES_PASSWORD_FILE` | Database password |
+| `postgres_db` | `POSTGRES_DB_FILE` | Database name |
+| `jwt_secret` | `JWT_SECRET_FILE` | JWT signing key |
+| `minio_access_key` | `S3_ACCESS_KEY_FILE` | MinIO access key |
+| `minio_secret_key` | `S3_SECRET_KEY_FILE` | MinIO secret key |
+| `oidc_client_secret` | `OIDC_CLIENT_SECRET_FILE` | OIDC client secret |
+| `superadmin_emails` | `SUPERADMIN_EMAILS_FILE` | Super admin emails |
+| `admin_password` | `ADMIN_PASSWORD_FILE` | Default admin password |
+| `kinescope_api_key` | `KINESCOPE_API_KEY_FILE` | Kinescope API key |

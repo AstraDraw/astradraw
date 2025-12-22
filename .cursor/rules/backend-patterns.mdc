@@ -161,12 +161,63 @@ npm run prisma:migrate:dev # Run migrations (development)
 npm run prisma:studio     # Open Prisma Studio GUI
 ```
 
-## Environment Variables
+## Environment Variables & Docker Secrets
 
-Key environment variables (see `docker-compose.yml`):
-- `DATABASE_URL` - PostgreSQL connection string
-- `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` - SSO config
-- `OIDC_INTERNAL_URL` - Internal Docker URL for OIDC discovery
-- `JWT_SECRET` - For signing JWT tokens
-- `KINESCOPE_API_KEY`, `KINESCOPE_PROJECT_ID` - Video hosting
+All sensitive configuration supports Docker secrets via the `_FILE` suffix pattern.
+See `/docs/DOCKER_SECRETS.md` for complete documentation.
+
+### Using Secrets in Code
+
+**Always use `getSecret()` for sensitive configuration:**
+
+```typescript
+import { getSecret } from '../utils/secrets';
+
+// Checks JWT_SECRET_FILE first, then JWT_SECRET, then uses fallback
+const jwtSecret = getSecret('JWT_SECRET', 'fallback-value');
+
+// For required secrets, use getSecretOrThrow
+import { getSecretOrThrow } from '../utils/secrets';
+const password = getSecretOrThrow('POSTGRES_PASSWORD');
+```
+
+### Key Environment Variables
+
+| Variable | Description | Supports `_FILE` |
+|----------|-------------|------------------|
+| `DATABASE_URL` | PostgreSQL connection string | ✅ |
+| `POSTGRES_USER` | Database username | ✅ |
+| `POSTGRES_PASSWORD` | Database password | ✅ |
+| `POSTGRES_DB` | Database name | ✅ |
+| `POSTGRES_HOST` | Database host | ❌ |
+| `POSTGRES_PORT` | Database port | ❌ |
+| `JWT_SECRET` | JWT signing secret | ✅ |
+| `OIDC_ISSUER_URL` | OIDC provider URL | ✅ |
+| `OIDC_CLIENT_ID` | OIDC client ID | ✅ |
+| `OIDC_CLIENT_SECRET` | OIDC client secret | ✅ |
+| `OIDC_INTERNAL_URL` | Internal OIDC URL (Docker) | ✅ |
+| `ADMIN_PASSWORD` | Default admin password | ✅ |
+| `SUPERADMIN_EMAILS` | Super admin emails | ✅ |
+| `KINESCOPE_API_KEY` | Video hosting API key | ✅ |
+| `KINESCOPE_PROJECT_ID` | Video hosting project | ✅ |
+| `S3_ACCESS_KEY` | S3/MinIO access key | ✅ |
+| `S3_SECRET_KEY` | S3/MinIO secret key | ✅ |
+
+### External PostgreSQL
+
+To use an external PostgreSQL server:
+
+```bash
+# In deploy/.env
+POSTGRES_HOST=10.1.125.55
+POSTGRES_PORT=5000
+
+# Create secrets
+echo "db_user" > deploy/secrets/postgres_user
+echo "db_password" > deploy/secrets/postgres_password
+echo "db_name" > deploy/secrets/postgres_db
+
+# Start without built-in postgres
+docker compose up -d --scale postgres=0
+```
 

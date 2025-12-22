@@ -132,12 +132,12 @@ services:
       - STORAGE_BACKEND=${STORAGE_BACKEND:-s3}
       
       # === S3/MinIO Configuration (when STORAGE_BACKEND=s3) ===
-      - S3_ENDPOINT=http://minio:9000
+      - S3_ENDPOINT=${S3_ENDPOINT:-http://minio:9000}
       - S3_ACCESS_KEY_FILE=/run/secrets/minio_access_key
       - S3_SECRET_KEY_FILE=/run/secrets/minio_secret_key
       - S3_BUCKET=${S3_BUCKET:-excalidraw}
       - S3_REGION=${S3_REGION:-us-east-1}
-      - S3_FORCE_PATH_STYLE=true
+      - S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-true}
       # Public URL for S3 thumbnails (production with dedicated S3 domain)
       # If not set, thumbnails use /s3/ path proxied via Traefik
       # Must point to the same bucket as S3_BUCKET (no trailing slash)
@@ -146,33 +146,50 @@ services:
       
       # === Keyv Configuration (when STORAGE_BACKEND=keyv) ===
       # - STORAGE_URI_FILE=/run/secrets/storage_uri
-      # - STORAGE_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       
       # === PostgreSQL Configuration (for Workspace/User management) ===
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      # All credentials support _FILE suffix for Docker secrets
+      # Option 1: Use individual secrets (recommended for external PostgreSQL)
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      # Option 2: Use DATABASE_URL directly (uncomment and comment out above)
+      # - DATABASE_URL_FILE=/run/secrets/database_url
       
       # === OIDC Configuration (Authentik) ===
+      # All OIDC settings support _FILE suffix for Docker secrets
       - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
       - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      # For secrets, prefer using _FILE suffix:
+      # - OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
       - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
       - OIDC_CALLBACK_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}/api/v2/auth/callback
       # Internal URL for OIDC discovery (uses Docker network, bypasses Traefik/SSL)
       - OIDC_INTERNAL_URL=${OIDC_INTERNAL_URL:-}
+      # JWT secret - prefer using _FILE suffix for production:
+      # - JWT_SECRET_FILE=/run/secrets/jwt_secret
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       
       # === Local Authentication (Default Admin) ===
+      # All admin settings support _FILE suffix for Docker secrets
       - ENABLE_LOCAL_AUTH=${ENABLE_LOCAL_AUTH:-true}
       - ENABLE_REGISTRATION=${ENABLE_REGISTRATION:-true}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      # For secrets, prefer using _FILE suffix:
+      # - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
       
       # === Super Admin Configuration ===
       # Comma-separated list of emails that should be super admins
+      # Supports _FILE suffix: SUPERADMIN_EMAILS_FILE=/run/secrets/superadmin_emails
       - SUPERADMIN_EMAILS=${SUPERADMIN_EMAILS:-admin@localhost}
       
       # === Kinescope Configuration (for Talktrack video proxy) ===
+      # Supports _FILE suffix for Docker secrets
       - KINESCOPE_API_KEY=${KINESCOPE_API_KEY:-}
       - KINESCOPE_PROJECT_ID=${KINESCOPE_PROJECT_ID:-}
       
@@ -271,21 +288,31 @@ services:
       - admin  # Only start with: docker-compose --profile admin up
 
   # PostgreSQL Database (recommended for production)
+  # Note: For external PostgreSQL, set POSTGRES_HOST in .env and use:
+  #   docker compose up -d --scale postgres=0
+  # Or comment out the depends_on for postgres in the api service
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      # Supports both direct env vars and _FILE suffix for Docker secrets
+      # Option 1: Use secrets (recommended)
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      # Option 2: Use direct env vars (fallback, reads from .env)
+      - POSTGRES_USER=${POSTGRES_USER:-excalidraw}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+      - POSTGRES_DB=${POSTGRES_DB:-excalidraw}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./secrets:/run/secrets:ro
     networks:
       - internal
     labels:
       - "traefik.enable=false"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-excalidraw} -d $${POSTGRES_DB:-excalidraw}"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -51,8 +51,18 @@ cd deploy
 # Copy environment template
 cp env.example .env
 
-# Create secrets
+# Create secrets directory and required secrets
 mkdir -p secrets
+
+# Database credentials
+echo "excalidraw" > secrets/postgres_user
+openssl rand -base64 32 > secrets/postgres_password
+echo "excalidraw" > secrets/postgres_db
+
+# JWT secret
+openssl rand -base64 32 > secrets/jwt_secret
+
+# MinIO credentials
 echo "minioadmin" > secrets/minio_access_key
 openssl rand -base64 32 > secrets/minio_secret_key
 
@@ -65,6 +75,8 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # Enable local builds
 cp docker-compose.override.yml.disabled docker-compose.override.yml
 ```
+
+> **Note:** See [Docker Secrets Documentation](docs/DOCKER_SECRETS.md) for complete secrets management guide.
 
 ### 4. Build and Run
 
@@ -247,6 +259,9 @@ docs: update API documentation
 ## Getting Help
 
 - Check existing documentation in `docs/`
+  - [Architecture](docs/ARCHITECTURE.md) - System overview
+  - [Docker Secrets](docs/DOCKER_SECRETS.md) - Secure credential management
+  - [Workspace & Auth](docs/WORKSPACE.md) - Authentication details
 - Look at similar features for patterns
 - Open an issue for questions
 

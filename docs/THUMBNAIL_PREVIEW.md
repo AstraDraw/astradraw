@@ -222,33 +222,6 @@ labels:
 
 This allows the browser to access thumbnails at `/s3/excalidraw/thumbnails/{id}.png` which Traefik routes to `minio:9000/excalidraw/thumbnails/{id}.png`.
 
-### MinIO Bucket Policy (Required)
-
-Thumbnails need public read access. By default, MinIO buckets are private. You must set the thumbnails folder to allow anonymous downloads:
-
-```bash
-# Inside the minio container or using mc client
-mc alias set local http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
-mc anonymous set download local/excalidraw/thumbnails
-```
-
-**Or via docker compose:**
-
-```bash
-cd deploy
-docker compose exec minio mc alias set local http://localhost:9000 $(cat /run/secrets/minio_access_key) $(cat /run/secrets/minio_secret_key)
-docker compose exec minio mc anonymous set download local/excalidraw/thumbnails
-```
-
-**Verify the policy:**
-
-```bash
-docker compose exec minio mc anonymous get local/excalidraw/thumbnails
-# Should output: Access permission for `local/excalidraw/thumbnails` is `download`
-```
-
-> ⚠️ **Note:** This policy is not persistent across MinIO container restarts if using ephemeral storage. For production, consider using a MinIO init container or startup script.
-
 ---
 
 ## Integration Points
@@ -418,7 +391,6 @@ This triggers all components subscribed to `scenesRefreshAtom` to re-fetch and d
 
 | Date | Change |
 |------|--------|
-| 2025-12-22 | Added MinIO bucket policy documentation for public thumbnail access |
 | 2025-12-22 | Added URL generation docs: S3_PUBLIC_URL for production, Traefik proxy for dev |
 | 2025-12-22 | Full implementation: backend endpoint, frontend utility, save flow integration, UI refresh |
 
