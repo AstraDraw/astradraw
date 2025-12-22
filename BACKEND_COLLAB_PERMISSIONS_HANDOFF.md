@@ -463,3 +463,4 @@ For questions about this implementation, refer to:
 - API changes: `backend/CHANGELOG.md`
 - This handoff: `BACKEND_COLLAB_PERMISSIONS_HANDOFF.md`
 
+

@@ -292,6 +292,11 @@ dev:
         sleep 1
     done
     
+    # Step 3.5: Configure MinIO thumbnails public access
+    echo ""
+    echo "🖼️  Configuring MinIO thumbnails public access..."
+    just dev-configure-minio-thumbnails
+    
     # Step 4: Generate frontend env
     echo ""
     echo "📝 Generating frontend env-config.js..."
@@ -369,6 +374,31 @@ dev-env-frontend:
     };
     ENVEOF
     echo "Created frontend/public/env-config.js"
+
+# Configure MinIO to make thumbnails publicly readable
+dev-configure-minio-thumbnails:
+    #!/usr/bin/env bash
+    set -e
+    
+    # Source deploy/.env to get bucket name
+    if [ -f deploy/.env ]; then
+        set -a
+        source deploy/.env
+        set +a
+    fi
+    
+    BUCKET="${S3_BUCKET:-excalidraw}"
+    
+    # Wait a moment for MinIO to be fully ready
+    sleep 2
+    
+    # Read credentials from Docker secrets inside the container and configure
+    docker exec deploy-minio-1 sh -c '
+        ACCESS_KEY=$(cat /run/secrets/minio_access_key)
+        SECRET_KEY=$(cat /run/secrets/minio_secret_key)
+        mc alias set local http://localhost:9000 "$ACCESS_KEY" "$SECRET_KEY" 2>/dev/null || true
+        mc anonymous set download local/'"$BUCKET"'/thumbnails 2>/dev/null || true
+    ' > /dev/null 2>&1 && echo "   ✅ Thumbnails folder configured for public read" || echo "   ⚠️  Could not configure thumbnails (bucket may not exist yet)"
 
 # Stop all native services and infrastructure
 dev-stop:
