@@ -963,3 +963,106 @@ const url = `${baseUrl}/${bucket}/path`;
 
 **See:** `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for the full pattern.
 
+### 17. Dark Mode Not Working for Workspace Components
+
+**Problem:** Sidebar, dashboard, or settings pages don't switch to dark mode when the canvas does.
+
+**Cause:** Dark mode styles only use `.excalidraw.theme--dark` selector, but workspace components are **outside** the `.excalidraw` container.
+
+**DOM Structure:**
+```
+.excalidraw-app.theme--dark        ← Theme class must be HERE
+├── .workspace-sidebar             ← Outside .excalidraw!
+├── .excalidraw-app__dashboard     ← Outside .excalidraw!
+└── .excalidraw-app__canvas
+    └── .excalidraw.theme--dark    ← Theme class also here
+```
+
+**Solution:** Always use **both** selectors for dark mode:
+
+```scss
+// ❌ BAD - only works for components inside .excalidraw
+.excalidraw.theme--dark {
+  .my-component { ... }
+}
+
+// ✅ GOOD - works for all workspace components
+.excalidraw.theme--dark,
+.excalidraw-app.theme--dark {
+  .my-component { ... }
+}
+```
+
+**Files that need both selectors:**
+- All files in `excalidraw-app/components/Workspace/`
+- All files in `excalidraw-app/components/Settings/`
+- `EmojiPicker.scss`, `SaveStatusIndicator.scss`
+
+**See:** `/docs/WORKSPACE_UI_STYLING.md` for complete dark mode patterns.
+
+### 18. Text Not Readable in Dark Mode
+
+**Problem:** Text appears dark gray on dark background, making it unreadable.
+
+**Cause:** Missing explicit color overrides in dark mode section.
+
+**Common elements that need dark mode color overrides:**
+- Form labels (`label`)
+- Input text and placeholders
+- Dialog titles (`h2`)
+- Field values
+- Member names/emails
+- Hints and descriptions
+
+**Solution:** Add explicit color overrides:
+
+```scss
+.excalidraw-app.theme--dark {
+  .my-component {
+    // Primary text (headings, names, values)
+    &__title,
+    &__name,
+    &__field-value {
+      color: var(--text-primary-color, #e1e1e1);
+    }
+
+    // Secondary text (hints, descriptions, placeholders)
+    &__subtitle,
+    &__hint {
+      color: var(--text-secondary-color, #9b9b9b);
+    }
+
+    // Inputs and selects
+    &__input {
+      background: var(--island-bg-color, #232329);
+      color: var(--text-primary-color, #e1e1e1);
+
+      &::placeholder {
+        color: var(--text-secondary-color, #9b9b9b);
+      }
+    }
+
+    // Dialog headers
+    &__dialog-header h2 {
+      color: var(--text-primary-color, #e1e1e1);
+    }
+
+    // Form labels
+    &__form-group label {
+      color: var(--text-primary-color, #e1e1e1);
+    }
+  }
+}
+```
+
+**Dark mode color reference:**
+| Element | Light | Dark |
+|---------|-------|------|
+| Primary text | `#1b1b1f` | `#e1e1e1` |
+| Secondary text | `#6b6b6b` | `#9b9b9b` |
+| Page background | `#fafafa` | `#1e1e24` |
+| Card background | `#ffffff` | `#232329` |
+| Borders | `#e5e5e5` | `#3d3d3d` |
+
+**See:** `/docs/WORKSPACE_UI_STYLING.md` for complete styling guide.
+
