@@ -57,7 +57,7 @@ services:
   # Excalidraw Frontend
   app:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.53
+    image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.57
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
@@ -124,7 +124,7 @@ services:
   # AstraDraw API (authentication, workspace, storage)
   api:
     # For production: use pre-built image from GitHub Container Registry
-    image: ghcr.io/astrateam-net/astradraw-api:0.7.2
+    image: ghcr.io/astrateam-net/astradraw-api:0.7.4
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
@@ -138,6 +138,11 @@ services:
       - S3_BUCKET=${S3_BUCKET:-excalidraw}
       - S3_REGION=${S3_REGION:-us-east-1}
       - S3_FORCE_PATH_STYLE=true
+      # Public URL for S3 thumbnails (production with dedicated S3 domain)
+      # If not set, thumbnails use /s3/ path proxied via Traefik
+      # Must point to the same bucket as S3_BUCKET (no trailing slash)
+      # Example: https://s3.example.com
+      - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
       
       # === Keyv Configuration (when STORAGE_BACKEND=keyv) ===
       # - STORAGE_URI_FILE=/run/secrets/storage_uri
@@ -219,9 +224,24 @@ services:
       - minio_data:/data
       - ./secrets:/run/secrets:ro
     networks:
+      - astradraw
       - internal
     labels:
-      - "traefik.enable=false"
+      - "traefik.enable=true"
+      # S3 API access for thumbnails at /s3/{bucket}/thumbnails/{id}.png
+      - "traefik.http.routers.minio-s3.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/s3`)"
+      - "traefik.http.routers.minio-s3.entrypoints=websecure"
+      - "traefik.http.routers.minio-s3.tls=true"
+      - "traefik.http.routers.minio-s3.priority=110"
+      - "traefik.http.routers.minio-s3.service=minio-s3"
+      - "traefik.http.services.minio-s3.loadbalancer.server.port=9000"
+      # Strip /s3 prefix before forwarding to MinIO
+      - "traefik.http.routers.minio-s3.middlewares=strip-s3-prefix"
+      - "traefik.http.middlewares.strip-s3-prefix.stripprefix.prefixes=/s3"
+      # HTTP redirect
+      - "traefik.http.routers.minio-s3-http.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/s3`)"
+      - "traefik.http.routers.minio-s3-http.entrypoints=web"
+      - "traefik.http.routers.minio-s3-http.middlewares=redirect-to-https"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s

@@ -847,3 +847,119 @@ setIsAutoCollabScene(loaded.access.canCollaborate && !!loaded.roomId);
 
 **See:** `/docs/AUTO_COLLABORATION.md` for complete documentation.
 
+## Thumbnail Preview System
+
+### Overview
+
+Scene thumbnails are generated client-side after each successful save and uploaded to MinIO/S3.
+
+**See:** `/docs/THUMBNAIL_PREVIEW.md` for complete documentation.
+
+### Common Issues
+
+#### MinIO URLs Not Resolving (ERR_NAME_NOT_RESOLVED)
+
+**Problem:** Browser shows `net::ERR_NAME_NOT_RESOLVED` for URLs like `minio:9000/bucket/...`
+
+**Cause:** The browser can't resolve internal Docker hostnames. MinIO's internal hostname (`minio`) is only accessible within the Docker network.
+
+**Solution:** Use one of these approaches:
+
+1. **Development (Traefik proxy):** Expose MinIO via Traefik at `/s3/` path
+   ```yaml
+   # docker-compose.yml - minio service
+   labels:
+     - "traefik.enable=true"
+     - "traefik.http.routers.minio-s3.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/s3`)"
+     - "traefik.http.services.minio-s3.loadbalancer.server.port=9000"
+     - "traefik.http.middlewares.minio-s3-stripprefix.stripprefix.prefixes=/s3"
+     - "traefik.http.routers.minio-s3.middlewares=minio-s3-stripprefix"
+   ```
+   Then generate URLs like `/s3/bucket/thumbnails/id.png`
+
+2. **Production (public S3 URL):** Set `S3_PUBLIC_URL` environment variable
+   ```bash
+   S3_PUBLIC_URL=https://s3.example.com  # No trailing slash!
+   ```
+   Then generate URLs like `https://s3.example.com/bucket/thumbnails/id.png`
+
+**URL generation pattern:**
+```typescript
+const s3PublicUrl = process.env.S3_PUBLIC_URL;
+const bucket = (process.env.S3_BUCKET || 'excalidraw').replace(/^\//, '');
+
+if (s3PublicUrl) {
+  // Production: direct S3/CDN URL
+  thumbnailUrl = `${s3PublicUrl.replace(/\/+$/, '')}/${bucket}/thumbnails/${key}`;
+} else {
+  // Development: Traefik proxy
+  thumbnailUrl = `/s3/${bucket}/thumbnails/${key}`;
+}
+```
+
+#### URL Malformed with Double Slashes
+
+**Problem:** URLs contain `//` like `https://s3.example.com//bucket/...`
+
+**Cause:** Environment variables have trailing or leading slashes.
+
+**Solution:** Always sanitize:
+```typescript
+// Strip trailing slashes from base URL
+const baseUrl = s3PublicUrl.replace(/\/+$/, '');
+
+// Strip leading slashes from bucket name
+const bucket = (process.env.S3_BUCKET || 'excalidraw').replace(/^\//, '');
+
+// Build URL
+const url = `${baseUrl}/${bucket}/path`;
+```
+
+### 16. CSS Hide/Show Pattern Broken by `display: flex !important`
+
+**Problem:** Dashboard and canvas show side-by-side instead of one being hidden.
+
+**Cause:** SCSS rule like `display: flex !important` overrides the inline `display: none` style used by the CSS Hide/Show pattern.
+
+**Example of the bug:**
+```scss
+// ❌ BAD: This breaks inline display: none
+.excalidraw-app__dashboard {
+  display: flex !important;  // Always shows, even when should be hidden
+}
+```
+
+**Solution:** Use `aria-hidden` attribute as the single source of truth:
+
+```scss
+// ✅ GOOD: aria-hidden controls visibility
+.excalidraw-app__dashboard {
+  flex-direction: column;
+  overflow: hidden;
+
+  &[aria-hidden="true"] {
+    display: none !important;
+  }
+
+  &[aria-hidden="false"] {
+    display: flex;
+  }
+}
+```
+
+```tsx
+// In JSX - set aria-hidden based on mode
+<div
+  className="excalidraw-app__dashboard"
+  aria-hidden={appMode !== "dashboard"}
+>
+  <WorkspaceMainContent />
+</div>
+```
+
+**Key principle:** When using CSS Hide/Show pattern, never use `display: X !important` unconditionally. Either:
+1. Use `aria-hidden` attribute to control display
+2. Or use inline styles only (no SCSS `!important`)
+
+**See:** `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for the full pattern.
+
