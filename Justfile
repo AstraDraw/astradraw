@@ -268,6 +268,11 @@ test-api-full url="https://10.100.0.10" admin_email="admin@localhost" admin_pass
     chmod +x deploy/test-backend-api.sh
     SUPERADMIN_EMAIL={{admin_email}} SUPERADMIN_PASSWORD={{admin_pass}} deploy/test-backend-api.sh {{url}}
 
+# Setup test data for manual auto-collaboration testing (does NOT clean up)
+setup-collab-test url="https://10.100.0.10":
+    chmod +x deploy/setup-collab-test.sh
+    deploy/setup-collab-test.sh {{url}}
+
 # ============================================
 # SETUP
 # ============================================

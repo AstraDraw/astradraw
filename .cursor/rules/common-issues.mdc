@@ -781,3 +781,69 @@ rm deploy/logs/navigation.log
 
 **See:** `/docs/DEBUG_NAVIGATION.md` for complete documentation (enable/disable, log format, all events, jq commands).
 
+## Auto-Collaboration for Shared Collections
+
+### Overview
+
+Scenes in non-private collections of SHARED workspaces automatically have collaboration enabled. Users see each other's cursors immediately without clicking "Share".
+
+### Key Implementation Details
+
+1. **Room credentials stored in database**: `roomId` and `roomKeyEncrypted` on Scene model
+2. **AES-128-GCM key format**: 22-character base64url string (16 bytes encoded)
+3. **`isAutoCollab` flag**: Prevents scene reset when joining collaboration
+
+### Common Issues
+
+#### Encryption Key Length Error
+
+**Error:** `DataError: The JWK "k" member did not include the right length of key data`
+
+**Cause:** Room key is not 22 characters (base64url encoding of 16 bytes for AES-128-GCM).
+
+**Solution:** Generate key with `randomBytes(16).toString('base64url')`:
+```typescript
+private generateRoomKey(): string {
+  return randomBytes(16).toString('base64url'); // Returns 22 chars
+}
+```
+
+#### Scene Data Lost on First Load
+
+**Problem:** Opening a shared scene shows blank canvas.
+
+**Cause:** `startCollaboration()` calls `resetScene()` before loading from room storage.
+
+**Solution:** Pass `isAutoCollab: true` to keep current scene data:
+```typescript
+await collabAPI.startCollaboration({
+  roomId: loaded.roomId,
+  roomKey: loaded.roomKey,
+  isAutoCollab: true, // Don't reset scene
+});
+```
+
+#### Autosave Shows "Unsaved" During Collaboration
+
+**Problem:** SaveStatusIndicator shows "Unsaved changes" during collaboration.
+
+**Cause:** Autosave is disabled during collaboration, but indicator still shows.
+
+**Solution:** Hide SaveStatusIndicator when collaborating:
+```typescript
+const showSaveStatus = isAuthenticated && currentSceneId && !isLegacyMode && !isCollaborating;
+```
+
+### State Management
+
+Use `isAutoCollabSceneAtom` to track auto-collab state:
+```typescript
+// In settingsState.ts
+export const isAutoCollabSceneAtom = atom<boolean>(false);
+
+// Set when loading scene
+setIsAutoCollabScene(loaded.access.canCollaborate && !!loaded.roomId);
+```
+
+**See:** `/docs/AUTO_COLLABORATION.md` for complete documentation.
+

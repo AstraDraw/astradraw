@@ -189,6 +189,27 @@ The SaveStatusIndicator only appears when:
 - User is authenticated
 - A workspace scene is open (`currentSceneId` is set)
 - Not in legacy/anonymous mode
+- **Not in collaboration mode** (collaboration has its own save mechanism)
+
+## Interaction with Collaboration
+
+**Important:** Autosave is automatically disabled when collaboration is active.
+
+```typescript
+// In onChange callback:
+if (currentSceneId && !collabAPI?.isCollaborating()) {
+  // Only track unsaved changes for non-collaborative scenes
+  // Collaborative scenes save via room-service
+}
+```
+
+| Scene Type | Save Mechanism | Status Indicator |
+|------------|----------------|------------------|
+| Personal/Private scene (solo) | Workspace autosave | SaveStatusIndicator |
+| Personal/Private scene (sharing) | Room-service | Collab status |
+| **Shared collection scene** | **Room-service (always)** | **Collab status** |
+
+For shared collection scenes, data is always saved to room storage (`/rooms/{roomId}`) via the collaboration system, even if you're the only person viewing the scene. See [AUTO_COLLABORATION.md](./AUTO_COLLABORATION.md) for details.
 
 ## Mobile Responsiveness
 

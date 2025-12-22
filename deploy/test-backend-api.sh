@@ -232,12 +232,24 @@ SCENE_ID=$(echo "$CREATE_SCENE_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cu
 log_info "Scene ID: $SCENE_ID"
 
 if [ -n "$SCENE_ID" ] && [ "$SCENE_ID" != "null" ]; then
-    # Check collaborationEnabled field (should be true by default)
-    if echo "$CREATE_SCENE_RESPONSE" | grep -q '"collaborationEnabled":true'; then
-        log_success "Scene has collaborationEnabled=true by default"
-    else
-        log_fail "Scene should have collaborationEnabled=true"
+    # Check collaborationEnabled field (should be false for personal workspace)
+    if echo "$CREATE_SCENE_RESPONSE" | grep -q '"collaborationEnabled":false'; then
+        log_success "Scene in personal workspace has collaborationEnabled=false"
+    elif echo "$CREATE_SCENE_RESPONSE" | grep -q '"collaborationEnabled":true'; then
+        log_fail "Scene in personal workspace should have collaborationEnabled=false"
         echo "  Response: $CREATE_SCENE_RESPONSE"
+    else
+        log_skip "collaborationEnabled field check"
+    fi
+    
+    # NEW: Check that personal workspace scenes do NOT have auto-generated roomId
+    if echo "$CREATE_SCENE_RESPONSE" | grep -q '"roomId":null'; then
+        log_success "Scene in personal workspace has roomId=null (no auto-collaboration)"
+    elif echo "$CREATE_SCENE_RESPONSE" | grep -q '"roomId":"[^"]*"'; then
+        log_fail "Scene in personal workspace should NOT have auto-generated roomId"
+        echo "  Response: $CREATE_SCENE_RESPONSE"
+    else
+        log_success "Scene in personal workspace has no roomId"
     fi
     
     # Get scene by slug (new endpoint)
@@ -373,12 +385,22 @@ if [ "$SKIP_SUPERADMIN_TESTS" != "true" ]; then
             fi
         fi
         
-        # Create collection in shared workspace
-        COLLECTION_RESPONSE=$(api_call POST "/api/v2/workspaces/$SHARED_WS_ID/collections" '{"name":"Project Alpha","icon":"📁"}' "$SUPERADMIN_COOKIES")
+        # Create a NON-PRIVATE collection in shared workspace (for auto-collaboration)
+        COLLECTION_RESPONSE=$(api_call POST "/api/v2/workspaces/$SHARED_WS_ID/collections" '{"name":"Project Alpha","icon":"📁","isPrivate":false}' "$SUPERADMIN_COOKIES")
         if echo "$COLLECTION_RESPONSE" | grep -q '"id":'; then
-            log_success "Create collection in shared workspace"
+            log_success "Create non-private collection in shared workspace"
             SHARED_COLLECTION_ID=$(echo "$COLLECTION_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
             log_info "Collection ID: $SHARED_COLLECTION_ID"
+            
+            # Also create a PRIVATE collection to test that auto-collaboration is disabled
+            PRIVATE_COLLECTION_RESPONSE=$(api_call POST "/api/v2/workspaces/$SHARED_WS_ID/collections" '{"name":"My Private Drafts","icon":"🔒","isPrivate":true}' "$SUPERADMIN_COOKIES")
+            if echo "$PRIVATE_COLLECTION_RESPONSE" | grep -q '"id":'; then
+                PRIVATE_COLLECTION_ID=$(echo "$PRIVATE_COLLECTION_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+                log_success "Create private collection in shared workspace"
+                log_info "Private Collection ID: $PRIVATE_COLLECTION_ID"
+            else
+                log_skip "Create private collection (not critical)"
+            fi
             
             # Test team-collection access level
             if [ -n "$TEAM_ID" ]; then
@@ -410,8 +432,8 @@ if [ "$SKIP_SUPERADMIN_TESTS" != "true" ]; then
                 fi
             fi
             
-            # Create scene in shared workspace collection and test collaboration
-            log_section "10b. Super Admin - Collaboration in Shared Workspace"
+            # Create scene in shared workspace collection and test AUTO-COLLABORATION
+            log_section "10b. Super Admin - Auto-Collaboration in Shared Workspace"
             
             SHARED_SCENE_TITLE="Shared Scene ${TIMESTAMP}"
             SHARED_SCENE_RESPONSE=$(api_call POST "/api/v2/workspace/scenes" "{\"title\":\"$SHARED_SCENE_TITLE\",\"collectionId\":\"$SHARED_COLLECTION_ID\"}" "$SUPERADMIN_COOKIES")
@@ -421,19 +443,61 @@ if [ "$SKIP_SUPERADMIN_TESTS" != "true" ]; then
                 log_success "Create scene in shared workspace"
                 log_info "Shared Scene ID: $SHARED_SCENE_ID"
                 
-                # Start collaboration in shared workspace (should succeed)
+                # NEW: Check if scene was auto-created with roomId (auto-collaboration)
+                if echo "$SHARED_SCENE_RESPONSE" | grep -q '"roomId":"[^"]*"'; then
+                    log_success "Scene auto-created with roomId (auto-collaboration enabled)"
+                    AUTO_ROOM_ID=$(echo "$SHARED_SCENE_RESPONSE" | grep -o '"roomId":"[^"]*"' | cut -d'"' -f4)
+                    log_info "Auto-generated Room ID: $AUTO_ROOM_ID"
+                else
+                    log_fail "Scene in shared collection should have auto-generated roomId"
+                    echo "  Response: $SHARED_SCENE_RESPONSE"
+                fi
+                
+                # NEW: Check collaborationEnabled is true
+                if echo "$SHARED_SCENE_RESPONSE" | grep -q '"collaborationEnabled":true'; then
+                    log_success "Scene has collaborationEnabled=true"
+                else
+                    log_fail "Scene in shared collection should have collaborationEnabled=true"
+                fi
+                
+                # NEW: Test getSceneBySlug returns roomKey for auto-collaboration
+                log_info "Testing scene load with auto-collaboration credentials..."
+                SCENE_BY_SLUG_RESPONSE=$(api_call GET "/api/v2/workspace/by-slug/$SHARED_WS_SLUG/scenes/$SHARED_SCENE_ID" "" "$SUPERADMIN_COOKIES")
+                
+                if echo "$SCENE_BY_SLUG_RESPONSE" | grep -q '"roomId":"[^"]*"'; then
+                    log_success "getSceneBySlug returns roomId"
+                else
+                    log_fail "getSceneBySlug should return roomId"
+                    echo "  Response: $SCENE_BY_SLUG_RESPONSE"
+                fi
+                
+                if echo "$SCENE_BY_SLUG_RESPONSE" | grep -q '"roomKey":"[^"]*"'; then
+                    log_success "getSceneBySlug returns roomKey (auto-collaboration ready)"
+                else
+                    log_fail "getSceneBySlug should return roomKey for users with canCollaborate"
+                    echo "  Response: $SCENE_BY_SLUG_RESPONSE"
+                fi
+                
+                # Check canCollaborate is true in access
+                if echo "$SCENE_BY_SLUG_RESPONSE" | grep -q '"canCollaborate":true'; then
+                    log_success "canCollaborate permission is true for shared collection scene"
+                else
+                    log_fail "canCollaborate should be true for shared collection scene"
+                fi
+                
+                # Start collaboration endpoint should still work (for backwards compatibility)
                 SHARED_COLLAB_RESPONSE=$(api_call POST "/api/v2/workspace/scenes/$SHARED_SCENE_ID/collaborate" "" "$SUPERADMIN_COOKIES")
                 if echo "$SHARED_COLLAB_RESPONSE" | grep -q '"roomId":'; then
-                    log_success "Start collaboration in shared workspace"
+                    log_success "Start collaboration endpoint still works"
                     ROOM_ID=$(echo "$SHARED_COLLAB_RESPONSE" | grep -o '"roomId":"[^"]*"' | cut -d'"' -f4)
-                    log_info "Room ID: $ROOM_ID"
+                    log_info "Room ID from endpoint: $ROOM_ID"
                     
-                # Check if roomKey is returned (decrypted server-side)
-                if echo "$SHARED_COLLAB_RESPONSE" | grep -q '"roomKey":'; then
-                    log_success "roomKey is present in response (decrypted)"
-                else
-                    log_fail "roomKey should be present in collaboration response"
-                fi
+                    # Check if roomKey is returned (decrypted server-side)
+                    if echo "$SHARED_COLLAB_RESPONSE" | grep -q '"roomKey":'; then
+                        log_success "roomKey is present in response (decrypted)"
+                    else
+                        log_fail "roomKey should be present in collaboration response"
+                    fi
                 else
                     log_fail "Start collaboration in shared workspace"
                     echo "  Response: $SHARED_COLLAB_RESPONSE"
@@ -450,6 +514,38 @@ if [ "$SKIP_SUPERADMIN_TESTS" != "true" ]; then
             else
                 log_fail "Create scene in shared workspace"
                 echo "  Response: $SHARED_SCENE_RESPONSE"
+            fi
+            
+            # NEW: Test that scenes in PRIVATE collections do NOT get auto-collaboration
+            if [ -n "$PRIVATE_COLLECTION_ID" ]; then
+                log_section "10c. Super Admin - Private Collection (No Auto-Collaboration)"
+                
+                PRIVATE_SCENE_TITLE="Private Scene ${TIMESTAMP}"
+                PRIVATE_SCENE_RESPONSE=$(api_call POST "/api/v2/workspace/scenes" "{\"title\":\"$PRIVATE_SCENE_TITLE\",\"collectionId\":\"$PRIVATE_COLLECTION_ID\"}" "$SUPERADMIN_COOKIES")
+                
+                if echo "$PRIVATE_SCENE_RESPONSE" | grep -q '"id":'; then
+                    PRIVATE_SCENE_ID=$(echo "$PRIVATE_SCENE_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+                    log_success "Create scene in private collection"
+                    
+                    # Check that private collection scenes do NOT have auto-generated roomId
+                    if echo "$PRIVATE_SCENE_RESPONSE" | grep -q '"roomId":null'; then
+                        log_success "Scene in private collection has roomId=null (no auto-collaboration)"
+                    elif echo "$PRIVATE_SCENE_RESPONSE" | grep -q '"roomId":"[^"]*"'; then
+                        log_fail "Scene in private collection should NOT have auto-generated roomId"
+                        echo "  Response: $PRIVATE_SCENE_RESPONSE"
+                    else
+                        log_success "Scene in private collection has no roomId"
+                    fi
+                    
+                    # Check collaborationEnabled is false for private collection
+                    if echo "$PRIVATE_SCENE_RESPONSE" | grep -q '"collaborationEnabled":false'; then
+                        log_success "Scene in private collection has collaborationEnabled=false"
+                    else
+                        log_fail "Scene in private collection should have collaborationEnabled=false"
+                    fi
+                else
+                    log_skip "Create scene in private collection"
+                fi
             fi
         else
             log_fail "Create collection in shared workspace"
