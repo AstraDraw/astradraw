@@ -93,13 +93,29 @@ openssl rand -base64 32 > secrets/room_key_secret
 
 > ⚠️ **Important:** This secret encrypts room keys stored in the database. It can be any length string. The actual room keys (used for end-to-end encryption) are automatically generated as 22-character strings (16 bytes base64url) to meet AES-128-GCM requirements.
 
-### External Services
+### External Services (Backend)
 
 | Secret File | Environment Variable | Description |
 |-------------|---------------------|-------------|
-| `kinescope_api_key` | `KINESCOPE_API_KEY_FILE` | Kinescope API key |
+| `kinescope_api_key` | `KINESCOPE_API_KEY_FILE` | Kinescope API key (Talktrack) |
 | `kinescope_project_id` | `KINESCOPE_PROJECT_ID_FILE` | Kinescope project ID |
-| `giphy_api_key` | `GIPHY_API_KEY_FILE` | GIPHY API key |
+
+### Frontend Environment Variables (NO `_FILE` support)
+
+The following variables are **frontend-only** and do NOT support Docker secrets:
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `VITE_APP_GIPHY_API_KEY` | GIPHY API key for Stickers & GIFs |
+
+**Why?** Frontend environment variables are injected at build/runtime via Vite and `window.__ENV__`. They don't have access to the backend's `getSecret()` utility.
+
+To use GIPHY, pass the API key directly:
+```yaml
+app:
+  environment:
+    - VITE_APP_GIPHY_API_KEY=${GIPHY_API_KEY}
+```
 
 ## External PostgreSQL
 
@@ -118,8 +134,8 @@ echo "your_db_name" > secrets/postgres_db
 Add to `deploy/.env`:
 
 ```bash
-POSTGRES_HOST=10.1.125.55
-POSTGRES_PORT=5000
+POSTGRES_HOST=10.10.120.50
+POSTGRES_PORT=5678
 ```
 
 ### 3. Start Without Built-in PostgreSQL

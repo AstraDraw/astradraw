@@ -115,6 +115,9 @@ Update `docker-compose.yml` to use secrets:
 ```yaml
 api:
   environment:
+    # REQUIRED: App URL for redirects after login
+    - APP_URL=https://draw.example.com
+    
     # OIDC via Docker secrets
     - OIDC_ISSUER_URL_FILE=/run/secrets/oidc_issuer_url
     - OIDC_CLIENT_ID_FILE=/run/secrets/oidc_client_id
@@ -154,6 +157,26 @@ OIDC_INTERNAL_URL=http://authentik-server:9000/application/o/astradraw/
 ```
 
 The backend uses `OIDC_INTERNAL_URL` for discovery but validates tokens against `OIDC_ISSUER_URL`.
+
+## Required Environment Variables
+
+The following environment variables **must be set** for SSO to work:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `APP_URL` | **Required.** Full URL of your AstraDraw instance. Used for redirects after login. | `https://draw.example.com` |
+| `OIDC_ISSUER_URL` | OIDC provider's issuer URL | `https://auth.example.com/application/o/astradraw/` |
+| `OIDC_CLIENT_ID` | Client ID from your OIDC provider | `mOWFfhX2RFM7MSFPqJeMTnxzBd205Hq14lqCE3EU` |
+| `OIDC_CLIENT_SECRET` | Client secret from your OIDC provider | (secret value) |
+| `OIDC_CALLBACK_URL` | Callback URL (must match OIDC provider config) | `https://draw.example.com/api/v2/auth/callback` |
+
+Optional:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OIDC_INTERNAL_URL` | Internal URL for Docker-to-Docker communication | `http://authentik-server:9000/application/o/astradraw/` |
+| `ENABLE_LOCAL_AUTH` | Enable local username/password login | `true` or `false` |
+| `SUPERADMIN_EMAILS` | Comma-separated list of super admin emails | `admin@example.com` |
 
 ## Complete Example Configuration
 
