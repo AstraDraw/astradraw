@@ -85,6 +85,38 @@ Unlike legacy anonymous collaboration (`/#room=xxx,yyy`), workspace scenes **do 
 
 ---
 
+## Configuration
+
+### Room Key Secret
+
+The auto-collaboration feature encrypts room keys before storing them in the database. The encryption uses:
+
+1. **`ROOM_KEY_SECRET`** - If set, used for room key encryption
+2. **`JWT_SECRET`** - Fallback if `ROOM_KEY_SECRET` is not set
+
+**You do NOT need to define `ROOM_KEY_SECRET`** - the system automatically uses `JWT_SECRET` for encryption.
+
+**When to use a separate `ROOM_KEY_SECRET`:**
+- If you want to rotate `JWT_SECRET` without invalidating existing collaboration rooms
+- For additional security separation between authentication and collaboration
+
+**Configuration:**
+```bash
+# Option 1: Use JWT_SECRET (default, no action needed)
+# Room keys are encrypted with JWT_SECRET automatically
+
+# Option 2: Use separate secret (optional)
+# In deploy/.env:
+ROOM_KEY_SECRET=your_separate_secret
+
+# Or via Docker secrets:
+echo "your_separate_secret" > deploy/secrets/room_key_secret
+# And in docker-compose.yml:
+# - ROOM_KEY_SECRET_FILE=/run/secrets/room_key_secret
+```
+
+---
+
 ## Implementation
 
 ### Backend Changes

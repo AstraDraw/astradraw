@@ -77,6 +77,14 @@ The backend automatically reads secrets from `/run/secrets/` (mounted from `./se
 | `minio_access_key` | `S3_ACCESS_KEY_FILE` | S3/MinIO access key |
 | `minio_secret_key` | `S3_SECRET_KEY_FILE` | S3/MinIO secret key |
 
+### Collaboration (Auto-Collab Feature)
+
+| Secret File | Environment Variable | Description |
+|-------------|---------------------|-------------|
+| `room_key_secret` | `ROOM_KEY_SECRET_FILE` | Room key encryption secret (optional) |
+
+**Note:** `ROOM_KEY_SECRET` is **optional**. If not set, the system uses `JWT_SECRET` for room key encryption. You only need a separate `ROOM_KEY_SECRET` if you want to rotate `JWT_SECRET` without invalidating existing collaboration rooms.
+
 ### External Services
 
 | Secret File | Environment Variable | Description |
@@ -162,6 +170,7 @@ deploy/
 │   ├── oidc_client_secret  # If using OIDC
 │   ├── superadmin_emails   # Optional
 │   ├── admin_password      # Optional
+│   ├── room_key_secret     # Optional (defaults to jwt_secret)
 │   ├── kinescope_api_key   # If using Talktrack
 │   └── kinescope_project_id
 └── logs/

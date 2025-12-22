@@ -173,6 +173,13 @@ services:
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - APP_URL=${APP_PROTOCOL:-http}://${APP_DOMAIN}
       
+      # === Room Key Secret (for auto-collaboration encryption) ===
+      # Optional: If not set, JWT_SECRET is used for room key encryption
+      # Use a separate secret if you want to rotate JWT_SECRET without
+      # invalidating existing collaboration rooms
+      # - ROOM_KEY_SECRET_FILE=/run/secrets/room_key_secret
+      - ROOM_KEY_SECRET=${ROOM_KEY_SECRET:-}
+      
       # === Local Authentication (Default Admin) ===
       # All admin settings support _FILE suffix for Docker secrets
       - ENABLE_LOCAL_AUTH=${ENABLE_LOCAL_AUTH:-true}
