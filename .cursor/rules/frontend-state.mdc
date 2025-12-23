@@ -1,6 +1,6 @@
 ---
 description: "Jotai state management patterns for AstraDraw frontend"
-globs: ["frontend/excalidraw-app/components/Settings/settingsState.ts", "frontend/excalidraw-app/App.tsx"]
+globs: ["frontend/excalidraw-app/components/Settings/settingsState.ts", "frontend/excalidraw-app/App.tsx", "frontend/excalidraw-app/hooks/*.ts"]
 ---
 
 # Frontend State Management
@@ -8,6 +8,7 @@ globs: ["frontend/excalidraw-app/components/Settings/settingsState.ts", "fronten
 **Key files for context:**
 @frontend/excalidraw-app/components/Settings/settingsState.ts
 @frontend/excalidraw-app/router.ts
+@frontend/excalidraw-app/hooks/
 
 ## Jotai vs useState
 
@@ -100,17 +101,28 @@ useEffect(() => { loadCollections(); }, [refreshCounter]);
 const navigateToScene = useSetAtom(navigateToSceneAtom);
 navigateToScene({ workspaceSlug, sceneId, title });
 
-// In App.tsx handlePopState - set state DIRECTLY
-const handlePopState = () => {
-  const route = parseUrl();
-  if (route.type === "dashboard") {
-    setAppMode("dashboard");    // ✅ Direct state set
-    setDashboardView("home");   // ✅ No URL push
-  }
-};
+// In useUrlRouting hook - set state DIRECTLY (no URL push)
+// This is now extracted to hooks/useUrlRouting.ts
 ```
 
-**Rule:** `handlePopState` should NEVER call navigation atoms that push URLs.
+**Rule:** `handlePopState` (in `useUrlRouting`) should NEVER call navigation atoms that push URLs.
+
+## App.tsx Hooks
+
+App.tsx uses extracted hooks for better maintainability:
+
+| Hook | Purpose |
+|------|---------|
+| `useAutoSave` | Save state machine, debounce, retry, offline |
+| `useSceneLoader` | Scene loading, auto-collab join |
+| `useUrlRouting` | Popstate, URL parsing |
+| `useKeyboardShortcuts` | Ctrl+S, Cmd+P, Cmd+[, Cmd+] |
+| `useWorkspaceData` | Workspace/collections loading |
+
+**When to create a new hook:**
+- Logic is 50+ lines and has single responsibility
+- Logic could be reused in another component
+- Logic has its own state + effects that form a cohesive unit
 
 ## Migration: useState to Jotai
 

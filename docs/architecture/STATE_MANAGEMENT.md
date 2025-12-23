@@ -179,12 +179,26 @@ Some state is intentionally kept as local `useState` because it's:
 
 ### In App.tsx
 
+App.tsx uses extracted hooks for most logic. Remaining local state:
+
 | State | Purpose | Why not Jotai? |
 |-------|---------|----------------|
 | `errorMessage` | Error display | Component-local UI state |
-| `_isOnline` | Network status tracking | Internal mechanism |
-| `hasUnsavedChanges` | Autosave status indicator | Could be Jotai, but tightly coupled to save logic |
+| `isLegacyMode` | Legacy collab mode detection | Internal mechanism |
+| `pendingInviteCode` | Invite URL handling | Temporary state |
 | `forceRefresh` | Force component re-render | Internal mechanism |
+
+### App.tsx Hooks
+
+Logic has been extracted into focused hooks in `excalidraw-app/hooks/`:
+
+| Hook | Manages |
+|------|---------|
+| `useAutoSave` | Save status, debounce, retry, offline detection |
+| `useSceneLoader` | Scene loading, scene state (id, title, access) |
+| `useUrlRouting` | Popstate, URL parsing, dashboard navigation |
+| `useKeyboardShortcuts` | Ctrl+S, Cmd+P, Cmd+[, Cmd+] |
+| `useWorkspaceData` | Workspace, collections, private collection ID |
 
 ### In Child Components
 
@@ -388,6 +402,16 @@ export const someActionAtom = atom(null, (get, set) => {
 ```
 excalidraw-app/
 ├── app-jotai.ts              # Jotai provider setup, authUserAtom
+├── hooks/                    # Extracted logic hooks
+│   ├── useAutoSave.ts        # Save state machine, debounce, retry
+│   ├── useSceneLoader.ts     # Scene loading from workspace URLs
+│   ├── useUrlRouting.ts      # Popstate, URL parsing
+│   ├── useKeyboardShortcuts.ts  # Global keyboard handlers
+│   ├── useWorkspaceData.ts   # Workspace/collections loading
+│   ├── useSceneActions.ts    # Scene CRUD operations
+│   ├── useScenesCache.ts     # Centralized scenes cache
+│   ├── useCollections.ts     # Collection operations
+│   └── useWorkspaces.ts      # Workspace operations
 ├── components/
 │   ├── Settings/
 │   │   ├── settingsState.ts  # Main navigation/app state atoms
@@ -418,6 +442,7 @@ excalidraw-app/
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Documented App.tsx hooks (useAutoSave, useSceneLoader, etc.) |
 | 2025-12-23 | Added centralized scenes cache with `scenesCacheAtom` |
 | 2025-12-23 | Migrated `workspaceSidebarOpen` from useState to Jotai atom |
 | 2025-12-23 | Initial documentation |

@@ -18,13 +18,19 @@ frontend/
 │   │   ├── api/              # Modular API client (scenes, workspaces, etc.)
 │   │   ├── AuthContext.tsx   # Auth provider
 │   │   └── workspaceApi.ts   # Re-exports from api/ (backward compat)
+│   ├── hooks/                # Extracted logic hooks
+│   │   ├── useAutoSave.ts    # Save state machine, debounce, retry
+│   │   ├── useSceneLoader.ts # Scene loading, auto-collab
+│   │   ├── useUrlRouting.ts  # Popstate, URL parsing
+│   │   ├── useKeyboardShortcuts.ts  # Global keyboard handlers
+│   │   └── useWorkspaceData.ts      # Workspace/collections loading
 │   ├── components/           # Custom components
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
 │   │   ├── Settings/         # ProfilePage, MembersPage
 │   │   ├── EmojiPicker/      # Emoji picker for collection icons
 │   │   ├── Talktrack/        # Recording feature
 │   │   └── Presentation/     # Slideshow mode
-│   └── App.tsx               # Main app component
+│   └── App.tsx               # Main app orchestrator (uses hooks)
 ├── packages/excalidraw/      # Core Excalidraw library
 │   ├── locales/              # Translation files (en.json, ru-RU.json)
 ```

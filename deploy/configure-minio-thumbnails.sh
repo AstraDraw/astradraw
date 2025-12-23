@@ -23,3 +23,4 @@ docker exec deploy-minio-1 sh -c '
     mc anonymous set download local/'"$BUCKET"'/thumbnails 2>/dev/null || true
 ' > /dev/null 2>&1 && echo "   ✅ Thumbnails folder configured for public read" || echo "   ⚠️  Could not configure thumbnails (bucket may not exist yet)"
 
+

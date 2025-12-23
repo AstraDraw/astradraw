@@ -55,35 +55,28 @@ hooks/
 
 ---
 
-### 2. `App.tsx` is Massive (2,436 lines)
+### 2. ✅ RESOLVED: `App.tsx` Split into Focused Hooks
 
-**Problem:** The main App component handles too many responsibilities:
+> **Resolved:** 2025-12-23 - Extracted logic into 5 focused hooks, reducing App.tsx from 2,473 to ~1,900 lines
 
-- URL routing and navigation
-- Scene loading and saving
-- Collaboration setup
-- Keyboard shortcuts
-- Auto-save logic
-- Multiple dialogs and modals
+**Was:** Single file handling URL routing, scene loading, autosave, keyboard shortcuts, workspace data, and rendering.
 
-**Impact:** Changes risk breaking unrelated features. Hard to reason about.
-
-**Recommended Solution:**
+**Fix:** Created focused hooks:
 
 ```
-excalidraw-app/
-├── App.tsx                    # Slim orchestrator (~300 lines)
-├── AppProviders.tsx           # All providers wrapped
-├── AppRouting.tsx             # URL handling
-├── AppKeyboardShortcuts.tsx   # Keyboard handlers
-├── hooks/
-│   ├── useSceneLoader.ts      # Scene loading logic
-│   ├── useAutoSave.ts         # Auto-save logic (already exists partially)
-│   ├── useCollaboration.ts    # Collab setup
-│   └── useAppNavigation.ts    # Navigation state
+excalidraw-app/hooks/
+├── useAutoSave.ts           # Save state machine, debounce, retry, offline detection (~230 lines)
+├── useSceneLoader.ts        # Scene loading from workspace URLs, auto-collab (~250 lines)
+├── useUrlRouting.ts         # Popstate handling, URL parsing (~120 lines)
+├── useKeyboardShortcuts.ts  # Ctrl+S, Cmd+P, Cmd+[, Cmd+] (~130 lines)
+└── useWorkspaceData.ts      # Workspace/collections loading (~150 lines)
 ```
 
-**Effort:** High (1 week)
+**Benefits:**
+- Each hook has single responsibility
+- App.tsx is now an orchestrator that wires hooks together
+- Logic is testable in isolation
+- Easier to understand and maintain
 
 ---
 
@@ -482,14 +475,14 @@ import styles from './WorkspaceSidebar.module.scss';
 
 1. ✅ Split `WorkspaceSidebar.tsx` into smaller components (done 2025-12-23)
 2. ✅ Split `workspaceApi.ts` into modules (done 2025-12-23)
-3. Migrate more state to Jotai atoms
+3. ✅ Split `App.tsx` into focused hooks (done 2025-12-23)
+4. Migrate more state to Jotai atoms
 
 ### Phase 3: Advanced (1-2 months)
 
 1. Add React Query for data fetching
-2. Split `App.tsx` into smaller modules
-3. Add optimistic updates
-4. Add unit tests
+2. Add optimistic updates
+3. Add unit tests
 
 ---
 
@@ -550,6 +543,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Split App.tsx into 5 focused hooks          |
 | 2025-12-23 | Split workspaceApi.ts into modular API      |
 | 2025-12-23 | Split WorkspaceSidebar.tsx into components  |
 | 2025-12-23 | Marked Error Boundaries as resolved         |
