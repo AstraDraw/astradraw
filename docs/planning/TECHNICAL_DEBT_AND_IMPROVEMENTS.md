@@ -426,31 +426,64 @@ excalidraw-app/tests/
 
 ---
 
-### 12. CSS Could Use CSS Modules or Styled Components
+### 12. ✅ RESOLVED: CSS Modules Pilot Migration
 
-**Problem:** Global SCSS files can have naming conflicts.
+> **Resolved:** 2025-12-23 - Pilot migration of 3 components to CSS Modules
 
-**Current:**
+**Was:** All SCSS files were global with BEM naming conventions, risking naming conflicts.
 
-```scss
-// WorkspaceSidebar.scss
-.workspace-sidebar { ... }
-.workspace-sidebar__header { ... }
+**Fix:** Migrated 3 pilot components to CSS Modules to establish patterns:
+
+```
+components/Skeletons/
+├── Skeleton.module.scss      # Shimmer animation, dark mode
+├── SceneCardSkeleton.tsx     # Uses styles.sceneCardSkeleton
+└── CollectionItemSkeleton.tsx
+
+components/ErrorBoundary/
+├── ErrorBoundary.module.scss # Fallback styles, variants
+├── ErrorBoundary.tsx
+├── SidebarErrorFallback.tsx
+├── ContentErrorFallback.tsx
+└── GenericErrorFallback.tsx
+
+components/SaveStatusIndicator/
+├── SaveStatusIndicator.module.scss  # Status colors, animations
+└── SaveStatusIndicator.tsx
 ```
 
-**Alternative:** CSS Modules
+**Key patterns established:**
 
-```scss
-// WorkspaceSidebar.module.scss
-.sidebar { ... }
-.header { ... }
+1. **Dark mode** - Use `:global()` for theme selectors:
+   ```scss
+   :global(.excalidraw.theme--dark),
+   :global(.excalidraw-app.theme--dark) {
+     .container { ... }
+   }
+   ```
 
-// Component
-import styles from './WorkspaceSidebar.module.scss';
-<div className={styles.sidebar}>
-```
+2. **Animations** - Keyframes are locally scoped automatically
 
-**Effort:** High (not recommended unless refactoring anyway)
+3. **Class composition** - Use template literals for multiple classes:
+   ```typescript
+   className={`${styles.status} ${styles.statusSaved}`}
+   ```
+
+4. **Type safety** - Added declarations to `vite-env.d.ts`:
+   ```typescript
+   declare module "*.module.scss" {
+     const classes: { readonly [key: string]: string };
+     export default classes;
+   }
+   ```
+
+**Benefits:**
+- Guaranteed class name uniqueness
+- Better IDE autocomplete for styles
+- Clear dependency between component and styles
+- Foundation for broader migration if desired
+
+**Remaining:** 38 global SCSS files in `excalidraw-app/` (optional future migration)
 
 ---
 
@@ -578,6 +611,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | CSS Modules pilot migration (3 components)  |
 | 2025-12-23 | Fixed internationalization for UI strings   |
 | 2025-12-23 | Added unit tests for hooks and API client   |
 | 2025-12-23 | Added optimistic updates to scene actions   |
