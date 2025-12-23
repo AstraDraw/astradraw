@@ -72,14 +72,19 @@ After committing, show:
 
 ## Step 6: Push (Optional)
 
-Ask the user if they want to push the commits. If yes:
+Ask the user if they want to push the commits. If yes, use Justfile commands:
 
-### Push All Repos with Changes
+### Push All Repos
 ```bash
-echo "=== Pushing Main ===" && git -C /Volumes/storage/01_Projects/astradraw push
-echo "=== Pushing Frontend ===" && git -C /Volumes/storage/01_Projects/astradraw/frontend push
-echo "=== Pushing Backend ===" && git -C /Volumes/storage/01_Projects/astradraw/backend push
-echo "=== Pushing Room Service ===" && git -C /Volumes/storage/01_Projects/astradraw/room-service push
+just push-all
+```
+
+### Or Push Individual Repos
+```bash
+just push-main       # Main repo only
+just push-frontend   # Frontend only
+just push-backend    # Backend only
+just push-room       # Room service only
 ```
 
 ### Push Summary
