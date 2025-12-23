@@ -77,3 +77,11 @@ frontend/public/env-config.js
 # Prisma generated client
 backend/node_modules/.prisma/
 
+# =============================================================================
+# CURSOR-SPECIFIC - Plans and archive
+# =============================================================================
+
+# Cursor plans (auto-generated, not useful for context)
+.cursor/plans/
+.cursor/archive/
+

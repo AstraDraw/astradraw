@@ -25,8 +25,9 @@ temp_for_prod_reference/
 temp/
 *.tmp
 
-# Cursor plans (auto-generated)
+# Cursor plans and archive (auto-generated)
 .cursor/plans/
+.cursor/archive/
 
 # macOS
 .DS_Store
