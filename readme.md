@@ -1,4 +1,4 @@
-# AstraDraw - Self-hosted Excalidraw with Collaboration & Workspace
+# AstraDraw - Self-hosted Excalidraw with Collaboration & Workspaces
 
 A fully self-hosted, feature-rich fork of [Excalidraw](https://excalidraw.com) with real-time collaboration, user workspaces, video recordings, presentation mode, custom pens, and more.
 
@@ -26,17 +26,18 @@ All features are documented in the `/docs` folder for AI assistants and develope
 - 🌙 **Dark mode** support
 
 ### AstraDraw Extensions
+
 | Feature | Description | Documentation |
 |---------|-------------|---------------|
-| **Workspace** | Save/organize scenes with user accounts | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
-| **Roles, Teams & Collections** | Multi-workspace support with ADMIN/MEMBER/VIEWER roles, team-based access | [docs/ROLES_TEAMS_COLLECTIONS.md](docs/ROLES_TEAMS_COLLECTIONS.md) |
-| **User Profile** | Avatar upload, name editing, profile management | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
-| **Collaboration Profile** | Use profile name & avatar in collaboration | [docs/COLLABORATION_PROFILE.md](docs/COLLABORATION_PROFILE.md) |
-| **Talktrack** | Record canvas walkthroughs with camera PIP | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
-| **Presentation Mode** | Use frames as slides with laser pointer | [docs/PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) |
-| **Custom Pens** | Highlighter, fountain, marker presets | [docs/PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) |
-| **Stickers & GIFs** | GIPHY integration for inserting media | [docs/GIPHY_SUPPORT.md](docs/GIPHY_SUPPORT.md) |
-| **Libraries** | Pre-bundled shape libraries via Docker | [docs/LIBRARIES_SYSTEM.md](docs/LIBRARIES_SYSTEM.md) |
+| **Workspace** | Save/organize scenes with user accounts | [docs/features/WORKSPACE.md](docs/features/WORKSPACE.md) |
+| **Roles, Teams & Collections** | Multi-workspace support with ADMIN/MEMBER/VIEWER roles | [docs/guides/ROLES_TEAMS_COLLECTIONS.md](docs/guides/ROLES_TEAMS_COLLECTIONS.md) |
+| **User Profile** | Avatar upload, name editing, profile management | [docs/guides/USER_PROFILE.md](docs/guides/USER_PROFILE.md) |
+| **Collaboration** | Real-time collaboration with profile integration | [docs/features/COLLABORATION.md](docs/features/COLLABORATION.md) |
+| **Talktrack** | Record canvas walkthroughs with camera PIP | [docs/features/TALKTRACK.md](docs/features/TALKTRACK.md) |
+| **Presentation Mode** | Use frames as slides with laser pointer | [docs/features/PRESENTATION_MODE.md](docs/features/PRESENTATION_MODE.md) |
+| **Custom Pens** | Highlighter, fountain, marker presets | [docs/features/PENS_IMPLEMENTATION.md](docs/features/PENS_IMPLEMENTATION.md) |
+| **Stickers & GIFs** | GIPHY integration for inserting media | [docs/features/GIPHY_SUPPORT.md](docs/features/GIPHY_SUPPORT.md) |
+| **Libraries** | Pre-bundled shape libraries via Docker | [docs/features/LIBRARIES_SYSTEM.md](docs/features/LIBRARIES_SYSTEM.md) |
 
 ## Architecture
 
@@ -74,7 +75,13 @@ astradraw/
 ├── frontend/           # React app (Excalidraw fork) - separate git repo
 ├── backend/            # NestJS API - separate git repo
 ├── room-service/       # WebSocket server - separate git repo
-├── docs/               # Feature documentation
+├── docs/               # Feature documentation (organized by category)
+│   ├── architecture/   # Technical architecture docs
+│   ├── features/       # Feature documentation
+│   ├── guides/         # How-to guides
+│   ├── deployment/     # Deployment & configuration
+│   ├── planning/       # Roadmap & implementation plans
+│   └── troubleshooting/# Common issues & fixes
 ├── deploy/             # Docker Compose, configs, secrets
 │   ├── docker-compose.yml
 │   ├── .env, env.example
@@ -94,6 +101,27 @@ astradraw/
 
 ## Quick Start
 
+### Development (Recommended)
+
+```bash
+# 1. Clone all repositories
+git clone https://github.com/astrateam-net/astradraw.git
+cd astradraw
+git clone https://github.com/astrateam-net/astradraw-app.git frontend
+git clone https://github.com/astrateam-net/astradraw-api.git backend
+git clone https://github.com/astrateam-net/astradraw-room.git room-service
+
+# 2. Setup (first time only)
+just setup
+
+# 3. Start development with hot-reload
+just dev
+
+# 4. Access at https://draw.local
+```
+
+### Docker Deployment
+
 ```bash
 # 1. Clone this repository
 git clone https://github.com/astrateam-net/astradraw.git
@@ -111,12 +139,12 @@ openssl rand -base64 32 > secrets/minio_secret_key
 mkdir -p certs
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout certs/server.key -out certs/server.crt \
-  -subj "/CN=localhost"
+  -subj "/CN=draw.local"
 
 # 5. Start all services
 docker compose up -d
 
-# 6. Access AstraDraw at https://localhost (accept cert warning)
+# 6. Access at https://draw.local (add to /etc/hosts if needed)
 ```
 
 ## Configuration
@@ -140,7 +168,7 @@ In `deploy/`, copy `env.example` to `.env` and configure:
 2. **OIDC/SSO**: Authentik, Keycloak, Dex, or any OIDC provider
 3. **Hybrid**: Both local and SSO enabled
 
-See [docs/WORKSPACE.md](docs/WORKSPACE.md) for detailed auth setup.
+See [docs/deployment/SSO_OIDC_SETUP.md](docs/deployment/SSO_OIDC_SETUP.md) for detailed auth setup.
 
 ### Docker Secrets Support
 
@@ -153,26 +181,11 @@ volumes:
   - ./secrets:/run/secrets:ro
 ```
 
+See [docs/deployment/DOCKER_SECRETS.md](docs/deployment/DOCKER_SECRETS.md) for details.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup instructions.
-
-**Quick start for development:**
-
-```bash
-# Clone repositories
-git clone https://github.com/astrateam-net/astradraw.git
-cd astradraw
-git clone https://github.com/astrateam-net/astradraw-app.git frontend
-git clone https://github.com/astrateam-net/astradraw-api.git backend
-git clone https://github.com/astrateam-net/astradraw-room.git room-service
-
-# Setup and run
-cd deploy
-cp env.example .env
-cp docker-compose.override.yml.disabled docker-compose.override.yml
-docker compose up -d --build
-```
 
 ## API Endpoints
 
@@ -211,21 +224,22 @@ docker compose up -d --build
 | Document | Description |
 |----------|-------------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | **How to set up for development** |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture and design decisions |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Planned features and specifications |
+| [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | Technical architecture and design decisions |
+| [docs/planning/ROADMAP.md](docs/planning/ROADMAP.md) | Planned features and specifications |
 
 ### Feature Documentation
 
 | Feature | Documentation |
 |---------|---------------|
-| Workspace & Auth | [docs/WORKSPACE.md](docs/WORKSPACE.md) |
-| Roles, Teams & Collections | [docs/ROLES_TEAMS_COLLECTIONS.md](docs/ROLES_TEAMS_COLLECTIONS.md) |
-| User Profile | [docs/USER_PROFILE.md](docs/USER_PROFILE.md) |
-| Talktrack | [docs/TALKTRACK.MD](docs/TALKTRACK.MD) |
-| Presentation Mode | [docs/PRESENTATION_MODE.md](docs/PRESENTATION_MODE.md) |
-| Custom Pens | [docs/PENS_IMPLEMENTATION.md](docs/PENS_IMPLEMENTATION.md) |
-| Stickers & GIFs | [docs/GIPHY_SUPPORT.md](docs/GIPHY_SUPPORT.md) |
-| Libraries | [docs/LIBRARIES_SYSTEM.md](docs/LIBRARIES_SYSTEM.md) |
+| Workspace & Auth | [docs/features/WORKSPACE.md](docs/features/WORKSPACE.md) |
+| Roles, Teams & Collections | [docs/guides/ROLES_TEAMS_COLLECTIONS.md](docs/guides/ROLES_TEAMS_COLLECTIONS.md) |
+| User Profile | [docs/guides/USER_PROFILE.md](docs/guides/USER_PROFILE.md) |
+| Collaboration | [docs/features/COLLABORATION.md](docs/features/COLLABORATION.md) |
+| Talktrack | [docs/features/TALKTRACK.md](docs/features/TALKTRACK.md) |
+| Presentation Mode | [docs/features/PRESENTATION_MODE.md](docs/features/PRESENTATION_MODE.md) |
+| Custom Pens | [docs/features/PENS_IMPLEMENTATION.md](docs/features/PENS_IMPLEMENTATION.md) |
+| Stickers & GIFs | [docs/features/GIPHY_SUPPORT.md](docs/features/GIPHY_SUPPORT.md) |
+| Libraries | [docs/features/LIBRARIES_SYSTEM.md](docs/features/LIBRARIES_SYSTEM.md) |
 
 ## Tech Stack
 
@@ -251,29 +265,6 @@ docker compose up -d --build
 
 This project is optimized for development with Cursor IDE. Open `astradraw/` as your workspace to get AI assistance across all repositories.
 
-### Tips for Effective AI Collaboration
-
-**For new features:**
-```
-I want to implement [FEATURE NAME].
-It should [describe behavior].
-Similar to [reference if any].
-```
-
-**For bug fixes:**
-```
-[Describe the bug]
-Steps to reproduce: [steps]
-Error: [error message if any]
-```
-
-**For full-stack features:**
-```
-I want to add [FEATURE]. 
-This will need both backend API and frontend UI.
-Please check existing patterns first and propose a plan.
-```
-
 ### Cursor Rules
 
 The `.cursor/rules/` folder contains AI instructions for:
@@ -292,3 +283,4 @@ The `.cursor/rules/` folder contains AI instructions for:
 ## License
 
 MIT
+

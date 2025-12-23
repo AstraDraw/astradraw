@@ -29,3 +29,4 @@ window.__ENV__ = {
 EOF
 
 echo "Created frontend/public/env-config.js"
+
