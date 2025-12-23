@@ -485,6 +485,73 @@ components/SaveStatusIndicator/
 
 **Remaining:** 38 global SCSS files in `excalidraw-app/` (optional future migration)
 
+#### Full Migration Guide (If Proceeding)
+
+If you decide to migrate all 38 remaining SCSS files, follow these guidelines:
+
+**Migration Order (by complexity):**
+
+1. **Simple components first** - Small files with no dark mode or animations
+   - `AstradrawLogo.scss`, `AppFooter.scss`, `WelcomeScreenBackground.scss`
+
+2. **Settings pages** - Self-contained, rarely change
+   - `ProfilePage.scss`, `PreferencesPage.scss`, `MembersPage.scss`, etc.
+
+3. **Workspace components** - Core UI, test thoroughly
+   - `SceneCard.scss`, `DashboardView.scss`, `CollectionView.scss`
+
+4. **Complex components last** - Large files with many interactions
+   - `WorkspaceSidebar.scss` (835 lines), `FullModeNav.scss`, `LoginDialog.scss`
+
+**Checklist per component:**
+
+```markdown
+- [ ] Rename `Component.scss` → `Component.module.scss`
+- [ ] Convert BEM names to camelCase (`.scene-card__title` → `.title`)
+- [ ] Wrap dark mode selectors with `:global()`
+- [ ] Update component imports: `import styles from "./Component.module.scss"`
+- [ ] Replace className strings with `styles.className`
+- [ ] Test light mode
+- [ ] Test dark mode
+- [ ] Run `just check-frontend`
+```
+
+**Common patterns to handle:**
+
+| Pattern | Before (Global) | After (CSS Modules) |
+|---------|-----------------|---------------------|
+| BEM element | `.card__title` | `.title` |
+| BEM modifier | `.card--active` | `.cardActive` or separate `.active` |
+| Dark mode | `.theme--dark .card` | `:global(.theme--dark) .card` |
+| Pseudo-class | `.card:hover` | `.card:hover` (unchanged) |
+| Nested hover | `.card:hover .title` | `.card:hover .title` (unchanged) |
+| Animation | `@keyframes spin` | `@keyframes spin` (auto-scoped) |
+
+**Potential issues to watch:**
+
+1. **Cross-component styling** - If `ComponentA.scss` styles elements inside `ComponentB`, you'll need to either:
+   - Move those styles to `ComponentB.module.scss`
+   - Use `:global()` for the cross-component selectors
+   - Pass className as prop
+
+2. **Dynamic class names** - If you build class names dynamically:
+   ```typescript
+   // Before (won't work with modules)
+   className={`scene-card scene-card--${status}`}
+   
+   // After (use object lookup)
+   const statusClasses = { active: styles.active, pending: styles.pending };
+   className={`${styles.card} ${statusClasses[status]}`}
+   ```
+
+3. **Third-party component styling** - Use `:global()` when overriding library styles
+
+4. **CSS cascade order** - Dev and prod builds may order styles differently. If you see inconsistent styling, consider adding `@layer` declarations for explicit cascade control.
+
+**Estimated effort:** 2-3 days for full migration (38 files)
+
+**Recommendation:** Only proceed if you're experiencing actual naming conflicts or need the tree-shaking benefits. The current BEM approach works fine for most cases.
+
 ---
 
 ### 13. ✅ RESOLVED: Internationalization for AstraDraw-Specific Strings
