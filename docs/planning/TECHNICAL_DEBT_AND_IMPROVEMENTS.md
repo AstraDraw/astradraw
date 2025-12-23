@@ -20,39 +20,38 @@ The codebase has grown organically, and some patterns could be improved for main
 
 ## 🔴 High Priority Issues
 
-### 1. `WorkspaceSidebar.tsx` is Too Large (1,252 lines)
+### 1. ✅ RESOLVED: `WorkspaceSidebar.tsx` Split into Smaller Components
 
-**Problem:** This single file handles:
+> **Resolved:** 2025-12-23 - Split 1,235-line file into modular components and hooks
 
-- Workspace selection and management
-- Collection CRUD operations
-- Scene list and operations
-- Search functionality
-- Login dialog state
-- Multiple context menus
-- Keyboard shortcuts
+**Was:** Single file handling workspace management, collection CRUD, scene loading, search, dialogs, and UI orchestration.
 
-**Impact:** Hard to maintain, test, and understand.
-
-**Recommended Solution:**
+**Fix:** Created modular structure:
 
 ```
-components/Workspace/
-├── WorkspaceSidebar/
-│   ├── index.tsx              # Main orchestrator (~200 lines)
-│   ├── WorkspaceSelector.tsx  # Workspace dropdown
-│   ├── CollectionList.tsx     # Collections navigation
-│   ├── SceneList.tsx          # Scene cards in sidebar
-│   ├── SidebarSearch.tsx      # Search input
-│   ├── SidebarFooter.tsx      # User menu, settings
-│   ├── hooks/
-│   │   ├── useWorkspaces.ts   # Workspace data fetching
-│   │   ├── useCollections.ts  # Collection operations
-│   │   └── useSceneActions.ts # Scene CRUD
-│   └── WorkspaceSidebar.scss
+components/Workspace/WorkspaceSidebar/
+├── index.ts                    # Re-export for backward compatibility
+├── WorkspaceSidebar.tsx        # Slim orchestrator (~310 lines)
+├── SidebarHeader.tsx           # Workspace selector dropdown
+├── SidebarSearch.tsx           # Search input with keyboard shortcut
+├── SidebarFooter.tsx           # User avatar and notifications
+├── icons.tsx                   # Shared SVG icons
+└── dialogs/
+    ├── CreateCollectionDialog.tsx
+    ├── EditCollectionDialog.tsx
+    └── CreateWorkspaceDialog.tsx
+
+hooks/
+├── useWorkspaces.ts            # Workspace loading, switching, creating
+├── useCollections.ts           # Collection CRUD operations
+└── useSidebarScenes.ts         # Scene loading with caching
 ```
 
-**Effort:** Medium (2-3 days)
+**Benefits:**
+- Main orchestrator reduced from 1,235 to ~310 lines
+- Reusable hooks for workspace, collection, and scene management
+- Dialog components extracted for better testability
+- Backward compatible - same export from `components/Workspace/`
 
 ---
 
@@ -475,7 +474,7 @@ import styles from './WorkspaceSidebar.module.scss';
 
 ### Phase 2: Architecture (2-4 weeks)
 
-1. Split `WorkspaceSidebar.tsx` into smaller components
+1. ✅ Split `WorkspaceSidebar.tsx` into smaller components (done 2025-12-23)
 2. Split `workspaceApi.ts` into modules
 3. Migrate more state to Jotai atoms
 
@@ -494,8 +493,8 @@ import styles from './WorkspaceSidebar.module.scss';
 
 Each component/file should do ONE thing well.
 
-- ❌ `WorkspaceSidebar.tsx` (1,252 lines, does everything)
-- ✅ `SceneList.tsx` (100 lines, just renders scene list)
+- ❌ Large monolithic files (1,000+ lines)
+- ✅ Small focused components (100-300 lines)
 
 ### 2. Colocate Related Code
 
@@ -543,10 +542,11 @@ const { deleteScene, renameScene } = useSceneActions();
 
 ## Changelog
 
-| Date       | Changes                                 |
-| ---------- | --------------------------------------- |
-| 2025-12-23 | Marked Error Boundaries as resolved     |
-| 2025-12-23 | Marked Loading Skeletons as resolved    |
-| 2025-12-23 | Marked Toast Notifications as resolved  |
-| 2025-12-23 | Marked useSceneActions hook as resolved |
-| 2025-12-23 | Initial analysis and documentation      |
+| Date       | Changes                                     |
+| ---------- | ------------------------------------------- |
+| 2025-12-23 | Split WorkspaceSidebar.tsx into components  |
+| 2025-12-23 | Marked Error Boundaries as resolved         |
+| 2025-12-23 | Marked Loading Skeletons as resolved        |
+| 2025-12-23 | Marked Toast Notifications as resolved      |
+| 2025-12-23 | Marked useSceneActions hook as resolved     |
+| 2025-12-23 | Initial analysis and documentation          |

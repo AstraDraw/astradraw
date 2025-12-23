@@ -56,23 +56,47 @@ For each item type:
 
 3. **Run checks after each significant change:**
    ```bash
-   just check-all
+   just check
    ```
 
-## Step 5: Update Documentation
+## Step 5: Finalize
 
-After completing the item:
+After completing the implementation:
 
-1. **Mark as resolved** in `TECHNICAL_DEBT_AND_IMPROVEMENTS.md`:
+1. **Run all checks:**
+   ```bash
+   just check
+   ```
+
+2. **Mark as resolved** in `TECHNICAL_DEBT_AND_IMPROVEMENTS.md`:
    ```markdown
    ### X. ✅ RESOLVED: [Item Name]
    
    > **Resolved:** YYYY-MM-DD - [Brief description of fix]
    ```
 
-2. **Add to changelog** at bottom of document
+3. **Update phase checklist** (e.g., "5. ✅ Add error boundaries (done 2025-12-23)")
 
-3. **Update related docs** if patterns changed
+4. **Add to changelog table** at bottom of tech debt document
+
+5. **Update `frontend/CHANGELOG.md`** with new version entry:
+   ```markdown
+   ## [0.18.0-betaX.XX] - YYYY-MM-DD
+
+   ### Added/Changed/Fixed
+   - **[Item Name]** - Brief description of what was added
+   ```
+
+6. **Provide summary:**
+   ```
+   ## Tech Debt Item Complete
+
+   **Item:** [Name]
+   **Status:** ✅ Resolved
+   **Files Created:** X new files
+   **Files Modified:** Y files
+   **Checks:** Passing
+   ```
 
 ## Key Principles
 
@@ -80,7 +104,3 @@ After completing the item:
 - **Colocate Related Code**: Keep related files together
 - **DRY**: Extract common patterns into hooks
 - **Fail Gracefully**: Error boundaries, toast notifications
-
-## After Completion
-
-Run `/finish-tech-debt` to verify checks pass and finalize documentation.

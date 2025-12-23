@@ -114,7 +114,7 @@ just dev-status   # Verify everything is running
 ## Step 8: Run Checks
 
 ```bash
-just check-all    # All checks (frontend + backend + room)
+just check    # All checks (frontend + backend + room)
 ```
 
 ## Step 9: Test in Browser

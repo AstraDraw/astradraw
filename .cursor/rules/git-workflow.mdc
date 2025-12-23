@@ -50,7 +50,7 @@ fix(auth): resolve JWT cookie not being sent
 ## Pre-Release Checklist
 
 Before merging to main:
-- [ ] `just check-all` passes
+- [ ] `just check` passes
 - [ ] Feature tested in browser at `https://draw.local`
 - [ ] Existing features still work
 

@@ -90,7 +90,7 @@ Based on the issue type, look at specific files:
 
 1. Make the fix
 2. Test in browser at `https://draw.local`
-3. Run `just check-all` before committing
+3. Run `just check` before committing
 
 ## Keep Context Light
 

@@ -51,7 +51,7 @@ When fixing bugs that affect documented behavior:
 **Do NOT update docs until:**
 
 1. ✅ Code changes are committed
-2. ✅ `just check-all` passes
+2. ✅ `just check` passes
 3. ✅ Docker deployment tested
 4. ✅ User confirms feature works
 

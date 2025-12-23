@@ -56,7 +56,7 @@ AstraDraw is a self-hosted Excalidraw fork with enterprise features: user authen
 ```bash
 just dev          # Start with hot-reload
 just dev-status   # Check status
-just check-all    # Run all checks
+just check    # Run all checks
 ```
 
 Access: `https://draw.local`

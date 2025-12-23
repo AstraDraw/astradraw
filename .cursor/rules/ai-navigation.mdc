@@ -45,7 +45,7 @@ just dev-status       # Check status
 just dev-stop         # Stop everything
 
 # Code checks (run before commits)
-just check-all        # All checks (frontend + backend + room)
+just check        # All checks (frontend + backend + room)
 just check-frontend   # TypeScript + Prettier + ESLint
 just check-backend    # Build + Prettier + ESLint
 
