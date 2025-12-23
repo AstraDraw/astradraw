@@ -454,17 +454,31 @@ import styles from './WorkspaceSidebar.module.scss';
 
 ---
 
-### 13. No Internationalization for AstraDraw-Specific Strings
+### 13. ✅ RESOLVED: Internationalization for AstraDraw-Specific Strings
 
-**Problem:** Some strings are hardcoded in Russian, some in English.
+> **Resolved:** 2025-12-23 - Audited and fixed hardcoded strings across components
 
-**Files to check:**
+**Was:** Some UI strings were hardcoded in English without translation keys.
 
-- Settings pages
-- Workspace components
-- Error messages
+**Fix:** Added missing translation keys and replaced hardcoded strings:
 
-**Effort:** Medium (2-3 days)
+**New translation keys added:**
+- `workspace.moreOptions` - "More options" / "Ещё"
+- `workspace.notSet` - "Not set" / "Не указано"
+- `comments.promoTitle` - "Make comments with AstraDraw" / "Комментируйте с AstraDraw"
+- `comments.comingSoon` - "Coming soon" / "Скоро"
+
+**Components updated:**
+- `ErrorBoundary.tsx` - Uses `t("errorBoundary.genericMessage")` and `t("errorBoundary.retry")`
+- `UserProfileDialog.tsx` - Replaced 8 hardcoded strings with translation keys
+- `AppSidebar.tsx` - Comments promo text now uses translation keys
+- `SceneCard.tsx` - Tooltips use `t("workspace.private")` and `t("workspace.moreOptions")`
+- `SceneCardGrid.tsx` - Same tooltip updates
+
+**Benefits:**
+- Full Russian translation support for all AstraDraw UI
+- Consistent use of `t()` function across components
+- Removed fallback strings (e.g., `t("key") || "Fallback"`)
 
 ---
 
@@ -564,6 +578,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Fixed internationalization for UI strings   |
 | 2025-12-23 | Added unit tests for hooks and API client   |
 | 2025-12-23 | Added optimistic updates to scene actions   |
 | 2025-12-23 | Added React Query for data fetching         |
