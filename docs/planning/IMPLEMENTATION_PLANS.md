@@ -628,8 +628,8 @@ export function useDeleteSceneMutation() {
 | 6. Split workspaceApi.ts | ✅ Completed | 2025-12-23 | Split into auth/api/ modules (11 files) |
 | 7. useCollections Hook | ✅ Completed | 2025-12-23 | Part of WorkspaceSidebar split |
 | 8. useWorkspaces Hook | ✅ Completed | 2025-12-23 | Part of WorkspaceSidebar split |
-| 9. Optimistic Updates | ⬜ Not Started | | Toast notifications now available |
-| 10. React Query | ⬜ Not Started | | |
+| 9. Optimistic Updates | ✅ Completed | 2025-12-23 | Via useMutation with rollback on error |
+| 10. React Query | ✅ Completed | 2025-12-23 | Full integration for scenes, workspaces, collections |
 
 ---
 
@@ -637,6 +637,8 @@ export function useDeleteSceneMutation() {
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Completed Plan 10: React Query integration |
+| 2025-12-23 | Completed Plan 9: Optimistic updates with useMutation |
 | 2025-12-23 | Implemented Plan 3: Loading Skeletons |
 | 2025-12-23 | Implemented Plan 2: Toast Notifications |
 | 2025-12-23 | Implemented Plan 1: useSceneActions hook |

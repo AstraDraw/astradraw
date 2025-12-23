@@ -378,45 +378,50 @@ When creating a new workspace component, ensure dark mode support:
 
 ## Files Reference
 
-### Workspace Component SCSS Files
+> **Note:** All components have been migrated to CSS Modules (2025-12-23). Files are now organized in component folders with `.module.scss` extension. Shared styles are in `excalidraw-app/styles/`.
 
-| File | Component |
-|------|-----------|
-| `WorkspaceSidebar.scss` | Left sidebar with collections |
-| `DashboardView.scss` | Main dashboard home view |
-| `CollectionView.scss` | Collection scenes grid |
-| `SceneCard.scss` | Individual scene card |
-| `SceneCardGrid.scss` | Grid of scene cards |
-| `FullModeNav.scss` | Dashboard navigation menu |
-| `BoardModeNav.scss` | Canvas mode navigation |
-| `LoginDialog.scss` | Login modal |
-| `UserProfileDialog.scss` | Profile dialog |
-| `UserMenu.scss` | User dropdown menu |
-| `WorkspaceSidebarTrigger.scss` | Sidebar toggle button |
-| `CopyMoveDialog.scss` | Copy/move scene dialog |
-| `InviteAcceptPage.scss` | Invite acceptance page |
+### Component Folder Structure
 
-### Settings Component SCSS Files
+Each component now follows this pattern:
 
-| File | Component |
-|------|-----------|
-| `ProfilePage.scss` | User profile settings |
-| `WorkspaceSettingsPage.scss` | Workspace configuration |
-| `MembersPage.scss` | Team members management |
-| `TeamsCollectionsPage.scss` | Teams and collections admin |
+```
+ComponentName/
+├── index.ts                    # Re-export
+├── ComponentName.tsx           # Component
+└── ComponentName.module.scss   # CSS Module
+```
 
-### Other Component SCSS Files
+### Shared Styles (`excalidraw-app/styles/`)
 
-| File | Component |
-|------|-----------|
-| `EmojiPicker.scss` | Emoji picker for icons |
-| `SaveStatusIndicator.scss` | Auto-save status display |
+| File | Purpose |
+|------|---------|
+| `_variables.scss` | `$ui-font`, spacing, radius, transitions, z-index |
+| `_mixins.scss` | `@mixin dark-mode`, `@mixin truncate`, `@mixin custom-scrollbar` |
+| `_animations.scss` | `shimmer`, `fadeIn`, `spin` keyframes |
+
+### CSS Modules by Category
+
+**Workspace Components** (`components/Workspace/*/`):
+- `WorkspaceSidebar/`, `DashboardView/`, `CollectionView/`, `SceneCard/`, `SceneCardGrid/`
+- `FullModeNav/`, `BoardModeNav/`, `LoginDialog/`, `UserProfileDialog/`, `UserMenu/`
+- `WorkspaceSidebarTrigger/`, `CopyMoveDialog/`, `InviteAcceptPage/`, `QuickSearchModal/`
+
+**Settings Components** (`components/Settings/*/`):
+- `ProfilePage/`, `WorkspaceSettingsPage/`, `MembersPage/`, `TeamsCollectionsPage/`, `PreferencesPage/`
+
+**Feature Components**:
+- `Talktrack/` - `TalktrackToolbar/`, `TalktrackSetupDialog/`, `TalktrackPanel/`
+- `Presentation/` - `PresentationControls/`, `PresentationPanel/`, `SlidesLayoutDialog/`
+- `Stickers/StickersPanel/`, `EmojiPicker/`, `pens/PenToolbar/`, `pens/PenSettingsModal/`
+
+**Shared Components**:
+- `Skeletons/`, `ErrorBoundary/`, `SaveStatusIndicator/`, `AstradrawLogo/`, `AppFooter/`, `AppSidebar/`
 
 ---
 
 ## Related Documentation
 
-- `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` - CSS Hide/Show pattern for mode switching
-- `/.cursor/rules/common-issues.mdc` - Issue #5 (fonts), #16 (CSS hide/show)
-- `/.cursor/rules/frontend-patterns.mdc` - Frontend development patterns
+- `/docs/troubleshooting/CRITICAL_CSS_HIDE_SHOW_FIX.md` - CSS Hide/Show pattern for mode switching
+- `/.cursor/rules/frontend-patterns.mdc` - Frontend development patterns (includes CSS Modules)
+- `/docs/planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md` - CSS Modules migration details
 

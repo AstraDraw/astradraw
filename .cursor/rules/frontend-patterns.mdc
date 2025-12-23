@@ -29,7 +29,8 @@ frontend/
 │   │   ├── useCollections.ts # Collection CRUD (React Query + Jotai)
 │   │   ├── useScenesCache.ts # Scene fetching (React Query)
 │   │   └── useSceneActions.ts # Scene CRUD with optimistic updates
-│   ├── components/           # Custom components
+│   ├── styles/               # Shared SCSS (variables, mixins, animations)
+│   ├── components/           # Custom components (CSS Modules in folders)
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
 │   │   ├── Settings/         # ProfilePage, MembersPage, settingsState.ts
 │   │   ├── EmojiPicker/      # Emoji picker for collection icons
@@ -140,6 +141,36 @@ import { t } from "@excalidraw/excalidraw/i18n";
     Roboto, Helvetica, Arial, sans-serif;
   font-family: var(--ui-font);
 }
+```
+
+### CSS Modules (Preferred)
+
+Components use CSS Modules with shared mixins from `styles/`:
+
+```scss
+// ComponentName.module.scss
+@use "../../styles/mixins" as *;
+
+.card { background: var(--island-bg-color, #fff); }
+
+@include dark-mode {
+  .card { background: var(--island-bg-color, #232329); }
+}
+```
+
+```typescript
+// ComponentName.tsx
+import styles from "./ComponentName.module.scss";
+<div className={styles.card}>
+```
+
+**Component folder structure:**
+
+```
+ComponentName/
+├── index.ts              # Re-export
+├── ComponentName.tsx
+└── ComponentName.module.scss
 ```
 
 ## Data Fetching (React Query)

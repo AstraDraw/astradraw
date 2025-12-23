@@ -61,34 +61,20 @@ export function getEnv(): ImportMetaEnv {
 
 The `docker-entrypoint.sh` creates `/usr/share/nginx/html/env-config.js` with `window.__ENV__` and injects it into `index.html`.
 
-**State Management (Jotai):**
+**State Management:**
 
-The frontend uses Jotai atoms for global state management. Key patterns:
+The frontend uses a hybrid state management approach:
 
-1. **Navigation atoms** (`settingsState.ts`): Control app mode (canvas/dashboard), dashboard views, and active collection.
+1. **React Query** - Server state (scenes, workspaces, collections) with automatic caching, deduplication, and background refetching
+2. **Jotai atoms** - Client state (navigation, selection, UI) shared across components
+3. **useState** - Component-local UI state
 
-2. **Refresh trigger atoms**: Allow cross-component communication for data synchronization:
-   ```typescript
-   // When a collection is created/updated/deleted in one component,
-   // other components can subscribe to refresh their data
-   export const collectionsRefreshAtom = atom(0);
-   export const triggerCollectionsRefreshAtom = atom(null, (get, set) => {
-     set(collectionsRefreshAtom, get(collectionsRefreshAtom) + 1);
-   });
-   
-   // Same pattern for scenes
-   export const scenesRefreshAtom = atom(0);
-   export const triggerScenesRefreshAtom = atom(null, (get, set) => {
-     set(scenesRefreshAtom, get(scenesRefreshAtom) + 1);
-   });
-   ```
+Key files:
+- `lib/queryClient.ts` - React Query client and query key factory
+- `components/Settings/settingsState.ts` - Jotai atoms for navigation and UI state
+- `hooks/` - Data fetching hooks (`useScenesCache`, `useWorkspaces`, `useCollections`, `useSceneActions`)
 
-3. **Usage pattern**:
-   - Component A creates/updates data → calls `triggerCollectionsRefresh()`
-   - Component B subscribes to `collectionsRefreshAtom` in its `useEffect` dependencies
-   - Component B re-fetches data when the atom value changes
-
-This pattern avoids prop drilling and allows any component to notify others about data changes.
+See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for complete documentation.
 
 ### Backend (`backend/`)
 
