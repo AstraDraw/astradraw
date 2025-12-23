@@ -139,16 +139,44 @@ After completing a phase:
 
 2. **Update checklist** in `COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md`:
    ```markdown
-   ### Phase X: [Name]
+   ### Phase X: [Name] ✅
    - [x] Item completed
    - [x] Another item completed
    ```
 
-3. **Add translations** to both locale files:
+3. **Add implementation status** below acceptance criteria in the plan:
+   ```markdown
+   ### Implementation Status ✅
+
+   **Completed:** YYYY-MM-DD
+
+   **Files Created:**
+   - `path/to/file.ts` - Brief description
+
+   **Files Modified:**
+   - `path/to/file.ts` - What was changed
+   ```
+
+4. **Add to changelog table** at bottom of `COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md`:
+   ```markdown
+   | YYYY-MM-DD | Phase X: Brief description of what was completed |
+   ```
+
+5. **Update CHANGELOG.md** for affected repos:
+   - Backend changes: `backend/CHANGELOG.md`
+   - Frontend changes: `frontend/CHANGELOG.md`
+   ```markdown
+   ## [0.X.X] - YYYY-MM-DD
+
+   ### Added
+   - **Comment System Phase X** - Brief description
+   ```
+
+6. **Add translations** to both locale files (if UI strings added):
    - `packages/excalidraw/locales/en.json`
    - `packages/excalidraw/locales/ru-RU.json`
 
-4. **Provide phase summary:**
+7. **Provide phase summary:**
    ```
    ## Phase X Complete
 

@@ -768,13 +768,34 @@ export const toggleCommentModeAtom = atom(null, (get, set) => {
 
 ### Acceptance Criteria
 
-- [ ] API client functions match all backend endpoints
-- [ ] TypeScript interfaces match backend DTOs
-- [ ] React Query hooks fetch and cache threads correctly
-- [ ] Optimistic updates work for create/delete/resolve
-- [ ] Jotai atoms manage UI state (selected thread, comment mode)
-- [ ] Query keys added to queryClient.ts
-- [ ] Re-export from auth/api/index.ts
+- [x] API client functions match all backend endpoints
+- [x] TypeScript interfaces match backend DTOs
+- [x] React Query hooks fetch and cache threads correctly
+- [x] Optimistic updates work for create/delete/resolve
+- [x] Jotai atoms manage UI state (selected thread, comment mode)
+- [x] Query keys added to queryClient.ts
+- [x] Re-export from auth/api/index.ts
+
+### Implementation Status ✅
+
+**Completed:** 2025-12-23
+
+**Files Created:**
+- `frontend/excalidraw-app/auth/api/comments.ts` - API client with all endpoint functions
+- `frontend/excalidraw-app/hooks/useCommentThreads.ts` - React Query hooks for fetching and mutations
+- `frontend/excalidraw-app/components/Comments/commentsState.ts` - Jotai atoms for UI state
+- `frontend/excalidraw-app/components/Comments/index.ts` - Module exports
+
+**Files Modified:**
+- `frontend/excalidraw-app/auth/api/types.ts` - Added comment system TypeScript interfaces
+- `frontend/excalidraw-app/auth/api/index.ts` - Added comments API re-exports
+- `frontend/excalidraw-app/lib/queryClient.ts` - Added commentThreads query keys
+
+**Key Implementation Details:**
+- API client uses existing `apiRequest` helper with automatic credential handling
+- React Query hooks use 2-minute stale time (shorter than scenes' 5 minutes)
+- Optimistic updates for delete/resolve operations with rollback on error
+- Jotai atoms for: selectedThreadId, isCommentMode, commentFilters, pendingCommentPosition
 
 ---
 
@@ -1843,14 +1864,14 @@ Notification links use deep link format:
 - [x] Add field filtering support
 - [ ] Write controller tests (deferred - add as future task)
 
-### Phase 2: Frontend State & API
-- [ ] Create `auth/api/comments.ts`
-- [ ] Add TypeScript interfaces to `types.ts`
-- [ ] Add query keys to `queryClient.ts`
-- [ ] Create `useCommentThreads` hook
-- [ ] Create `useCommentMutations` hook
-- [ ] Create Jotai atoms in `commentsState.ts`
-- [ ] Write hook tests
+### Phase 2: Frontend State & API ✅
+- [x] Create `auth/api/comments.ts`
+- [x] Add TypeScript interfaces to `types.ts`
+- [x] Add query keys to `queryClient.ts`
+- [x] Create `useCommentThreads` hook
+- [x] Create `useCommentMutations` hook
+- [x] Create Jotai atoms in `commentsState.ts`
+- [ ] Write hook tests (deferred - add as future task)
 
 ### Phase 3: Canvas Integration
 - [ ] Create ThreadMarkersLayer component
@@ -1927,6 +1948,7 @@ Notification links use deep link format:
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Phase 2: Frontend State & API complete (API client, types, hooks, atoms) |
 | 2025-12-23 | Phase 1: All 13 API tests passed, documented testing pattern |
 | 2025-12-23 | Phase 1: Fixed controller path duplication (`@Controller()` not `@Controller('api/v2')`) |
 | 2025-12-23 | Phase 1 Backend Foundation complete (schema, module, endpoints, permissions) |
