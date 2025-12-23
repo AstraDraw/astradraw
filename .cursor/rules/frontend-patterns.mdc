@@ -23,10 +23,13 @@ frontend/
 │   │   ├── useSceneLoader.ts # Scene loading, auto-collab
 │   │   ├── useUrlRouting.ts  # Popstate, URL parsing
 │   │   ├── useKeyboardShortcuts.ts  # Global keyboard handlers
-│   │   └── useWorkspaceData.ts      # Workspace/collections loading
+│   │   ├── useWorkspaces.ts  # Workspace loading/switching (uses Jotai)
+│   │   ├── useCollections.ts # Collection CRUD (uses Jotai)
+│   │   ├── useScenesCache.ts # Centralized scene caching
+│   │   └── useSceneActions.ts # Scene delete/rename/duplicate
 │   ├── components/           # Custom components
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
-│   │   ├── Settings/         # ProfilePage, MembersPage
+│   │   ├── Settings/         # ProfilePage, MembersPage, settingsState.ts
 │   │   ├── EmojiPicker/      # Emoji picker for collection icons
 │   │   ├── Talktrack/        # Recording feature
 │   │   └── Presentation/     # Slideshow mode
@@ -136,6 +139,33 @@ import { t } from "@excalidraw/excalidraw/i18n";
   font-family: var(--ui-font);
 }
 ```
+
+## Shared State Access
+
+Components read workspace/collections data directly from Jotai atoms (no prop drilling):
+
+```typescript
+import { useAtomValue } from "../../app-jotai";
+import {
+  currentWorkspaceAtom,
+  collectionsAtom,
+  activeCollectionAtom,
+} from "../Settings/settingsState";
+
+// Read workspace data
+const workspace = useAtomValue(currentWorkspaceAtom);
+const collections = useAtomValue(collectionsAtom);
+const activeCollection = useAtomValue(activeCollectionAtom); // derived
+
+// For CRUD operations, use the hooks
+import { useWorkspaces } from "../../hooks/useWorkspaces";
+import { useCollections } from "../../hooks/useCollections";
+
+const { loadWorkspaces, switchWorkspace } = useWorkspaces({ isAuthenticated });
+const { createCollection, deleteCollection } = useCollections({ workspaceId });
+```
+
+**Rule:** Read from atoms for display, use hooks for mutations.
 
 ## API Calls
 

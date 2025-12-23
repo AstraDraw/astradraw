@@ -40,6 +40,36 @@ Jotai was chosen over other state management solutions because:
 
 **File:** `excalidraw-app/components/Settings/settingsState.ts`
 
+### Workspace & Collections Data
+
+| Atom | Type | Purpose |
+|------|------|---------|
+| `workspacesAtom` | `WorkspaceData[]` | List of all user workspaces |
+| `currentWorkspaceAtom` | `WorkspaceData \| null` | Currently active workspace |
+| `collectionsAtom` | `CollectionData[]` | Collections for current workspace |
+| `privateCollectionAtom` | `CollectionData \| null` | Derived: private collection from list |
+| `activeCollectionAtom` | `CollectionData \| null` | Derived: currently selected collection |
+| `clearWorkspaceDataAtom` | action | Clear all workspace data (e.g., on logout) |
+
+**Usage:**
+```typescript
+// Read workspace data
+const workspace = useAtomValue(currentWorkspaceAtom);
+const collections = useAtomValue(collectionsAtom);
+
+// Write workspace data (typically via hooks)
+const setWorkspace = useSetAtom(currentWorkspaceAtom);
+setWorkspace(newWorkspace);
+
+// Use derived atoms for computed values
+const privateCollection = useAtomValue(privateCollectionAtom);
+const activeCollection = useAtomValue(activeCollectionAtom);
+```
+
+**Note:** The `useWorkspaces` and `useCollections` hooks manage these atoms internally. Components should prefer using these hooks for CRUD operations, and read directly from atoms for display.
+
+**File:** `excalidraw-app/components/Settings/settingsState.ts`
+
 ### Navigation Action Atoms
 
 These are write-only atoms that encapsulate navigation logic including URL updates:
@@ -442,6 +472,7 @@ excalidraw-app/
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Added workspace/collections atoms (workspacesAtom, currentWorkspaceAtom, collectionsAtom, etc.) |
 | 2025-12-23 | Documented App.tsx hooks (useAutoSave, useSceneLoader, etc.) |
 | 2025-12-23 | Added centralized scenes cache with `scenesCacheAtom` |
 | 2025-12-23 | Migrated `workspaceSidebarOpen` from useState to Jotai atom |

@@ -71,9 +71,12 @@ export const derivedAtom = atom((get) => get(atomA) + get(atomB));
 |----------|-------|
 | **Navigation** | `appModeAtom`, `dashboardViewAtom`, `activeCollectionIdAtom` |
 | **Navigation Actions** | `navigateToDashboardAtom`, `navigateToCollectionAtom`, `navigateToSceneAtom` |
-| **Workspace** | `currentWorkspaceSlugAtom`, `currentSceneIdAtom`, `currentSceneTitleAtom` |
+| **Workspace Data** | `workspacesAtom`, `currentWorkspaceAtom`, `currentWorkspaceSlugAtom` |
+| **Collections Data** | `collectionsAtom`, `privateCollectionAtom` (derived), `activeCollectionAtom` (derived) |
+| **Scene** | `currentSceneIdAtom`, `currentSceneTitleAtom`, `isAutoCollabSceneAtom` |
 | **Sidebar** | `workspaceSidebarOpenAtom`, `toggleWorkspaceSidebarAtom` |
 | **Refresh Triggers** | `collectionsRefreshAtom`, `scenesRefreshAtom`, `triggerCollectionsRefreshAtom` |
+| **Cache** | `scenesCacheAtom`, `getScenesCacheAtom`, `setScenesCacheAtom`, `invalidateScenesCacheAtom` |
 
 ## Cross-Component Communication
 
@@ -117,7 +120,17 @@ App.tsx uses extracted hooks for better maintainability:
 | `useSceneLoader` | Scene loading, auto-collab join |
 | `useUrlRouting` | Popstate, URL parsing |
 | `useKeyboardShortcuts` | Ctrl+S, Cmd+P, Cmd+[, Cmd+] |
-| `useWorkspaceData` | Workspace/collections loading |
+
+## Data Management Hooks
+
+These hooks manage shared data via Jotai atoms:
+
+| Hook | Atoms Used | Purpose |
+|------|------------|---------|
+| `useWorkspaces` | `workspacesAtom`, `currentWorkspaceAtom` | Load/switch/create workspaces |
+| `useCollections` | `collectionsAtom`, `activeCollectionIdAtom` | Collection CRUD operations |
+| `useScenesCache` | `scenesCacheAtom` | Centralized scene caching |
+| `useSceneActions` | - | Delete/rename/duplicate scenes |
 
 **When to create a new hook:**
 - Logic is 50+ lines and has single responsibility

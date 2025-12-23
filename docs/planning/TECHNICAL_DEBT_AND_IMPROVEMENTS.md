@@ -80,36 +80,43 @@ excalidraw-app/hooks/
 
 ---
 
-### 3. Inconsistent State Management
+### 3. ✅ RESOLVED: Inconsistent State Management
 
-**Problem:** The codebase uses multiple state patterns:
+> **Resolved:** 2025-12-23 - Migrated workspace and collections data to Jotai atoms
 
-- Jotai atoms (navigation, sidebar, cache)
-- React useState (most components)
-- Refs for caching (WorkspaceSidebar)
-- Props drilling (some places)
+**Was:** Workspace and collections data was managed inconsistently with useState and prop drilling across multiple components.
 
-**Examples:**
+**Fix:** Created centralized Jotai atoms for shared state:
 
-```typescript
-// Pattern 1: Jotai atom (good for shared state)
-const workspaceSidebarOpen = useAtomValue(workspaceSidebarOpenAtom);
-
-// Pattern 2: Local state with prop drilling
-const [scenes, setScenes] = useState<WorkspaceScene[]>([]);
-// Then passed down through 3 component levels
-
-// Pattern 3: Ref for caching (inconsistent with Jotai cache)
-const scenesCacheRef = useRef<Map<string, WorkspaceScene[]>>(new Map());
+```
+settingsState.ts additions:
+├── workspacesAtom           # List of all user workspaces
+├── currentWorkspaceAtom     # Currently active workspace
+├── collectionsAtom          # Collections for current workspace
+├── privateCollectionAtom    # Derived: private collection
+├── activeCollectionAtom     # Derived: currently selected collection
+└── clearWorkspaceDataAtom   # Action: clear on logout
 ```
 
-**Recommended Solution:**
+**Changes made:**
+- Added 6 new atoms to `settingsState.ts`
+- Updated `useWorkspaces` hook to use atoms instead of useState
+- Updated `useCollections` hook to use atoms instead of useState
+- Removed `useWorkspaceData` hook (functionality merged into other hooks)
+- Updated 7 components to read from atoms directly:
+  - `WorkspaceMainContent.tsx` - removed workspace/collections props
+  - `DashboardView.tsx` - removed workspace prop
+  - `CollectionView.tsx` - removed workspace prop
+  - `SearchResultsView.tsx` - removed workspace prop
+  - `FullModeNav.tsx` - removed collections/activeCollectionId props
+  - `SidebarHeader.tsx` - removed currentWorkspace/workspaces props
+  - `App.tsx` - simplified prop passing
 
-1. **Document when to use what** (done in STATE_MANAGEMENT.md)
-2. **Migrate more shared state to Jotai** - workspaces, collections, current user
-3. **Use the new `useScenesCache` hook consistently** across all components
-
-**Effort:** Medium (ongoing)
+**Benefits:**
+- Single source of truth for workspace/collections data
+- No prop drilling - components read directly from atoms
+- Better performance - only components using specific atoms re-render
+- Simpler component interfaces - fewer props to manage
 
 ---
 
@@ -476,7 +483,7 @@ import styles from './WorkspaceSidebar.module.scss';
 1. ✅ Split `WorkspaceSidebar.tsx` into smaller components (done 2025-12-23)
 2. ✅ Split `workspaceApi.ts` into modules (done 2025-12-23)
 3. ✅ Split `App.tsx` into focused hooks (done 2025-12-23)
-4. Migrate more state to Jotai atoms
+4. ✅ Migrate more state to Jotai atoms (done 2025-12-23)
 
 ### Phase 3: Advanced (1-2 months)
 
@@ -543,6 +550,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Migrated workspace/collections to Jotai     |
 | 2025-12-23 | Split App.tsx into 5 focused hooks          |
 | 2025-12-23 | Split workspaceApi.ts into modular API      |
 | 2025-12-23 | Split WorkspaceSidebar.tsx into components  |
