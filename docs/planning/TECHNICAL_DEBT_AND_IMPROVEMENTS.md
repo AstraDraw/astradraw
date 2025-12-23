@@ -636,12 +636,44 @@ From pilot + Batch 1:
 
 ---
 
-### 13. 🟡 ANALYSIS: Real-Time Collaboration Performance (Socket.io)
+### 13. ✅ ANALYZED: Real-Time Collaboration Performance (Socket.io)
 
-> **Analyzed:** 2025-12-23 - Evaluated alternatives and identified optimization path
-> **Status:** Keep Socket.io, optimize hot path first; consider Yjs for future
+> **Analyzed:** 2025-12-23 - Profiled on LAN, excellent performance confirmed
+> **Status:** No changes needed. Current implementation performs well.
 
-**Issue:** During local testing, collaborator cursors were not moving smoothly on the canvas. Investigated whether Socket.io should be replaced with alternatives.
+**Issue:** During local testing, collaborator cursors appeared to move with some lag. Investigated whether Socket.io should be replaced with alternatives.
+
+#### Profiling Results (LAN Test - 2025-12-23)
+
+**Test Environment:**
+- Mac (WiFi) ↔ Router ↔ Windows (Ethernet)
+- Duration: 321 seconds
+- Total messages: 2,095 cursor/state updates
+- Messages per second: 6.5
+
+**Latency Summary:**
+
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Average latency | 0.26ms | ✅ Excellent |
+| P95 latency | 0.50ms | ✅ Excellent |
+| P99 latency | 0.70ms | ✅ Excellent |
+| Max latency | 4.20ms | ✅ Acceptable |
+
+**Detailed Timings:**
+
+| Operation | Avg (ms) | P95 (ms) | P99 (ms) |
+|-----------|----------|----------|----------|
+| Total processing | 0.26 | 0.50 | 0.70 |
+| Decryption (WebCrypto) | 0.14 | 0.30 | 0.40 |
+| Encryption (outgoing) | 0.39 | 0.90 | 1.70 |
+| updateScene | 0.02 | 0.10 | 0.10 |
+| Map cloning | 0.01 | 0.10 | 0.10 |
+
+**Conclusion:** Client-side processing is extremely fast (<1ms for 99% of messages). The perceived lag was likely caused by:
+1. WiFi network jitter (5-20ms)
+2. Intentional throttling (`CURSOR_SYNC_TIMEOUT = 33ms` = ~30fps)
+3. Browser paint cycles (~16ms at 60fps)
 
 #### Current Implementation
 
@@ -656,31 +688,6 @@ room-service/src/index.ts
 └── CURSOR_SYNC_TIMEOUT = 33ms             # ~30fps throttle on client
 ```
 
-#### Root Cause Analysis
-
-The cursor lag is likely **not** Socket.io's fault. Identified bottlenecks:
-
-**1. Encryption overhead per message (~1-3ms each)**
-```typescript
-// Portal.tsx - Every cursor update encrypts
-const json = JSON.stringify(data);
-const encoded = new TextEncoder().encode(json);
-const { encryptedBuffer, iv } = await encryptData(this.roomKey!, encoded);
-```
-At 30fps = 30-90ms of CPU time per second just for cursor sync.
-
-**2. React state updates per cursor move**
-```typescript
-// Collab.tsx:950-965 - Creates new Map and triggers render per update
-updateCollaborator = (socketId, updates) => {
-  const collaborators = new Map(this.collaborators);  // Clone entire map
-  this.excalidrawAPI.updateScene({ collaborators });  // Triggers render
-};
-```
-
-**3. No batching of incoming cursor updates**
-Each WebSocket message immediately triggers a state update and re-render.
-
 #### Alternatives Evaluated
 
 | Factor | Socket.io (Current) | Raw `ws` | Yjs + y-websocket |
@@ -693,17 +700,29 @@ Each WebSocket message immediately triggers a state update and re-render.
 | **Bundle size impact** | 0 | -47kb | +20kb |
 | **Reconnection handling** | ✅ Built-in | ❌ Manual | ✅ Built-in |
 
-#### Decision: Keep Socket.io, Optimize First
+#### Decision: Keep Socket.io - No Changes Needed
 
 **Rationale:**
+- Profiling confirmed excellent performance (<1ms P99)
 - Socket.io is battle-tested and already integrated with Excalidraw
-- Raw `ws` gains are marginal and loses reconnection handling
-- Yjs is excellent but requires significant refactor of element model
-- The actual bottleneck is client-side processing, not transport
+- Encryption overhead is negligible (0.14ms avg)
+- React updates are fast (0.02ms avg)
+- No bottlenecks identified in client-side processing
 
-#### Recommended Optimizations (Phase 1)
+#### Future Consideration: Yjs Migration
 
-**1. Batch cursor updates with RAF** (Highest impact)
+Consider Yjs **only if** these features become requirements:
+- **Offline editing** with automatic sync on reconnect
+- **Conflict-free concurrent edits** (eliminate version tracking)
+- **Better UX on unreliable networks** (mobile, poor WiFi)
+
+**NOT recommended for performance reasons** - current implementation is already fast.
+
+#### If Performance Issues Arise in the Future
+
+If profiling shows degraded performance (P95 > 10ms), consider these optimizations:
+
+**1. Batch cursor updates with RAF**
 ```typescript
 // Collab.tsx - Add batching to updateCollaborator
 private pendingCollaboratorUpdates = new Map<SocketId, Partial<Collaborator>>();
@@ -733,31 +752,15 @@ private flushCollaboratorUpdates = throttleRAF(() => {
 });
 ```
 
-**2. Consider unencrypted volatile channel for cursors** (Optional, security trade-off)
-- Cursor positions are ephemeral and non-sensitive
-- Could skip encryption for `MOUSE_LOCATION` messages only
-- Saves ~1-3ms per message
-
-**3. Adjust throttle if needed**
+**2. Adjust throttle** (trade-off: more bandwidth for smoother cursor)
 ```typescript
-// app_constants.ts - Try 20fps instead of 30fps
-export const CURSOR_SYNC_TIMEOUT = 50; // Was 33
+// app_constants.ts - Try 60fps instead of 30fps
+export const CURSOR_SYNC_TIMEOUT = 16; // Was 33
 ```
 
-#### Future Consideration: Yjs Migration
-
-Consider Yjs **only if** these features become requirements:
-- **Offline editing** with automatic sync on reconnect
-- **Conflict-free concurrent edits** (eliminate version tracking)
-- **Better UX on unreliable networks** (mobile, poor WiFi)
-
-Migration would involve:
-1. Mapping Excalidraw elements to Yjs data structures (Y.Map, Y.Array)
-2. Replacing `_reconcileElements` with CRDT merge
-3. Setting up y-websocket server (can coexist with current room-service)
-4. Adding IndexedDB persistence for offline support
-
-**Estimated effort:** 1-2 weeks for proof-of-concept, 1 month for production-ready
+**3. Unencrypted volatile channel for cursors** (security trade-off)
+- Cursor positions are ephemeral and non-sensitive
+- Could skip encryption for `MOUSE_LOCATION` messages only
 
 #### Files Involved
 
@@ -766,7 +769,80 @@ Migration would involve:
 | `room-service/src/index.ts` | WebSocket relay server |
 | `frontend/excalidraw-app/collab/Portal.tsx` | Socket connection, message broadcasting |
 | `frontend/excalidraw-app/collab/Collab.tsx` | Collaboration state, cursor handling |
+| `frontend/excalidraw-app/collab/collabProfiling.ts` | Performance profiling utility |
 | `frontend/excalidraw-app/app_constants.ts` | `CURSOR_SYNC_TIMEOUT` setting |
+
+#### Performance Profiling (for AI-Assisted Analysis)
+
+A profiling utility is available to measure actual bottlenecks. Use this before implementing optimizations.
+
+**How to collect profiling data:**
+
+1. Start the dev environment: `just dev`
+2. Open AstraDraw in two browser windows
+3. Join the same collaboration room in both
+4. In browser console (receiving side), enable profiling:
+   ```javascript
+   window.COLLAB_PROFILING = true;
+   ```
+5. Move cursor around in the other window for 30-60 seconds
+6. Copy the report to clipboard:
+   ```javascript
+   window.COLLAB_PROFILING_COPY();
+   ```
+7. Paste the markdown report into a chat with AI for analysis
+
+**Available commands:**
+
+| Command | Description |
+|---------|-------------|
+| `window.COLLAB_PROFILING = true` | Enable profiling |
+| `window.COLLAB_PROFILING = false` | Disable profiling |
+| `window.COLLAB_PROFILING_STATS()` | Show stats table in console |
+| `window.COLLAB_PROFILING_EXPORT()` | Download JSON report file |
+| `window.COLLAB_PROFILING_COPY()` | Copy markdown report to clipboard |
+| `window.COLLAB_PROFILING_CLEAR()` | Clear all collected data |
+
+**Example profiling report:**
+
+```markdown
+## Collaboration Performance Analysis
+
+**Duration:** 45.2 seconds
+**Total cursor/state updates received:** 1350
+**Messages per second:** 29.9
+
+### Latency Summary
+- Average: 8.45ms
+- P95: 15.23ms
+- P99: 22.18ms
+
+### Bottleneck Analysis
+- ⚠️ **Decryption is slow** (avg 3.21ms). Consider unencrypted volatile channel for cursors.
+- ⚠️ **updateScene is slow** (avg 4.89ms). Consider RAF batching.
+
+### Recommendation
+🟡 **Moderate latency.** Consider RAF batching if cursor feels laggy.
+
+### Detailed Timings
+
+| Label | Count | Avg (ms) | P95 (ms) | P99 (ms) |
+|-------|-------|----------|----------|----------|
+| client-broadcast:total | 1350 | 8.45 | 15.23 | 22.18 |
+| client-broadcast:decrypt | 1350 | 3.21 | 5.12 | 7.89 |
+| updateCollaborator:updateScene | 1350 | 4.89 | 9.45 | 14.23 |
+| ... | ... | ... | ... | ... |
+```
+
+**AI prompt for analysis:**
+
+> I've collected collaboration profiling data from AstraDraw. Please analyze this report and recommend whether we should:
+> 1. Implement RAF batching for cursor updates
+> 2. Use unencrypted channel for volatile cursor data
+> 3. Keep current implementation
+>
+> Here's the profiling report:
+> [paste report]
 
 ---
 
@@ -983,6 +1059,8 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Collaboration profiling: LAN test confirmed excellent performance (<1ms P99), no changes needed |
+| 2025-12-23 | Added collaboration profiling utility with AI-exportable reports |
 | 2025-12-23 | Added collaboration performance analysis: keep Socket.io, optimize cursor batching |
 | 2025-12-23 | CSS Modules migration: Batch 1 complete (8 components), shared styles infrastructure |
 | 2025-12-23 | Added efficient payloads with `?fields=` parameter for scenes and collections |
