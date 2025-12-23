@@ -120,31 +120,37 @@ const scenesCacheRef = useRef<Map<string, WorkspaceScene[]>>(new Map());
 
 ---
 
-### 4. `workspaceApi.ts` is Too Large (1,634 lines)
+### 4. ✅ RESOLVED: `workspaceApi.ts` Split into Modular API Structure
 
-**Problem:** Single file with all API functions. No error handling abstraction.
+> **Resolved:** 2025-12-23 - Split 1,634-line file into domain-specific modules
 
-**Recommended Solution:**
+**Was:** Single file with all API functions and duplicated error handling patterns.
+
+**Fix:** Created modular structure with centralized error handling:
 
 ```
-auth/
-├── api/
-│   ├── client.ts              # Base fetch wrapper with error handling
-│   ├── workspaces.ts          # Workspace CRUD
-│   ├── collections.ts         # Collection CRUD
-│   ├── scenes.ts              # Scene CRUD
-│   ├── teams.ts               # Team CRUD
-│   ├── members.ts             # Member management
-│   ├── invites.ts             # Invite links
-│   └── index.ts               # Re-exports all
-├── types.ts                   # All TypeScript interfaces
-└── hooks/
-    ├── useWorkspaces.ts       # React Query/SWR wrapper
-    ├── useCollections.ts
-    └── useScenes.ts
+auth/api/
+├── client.ts           # Base fetch wrapper with ApiError class
+├── types.ts            # All TypeScript interfaces (~120 lines)
+├── scenes.ts           # Scene CRUD, collaboration, thumbnails
+├── talktracks.ts       # Talktrack recording management
+├── users.ts            # User profile, avatar
+├── workspaces.ts       # Workspace CRUD, avatar
+├── members.ts          # Workspace member management
+├── invites.ts          # Invite link management
+├── teams.ts            # Team CRUD
+├── collections.ts      # Collection CRUD, team access
+└── index.ts            # Re-exports all functions and types
+
+auth/workspaceApi.ts    # Backward compat: re-exports from api/
 ```
 
-**Effort:** Medium (2-3 days)
+**Benefits:**
+- Each domain file is focused (~60-150 lines each)
+- Centralized error handling via `apiRequest()` helper
+- `ApiError` class with status code for better error handling
+- Full backward compatibility - existing imports unchanged
+- Better tree-shaking potential
 
 ---
 
@@ -475,7 +481,7 @@ import styles from './WorkspaceSidebar.module.scss';
 ### Phase 2: Architecture (2-4 weeks)
 
 1. ✅ Split `WorkspaceSidebar.tsx` into smaller components (done 2025-12-23)
-2. Split `workspaceApi.ts` into modules
+2. ✅ Split `workspaceApi.ts` into modules (done 2025-12-23)
 3. Migrate more state to Jotai atoms
 
 ### Phase 3: Advanced (1-2 months)
@@ -544,6 +550,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Split workspaceApi.ts into modular API      |
 | 2025-12-23 | Split WorkspaceSidebar.tsx into components  |
 | 2025-12-23 | Marked Error Boundaries as resolved         |
 | 2025-12-23 | Marked Loading Skeletons as resolved        |
