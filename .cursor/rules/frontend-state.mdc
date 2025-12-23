@@ -1,23 +1,33 @@
 ---
-description: "Jotai state management patterns for AstraDraw frontend"
-globs: ["frontend/excalidraw-app/components/Settings/settingsState.ts", "frontend/excalidraw-app/App.tsx", "frontend/excalidraw-app/hooks/*.ts"]
+description: "State management patterns for AstraDraw frontend (React Query + Jotai)"
+globs: ["frontend/excalidraw-app/components/Settings/settingsState.ts", "frontend/excalidraw-app/App.tsx", "frontend/excalidraw-app/hooks/*.ts", "frontend/excalidraw-app/lib/*.ts"]
 ---
 
 # Frontend State Management
 
 **Key files for context:**
+@frontend/excalidraw-app/lib/queryClient.ts
 @frontend/excalidraw-app/components/Settings/settingsState.ts
-@frontend/excalidraw-app/router.ts
 @frontend/excalidraw-app/hooks/
 
-## Jotai vs useState
+## State Categories
+
+1. **Server State (React Query)** - Data from API (scenes, workspaces, collections)
+2. **Client State (Jotai)** - UI state shared across components (navigation, selection)
+3. **Local State (useState)** - Component-specific UI state
+
+## React Query vs Jotai vs useState
+
+**Use React Query when:**
+1. Fetching data from the API (scenes, workspaces, collections, profiles)
+2. You need caching and request deduplication
+3. You need automatic background refetching
 
 **Use Jotai Atom when:**
-1. Multiple components need the same state (avoid prop drilling)
+1. Multiple components need the same client state (avoid prop drilling)
 2. State needs to be set by action atoms (navigation)
-3. Cross-component communication (refresh triggers)
-4. State is part of URL/routing
-5. State needs localStorage persistence
+3. State is part of URL/routing
+4. State needs localStorage persistence
 
 **Use useState when:**
 1. State is truly component-local (form inputs)
@@ -65,32 +75,55 @@ export const myActionAtom = atom(null, (get, set, params: MyParams) => {
 export const derivedAtom = atom((get) => get(atomA) + get(atomB));
 ```
 
-## Existing Atoms Reference
+## React Query Usage
+
+```typescript
+// Query client and keys
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryClient";
+
+// Fetching data - use hooks
+import { useScenesCache } from "../hooks/useScenesCache";
+const { scenes, isLoading, updateScenes } = useScenesCache({
+  workspaceId,
+  collectionId,
+  enabled: !!workspaceId,
+});
+
+// After mutations - invalidate queries
+const queryClient = useQueryClient();
+await deleteScene(sceneId);
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+```
+
+## Existing Atoms Reference (Jotai - Client State)
 
 | Category | Atoms |
 |----------|-------|
 | **Navigation** | `appModeAtom`, `dashboardViewAtom`, `activeCollectionIdAtom` |
 | **Navigation Actions** | `navigateToDashboardAtom`, `navigateToCollectionAtom`, `navigateToSceneAtom` |
-| **Workspace Data** | `workspacesAtom`, `currentWorkspaceAtom`, `currentWorkspaceSlugAtom` |
-| **Collections Data** | `collectionsAtom`, `privateCollectionAtom` (derived), `activeCollectionAtom` (derived) |
+| **Workspace Selection** | `workspacesAtom`, `currentWorkspaceAtom`, `currentWorkspaceSlugAtom` |
+| **Collections Selection** | `collectionsAtom`, `privateCollectionAtom` (derived), `activeCollectionAtom` (derived) |
 | **Scene** | `currentSceneIdAtom`, `currentSceneTitleAtom`, `isAutoCollabSceneAtom` |
 | **Sidebar** | `workspaceSidebarOpenAtom`, `toggleWorkspaceSidebarAtom` |
-| **Refresh Triggers** | `collectionsRefreshAtom`, `scenesRefreshAtom`, `triggerCollectionsRefreshAtom` |
-| **Cache** | `scenesCacheAtom`, `getScenesCacheAtom`, `setScenesCacheAtom`, `invalidateScenesCacheAtom` |
+| **Refresh Triggers** | `collectionsRefreshAtom`, `triggerCollectionsRefreshAtom` |
+
+> **Note:** `scenesCacheAtom` and `scenesRefreshAtom` have been removed. Use React Query instead.
 
 ## Cross-Component Communication
 
-Use refresh trigger atoms:
-
+For collections (still uses Jotai trigger):
 ```typescript
-// Component that modifies data
 const triggerRefresh = useSetAtom(triggerCollectionsRefreshAtom);
 await createCollection(...);
 triggerRefresh();
+```
 
-// Component that displays data
-const refreshCounter = useAtomValue(collectionsRefreshAtom);
-useEffect(() => { loadCollections(); }, [refreshCounter]);
+For scenes (use React Query):
+```typescript
+const queryClient = useQueryClient();
+await deleteScene(sceneId);
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
 ```
 
 ## Navigation Pattern
@@ -123,14 +156,15 @@ App.tsx uses extracted hooks for better maintainability:
 
 ## Data Management Hooks
 
-These hooks manage shared data via Jotai atoms:
+These hooks use React Query for fetching + Jotai for selection state:
 
-| Hook | Atoms Used | Purpose |
-|------|------------|---------|
-| `useWorkspaces` | `workspacesAtom`, `currentWorkspaceAtom` | Load/switch/create workspaces |
-| `useCollections` | `collectionsAtom`, `activeCollectionIdAtom` | Collection CRUD operations |
-| `useScenesCache` | `scenesCacheAtom` | Centralized scene caching |
-| `useSceneActions` | - | Delete/rename/duplicate scenes |
+| Hook | Data Source | Purpose |
+|------|-------------|---------|
+| `useScenesCache` | React Query | Fetch scenes with caching |
+| `useWorkspaces` | React Query + Jotai | Load workspaces, manage selection |
+| `useCollections` | React Query + Jotai | Load collections, manage selection |
+| `useSceneActions` | React Query invalidation | Delete/rename/duplicate scenes |
+| `useInvalidateScenesCache` | React Query | Invalidate scenes cache |
 
 **When to create a new hook:**
 - Logic is 50+ lines and has single responsibility

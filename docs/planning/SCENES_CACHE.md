@@ -1,29 +1,26 @@
 # Scenes Cache System
 
-This document describes the centralized caching system for workspace scenes in AstraDraw.
+This document describes the caching system for workspace scenes in AstraDraw using React Query.
 
 ## Overview
 
-AstraDraw implements a **stale-while-revalidate** caching strategy for scenes data. This ensures:
+AstraDraw uses **TanStack React Query** for scenes caching. This provides:
 
-- **Instant navigation** - Switching between collections shows data immediately
-- **Always fresh** - Background refresh keeps data up-to-date
-- **No spinners** - Users only see loading spinner on first visit
-- **Cross-component sync** - All components share the same cache
+- **Automatic caching** - Built-in stale-while-revalidate pattern
+- **Request deduplication** - Multiple components share one request
+- **Background refetching** - Data stays fresh automatically
+- **Instant navigation** - Cached data shown immediately
 
 ## Architecture
 
-### Cache Storage
+### React Query Setup
 
-The cache is stored in a Jotai atom (`scenesCacheAtom`) which provides:
-- Shared state across all React components
-- Automatic re-renders when cache updates
-- No prop drilling needed
+The cache is managed by React Query's QueryClient:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    scenesCacheAtom (Jotai)                  │
-│  Map<string, { scenes: WorkspaceScene[], timestamp: number }>│
+│                    QueryClient (React Query)                 │
+│  Automatic caching, deduplication, background refetch       │
 └─────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -35,20 +32,27 @@ The cache is stored in a Jotai atom (`scenesCacheAtom`) which provides:
 └───────────────┘   └─────────────────┘   └─────────────────┘
 ```
 
-### Cache Key Format
+### Query Key Format
 
-```
-"workspaceId:collectionId"  - Scenes for a specific collection
-"workspaceId:all"           - All scenes in workspace (dashboard)
+```typescript
+// lib/queryClient.ts
+export const queryKeys = {
+  scenes: {
+    all: ["scenes"] as const,
+    list: (workspaceId: string, collectionId?: string | null) =>
+      ["scenes", workspaceId, collectionId ?? "all"] as const,
+  },
+};
 ```
 
 ### Components Using Cache
 
-| Component | Cache Key | Purpose |
+| Component | Query Key | Purpose |
 |-----------|-----------|---------|
-| `WorkspaceSidebar` | `workspaceId:collectionId` | Scene list in left sidebar |
-| `DashboardView` | `workspaceId:all` | Recently modified scenes |
-| `CollectionView` | `workspaceId:collectionId` | Collection page scenes |
+| `WorkspaceSidebar` | `queryKeys.scenes.list(workspaceId, collectionId)` | Scene list in left sidebar |
+| `DashboardView` | `queryKeys.scenes.list(workspaceId, null)` | Recently modified scenes |
+| `CollectionView` | `queryKeys.scenes.list(workspaceId, collectionId)` | Collection page scenes |
+| `SearchResultsView` | `queryKeys.scenes.list(workspaceId, null)` | Search results |
 
 ## Usage
 
@@ -68,30 +72,54 @@ const MyComponent = ({ workspace, collection }) => {
 
   // scenes - Array of WorkspaceScene
   // isLoading - true only on first load (not on cache hit)
-  // updateScenes - Function to update scenes and cache together
+  // updateScenes - Function to update cache optimistically
   // refetch - Function to force refresh
 };
 ```
 
-### Updating Scenes
+### Updating Scenes (Optimistic Updates)
 
-When modifying scenes (create, delete, rename, duplicate), use `updateScenes` to keep cache in sync:
+When modifying scenes, use `updateScenes` for immediate UI feedback:
 
 ```typescript
+const { updateScenes } = useScenesCache({ workspaceId, collectionId });
+
 const handleDeleteScene = async (sceneId: string) => {
-  await deleteSceneApi(sceneId);
-  
-  // Update local state AND cache together
+  // Optimistic update - UI updates immediately
   updateScenes((prev) => prev.filter((s) => s.id !== sceneId));
   
-  // Notify other components to refresh
-  triggerScenesRefresh();
+  // API call
+  await deleteSceneApi(sceneId);
 };
 ```
 
 ### Invalidating Cache
 
-When scenes move between collections (copy/move), invalidate the cache:
+After mutations, invalidate queries to refetch fresh data:
+
+```typescript
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryClient";
+
+const queryClient = useQueryClient();
+
+// Invalidate all scenes
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+
+// Invalidate specific workspace
+queryClient.invalidateQueries({ 
+  queryKey: ["scenes", workspaceId] 
+});
+
+// Invalidate specific collection
+queryClient.invalidateQueries({ 
+  queryKey: queryKeys.scenes.list(workspaceId, collectionId) 
+});
+```
+
+### Using the Invalidation Hook
+
+For convenience, use the `useInvalidateScenesCache` hook:
 
 ```typescript
 import { useInvalidateScenesCache } from "../../hooks/useScenesCache";
@@ -105,158 +133,133 @@ invalidateCache(workspaceId, collectionId);
 invalidateCache(workspaceId);
 ```
 
-## Caching Strategy: Stale-While-Revalidate
+## Caching Strategy
+
+React Query implements stale-while-revalidate automatically:
 
 ```
 User opens collection → Check cache
   │
-  ├── Cache HIT
+  ├── Cache HIT (data < staleTime)
   │     │
-  │     ├── Show cached data immediately (no spinner)
+  │     └── Show cached data (no refetch)
+  │
+  ├── Cache HIT (data > staleTime)
   │     │
-  │     └── Fetch fresh data in background
-  │           │
-  │           └── Update cache & UI silently
+  │     ├── Show cached data immediately
+  │     │
+  │     └── Refetch in background → Update silently
   │
   └── Cache MISS
         │
-        ├── Show loading spinner
+        ├── Show loading state
         │
         └── Fetch data → Cache → Display
+```
+
+### Default Settings
+
+```typescript
+// lib/queryClient.ts
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,  // 5 minutes
+      gcTime: 30 * 60 * 1000,    // 30 minutes (garbage collection)
+      retry: 2,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 ```
 
 ### Benefits
 
 1. **Perceived performance** - Data appears instantly on cache hit
-2. **Data freshness** - Background refresh ensures data doesn't get stale
-3. **Reduced API calls** - Same data isn't fetched multiple times
-4. **Graceful degradation** - On error, cached data is still shown
+2. **Data freshness** - Background refresh after staleTime
+3. **Request deduplication** - Multiple components share one request
+4. **Automatic retry** - Failed requests retry automatically
+5. **Window focus refetch** - Data refreshes when user returns to tab
 
 ## Cache Lifecycle
 
 ### When Cache is Populated
 
 - First visit to a collection
-- Background refresh after showing cached data
-- After scene operations (create, rename, duplicate)
+- After staleTime expires (background refetch)
+- After `invalidateQueries()` call
 
 ### When Cache is Updated
 
-- `updateScenes()` - Updates specific cache entry
-- Background refresh - Replaces cache entry with fresh data
+- `updateScenes()` - Optimistic updates via `setQueryData`
+- Background refetch - Replaces cache with fresh data
+- After successful mutation
 
 ### When Cache is Invalidated
 
+- Scene CRUD operations (create, delete, rename, duplicate)
 - Scene moved/copied between collections
-- Workspace switch (clears all cache)
-- Manual `invalidateCache()` call
+- Manual `invalidateQueries()` call
 
 ### When Cache is Cleared
 
-- User logs out
-- `clearScenesCacheAtom` is dispatched
-
-## Atoms Reference
-
-### `scenesCacheAtom`
-
-Main cache storage atom.
-
-```typescript
-type ScenesCacheEntry = {
-  scenes: WorkspaceScene[];
-  timestamp: number;
-};
-
-const scenesCacheAtom = atom<Map<string, ScenesCacheEntry>>(new Map());
-```
-
-### `setScenesCacheAtom`
-
-Action atom to set cache entry.
-
-```typescript
-const setCacheEntry = useSetAtom(setScenesCacheAtom);
-setCacheEntry({ key: "workspace123:collection456", scenes: [...] });
-```
-
-### `invalidateScenesCacheAtom`
-
-Action atom to invalidate cache entries.
-
-```typescript
-const invalidate = useSetAtom(invalidateScenesCacheAtom);
-
-// Invalidate specific collection
-invalidate({ workspaceId: "ws123", collectionId: "col456" });
-
-// Invalidate all collections in workspace
-invalidate({ workspaceId: "ws123" });
-```
-
-### `clearScenesCacheAtom`
-
-Action atom to clear entire cache.
-
-```typescript
-const clearCache = useSetAtom(clearScenesCacheAtom);
-clearCache();
-```
+- `gcTime` expires (30 minutes after last use)
+- User logs out (clear all queries)
 
 ## Cross-Component Communication
 
-When one component modifies scenes, others need to know:
+React Query handles this automatically through shared cache:
 
 ```
-┌─────────────────┐    updateScenes()    ┌─────────────────┐
-│  CollectionView │ ──────────────────▶  │  scenesCacheAtom │
-│  (delete scene) │                      │  (shared cache)  │
-└─────────────────┘                      └─────────────────┘
-        │                                         │
-        │ triggerScenesRefresh()                  │ Jotai subscription
-        ▼                                         ▼
-┌─────────────────┐                      ┌─────────────────┐
-│ scenesRefreshAtom│ ◀────────────────── │  DashboardView  │
-│  (counter: 0→1)  │                     │ (auto re-render) │
-└─────────────────┘                      └─────────────────┘
-        │
-        │ useEffect dependency
-        ▼
-┌─────────────────┐
-│ WorkspaceSidebar │
-│ (refetch scenes) │
-└─────────────────┘
+┌─────────────────┐    invalidateQueries()   ┌─────────────────┐
+│  CollectionView │ ──────────────────────▶  │   QueryClient   │
+│  (delete scene) │                          │  (shared cache) │
+└─────────────────┘                          └─────────────────┘
+                                                      │
+                                                      │ Automatic refetch
+                                                      ▼
+                                             ┌─────────────────┐
+                                             │  All subscribed │
+                                             │   components    │
+                                             │  (auto-update)  │
+                                             └─────────────────┘
 ```
+
+No manual refresh triggers needed - React Query handles it!
 
 ## Performance Considerations
 
 ### Cache Size
 
-The cache stores scenes per collection. For a workspace with:
-- 10 collections × 50 scenes average = ~500 scene objects in memory
-- Each scene object is ~500 bytes
-- Total: ~250KB (negligible)
+React Query manages cache size automatically:
+- Unused queries are garbage collected after `gcTime` (30 min)
+- Active queries stay in memory while components are mounted
 
-### Background Refresh
+### Request Deduplication
 
-Background fetches happen on every cache hit, but:
-- Don't block UI (data shown immediately)
-- Don't show spinner
-- Update silently when complete
+Multiple components using the same query key share one request:
+- `DashboardView` and `SearchResultsView` both use `scenes.list(workspaceId, null)`
+- Only one API call is made, both components get the data
 
-### Memory Management
+### Background Refetch
 
-- Cache is cleared on logout
-- Cache is per-session (not persisted to localStorage)
-- Old entries are not automatically evicted (could add TTL if needed)
+Background fetches happen when:
+- Data is stale (> 5 min old) and component mounts
+- Window regains focus
+- Network reconnects
 
-## Future Improvements
+## Migration from Jotai Cache
 
-- [ ] Add TTL (time-to-live) to cache entries
-- [ ] Persist cache to localStorage for faster initial load
-- [ ] Add cache for collections (not just scenes)
-- [ ] Implement optimistic updates for better UX
-- [ ] Add cache size limits with LRU eviction
+The old Jotai-based cache (`scenesCacheAtom`) has been removed. Here's the mapping:
+
+| Old (Jotai) | New (React Query) |
+|-------------|-------------------|
+| `scenesCacheAtom` | QueryClient internal cache |
+| `setScenesCacheAtom` | `queryClient.setQueryData()` |
+| `invalidateScenesCacheAtom` | `queryClient.invalidateQueries()` |
+| `clearScenesCacheAtom` | `queryClient.clear()` |
+| `scenesRefreshAtom` | Not needed - automatic |
+| `triggerScenesRefreshAtom` | `queryClient.invalidateQueries()` |
 
 ---
 
@@ -264,7 +267,7 @@ Background fetches happen on every cache hit, but:
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Migrated to React Query from Jotai cache |
+| 2025-12-23 | Removed manual cache atoms |
+| 2025-12-23 | Added automatic request deduplication |
 | 2025-12-23 | Initial implementation with stale-while-revalidate strategy |
-| 2025-12-23 | Added `useScenesCache` hook for shared cache access |
-| 2025-12-23 | Migrated DashboardView and CollectionView to use shared cache |
-

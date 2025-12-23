@@ -18,14 +18,16 @@ frontend/
 │   │   ├── api/              # Modular API client (scenes, workspaces, etc.)
 │   │   ├── AuthContext.tsx   # Auth provider
 │   │   └── workspaceApi.ts   # Re-exports from api/ (backward compat)
+│   ├── lib/                  # Shared utilities
+│   │   └── queryClient.ts    # React Query client + query keys
 │   ├── hooks/                # Extracted logic hooks
 │   │   ├── useAutoSave.ts    # Save state machine, debounce, retry
 │   │   ├── useSceneLoader.ts # Scene loading, auto-collab
 │   │   ├── useUrlRouting.ts  # Popstate, URL parsing
 │   │   ├── useKeyboardShortcuts.ts  # Global keyboard handlers
-│   │   ├── useWorkspaces.ts  # Workspace loading/switching (uses Jotai)
-│   │   ├── useCollections.ts # Collection CRUD (uses Jotai)
-│   │   ├── useScenesCache.ts # Centralized scene caching
+│   │   ├── useWorkspaces.ts  # Workspace loading (React Query + Jotai)
+│   │   ├── useCollections.ts # Collection CRUD (React Query + Jotai)
+│   │   ├── useScenesCache.ts # Scene fetching (React Query)
 │   │   └── useSceneActions.ts # Scene delete/rename/duplicate
 │   ├── components/           # Custom components
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
@@ -140,9 +142,36 @@ import { t } from "@excalidraw/excalidraw/i18n";
 }
 ```
 
-## Shared State Access
+## Data Fetching (React Query)
 
-Components read workspace/collections data directly from Jotai atoms (no prop drilling):
+Server state (scenes, workspaces, collections) uses React Query:
+
+```typescript
+import { useScenesCache } from "../../hooks/useScenesCache";
+import { useWorkspaces } from "../../hooks/useWorkspaces";
+import { useCollections } from "../../hooks/useCollections";
+
+// Fetching data
+const { scenes, isLoading, updateScenes } = useScenesCache({
+  workspaceId,
+  collectionId,
+  enabled: !!workspaceId,
+});
+
+// After mutations - invalidate queries
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryClient";
+
+const queryClient = useQueryClient();
+await deleteScene(sceneId);
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+```
+
+**See:** `/docs/planning/SCENES_CACHE.md` for caching details.
+
+## Client State (Jotai)
+
+UI state shared across components uses Jotai atoms:
 
 ```typescript
 import { useAtomValue } from "../../app-jotai";
@@ -152,20 +181,13 @@ import {
   activeCollectionAtom,
 } from "../Settings/settingsState";
 
-// Read workspace data
+// Read workspace selection
 const workspace = useAtomValue(currentWorkspaceAtom);
 const collections = useAtomValue(collectionsAtom);
 const activeCollection = useAtomValue(activeCollectionAtom); // derived
-
-// For CRUD operations, use the hooks
-import { useWorkspaces } from "../../hooks/useWorkspaces";
-import { useCollections } from "../../hooks/useCollections";
-
-const { loadWorkspaces, switchWorkspace } = useWorkspaces({ isAuthenticated });
-const { createCollection, deleteCollection } = useCollections({ workspaceId });
 ```
 
-**Rule:** Read from atoms for display, use hooks for mutations.
+**Rule:** React Query for server data, Jotai for client state.
 
 ## API Calls
 

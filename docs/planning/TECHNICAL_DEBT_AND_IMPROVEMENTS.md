@@ -156,49 +156,45 @@ auth/workspaceApi.ts    # Backward compat: re-exports from api/
 
 ## 🟡 Medium Priority Issues
 
-### 5. No Data Fetching Library
+### 5. ✅ RESOLVED: Data Fetching Library (React Query)
 
-**Problem:** All API calls are manual `fetch()` with duplicated error handling.
+> **Resolved:** 2025-12-23 - Added TanStack React Query v5 for data fetching
 
-**Current Pattern:**
+**Was:** All API calls were manual `fetch()` with duplicated error handling and custom caching.
 
-```typescript
-const loadScenes = async () => {
-  setIsLoading(true);
-  try {
-    const data = await listWorkspaceScenes(workspaceId);
-    setScenes(data);
-  } catch (err) {
-    console.error("Failed to load:", err);
-  } finally {
-    setIsLoading(false);
-  }
-};
+**Fix:** Integrated TanStack React Query v5:
+
+```
+lib/
+├── queryClient.ts       # QueryClient with defaults + query key factory
+└── index.ts             # Re-exports
+
+hooks/
+├── useScenesCache.ts    # Rewritten with useQuery
+├── useWorkspaces.ts     # Updated to use useQuery
+├── useCollections.ts    # Updated to use useQuery
+└── useSceneActions.ts   # Updated to use queryClient.invalidateQueries
 ```
 
-**Recommended Solution:** Use **React Query** or **SWR**:
+**Key changes:**
 
-```typescript
-const {
-  data: scenes,
-  isLoading,
-  error,
-} = useQuery(
-  ["scenes", workspaceId, collectionId],
-  () => listWorkspaceScenes(workspaceId, collectionId),
-  { staleTime: 5 * 60 * 1000 }
-);
-```
+- Installed `@tanstack/react-query` package
+- Created `lib/queryClient.ts` with centralized QueryClient and type-safe query keys
+- Added `QueryClientProvider` to `index.tsx`
+- Rewrote `useScenesCache` to use `useQuery` (replaces 2 custom cache implementations)
+- Updated `useWorkspaces` and `useCollections` to use React Query for fetching
+- Removed manual cache atoms from `settingsState.ts`:
+  - `scenesCacheAtom`, `setScenesCacheAtom`, `invalidateScenesCacheAtom`, `clearScenesCacheAtom`
+  - `scenesRefreshAtom`, `triggerScenesRefreshAtom`
+- Deleted redundant `useSidebarScenes.ts` hook
 
 **Benefits:**
 
-- Automatic caching (replaces our manual cache)
-- Background refetching
-- Error/loading states built-in
-- Request deduplication
-- Optimistic updates
-
-**Effort:** High (1 week) - but big long-term payoff
+- Automatic caching with 5-minute stale time
+- Request deduplication (multiple components share one request)
+- Background refetching on window focus
+- Simplified hooks - no manual loading/error state management
+- Foundation for optimistic updates (tech debt item #8)
 
 ---
 
@@ -487,7 +483,7 @@ import styles from './WorkspaceSidebar.module.scss';
 
 ### Phase 3: Advanced (1-2 months)
 
-1. Add React Query for data fetching
+1. ✅ Add React Query for data fetching (done 2025-12-23)
 2. Add optimistic updates
 3. Add unit tests
 
@@ -550,6 +546,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Added React Query for data fetching         |
 | 2025-12-23 | Migrated workspace/collections to Jotai     |
 | 2025-12-23 | Split App.tsx into 5 focused hooks          |
 | 2025-12-23 | Split workspaceApi.ts into modular API      |

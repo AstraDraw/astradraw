@@ -6,9 +6,10 @@ This document describes the state management architecture used in AstraDraw, inc
 
 AstraDraw uses a hybrid state management approach:
 
-1. **Jotai Atoms** - For global state shared across multiple components
-2. **React useState** - For component-local UI state
-3. **React Context** - For authentication (via `AuthProvider`)
+1. **React Query** - For server state (API data: scenes, workspaces, collections)
+2. **Jotai Atoms** - For client state shared across components (navigation, selection, UI)
+3. **React useState** - For component-local UI state
+4. **React Context** - For authentication (via `AuthProvider`)
 
 ### Why Jotai?
 
@@ -98,27 +99,29 @@ navigateToCollection({ collectionId: "abc123", isPrivate: false });
 
 ### Refresh Trigger Atoms
 
-Used for cross-component communication to trigger data re-fetching:
+> **Note:** As of 2025-12-23, scenes use React Query for data fetching. The `scenesRefreshAtom` and `triggerScenesRefreshAtom` have been removed. Use `queryClient.invalidateQueries()` instead.
+
+Collections still use refresh trigger atoms:
 
 | Atom | Purpose |
 |------|---------|
 | `collectionsRefreshAtom` | Counter that increments when collections change |
 | `triggerCollectionsRefreshAtom` | Action atom to increment collections refresh |
-| `scenesRefreshAtom` | Counter that increments when scenes change |
-| `triggerScenesRefreshAtom` | Action atom to increment scenes refresh |
 
 **Usage:**
 ```typescript
-// In component that modifies data
+// For collections (still uses Jotai trigger)
 const triggerRefresh = useSetAtom(triggerCollectionsRefreshAtom);
 await createCollection(...);
-triggerRefresh(); // Notify other components
+triggerRefresh();
 
-// In component that displays data
-const refreshCounter = useAtomValue(collectionsRefreshAtom);
-useEffect(() => {
-  loadCollections();
-}, [refreshCounter]); // Re-fetch when counter changes
+// For scenes (use React Query invalidation)
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryClient";
+
+const queryClient = useQueryClient();
+await deleteScene(sceneId);
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
 ```
 
 **File:** `excalidraw-app/components/Settings/settingsState.ts`
@@ -240,7 +243,98 @@ Most child components use local `useState` for:
 
 ---
 
+## React Query (Server State)
+
+React Query handles all API data fetching with automatic caching, deduplication, and background refetching.
+
+### Query Client Setup
+
+```typescript
+// lib/queryClient.ts
+import { QueryClient } from "@tanstack/react-query";
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 30 * 60 * 1000,   // 30 minutes
+      retry: 2,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+// Type-safe query keys
+export const queryKeys = {
+  scenes: {
+    all: ["scenes"] as const,
+    list: (workspaceId: string, collectionId?: string | null) =>
+      ["scenes", workspaceId, collectionId ?? "all"] as const,
+  },
+  workspaces: {
+    all: ["workspaces"] as const,
+    list: () => ["workspaces"] as const,
+  },
+  collections: {
+    all: ["collections"] as const,
+    list: (workspaceId: string) => ["collections", workspaceId] as const,
+  },
+};
+```
+
+### Data Fetching Hooks
+
+| Hook | Query Key | Data Source |
+|------|-----------|-------------|
+| `useScenesCache` | `queryKeys.scenes.list(workspaceId, collectionId)` | `listWorkspaceScenes()` |
+| `useWorkspaces` | `queryKeys.workspaces.list()` | `listWorkspaces()` |
+| `useCollections` | `queryKeys.collections.list(workspaceId)` | `listCollections()` |
+
+**Usage:**
+```typescript
+// In components - use the hooks
+const { scenes, isLoading, updateScenes } = useScenesCache({
+  workspaceId: workspace?.id,
+  collectionId: activeCollectionId,
+  enabled: !!workspace?.id,
+});
+
+// After mutations - invalidate queries
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryClient";
+
+const queryClient = useQueryClient();
+await deleteScene(sceneId);
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+```
+
+### Outside React Components
+
+For code outside React components (e.g., utility functions), import the queryClient directly:
+
+```typescript
+import { queryClient, queryKeys } from "../lib/queryClient";
+
+// After mutation
+queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+```
+
+---
+
 ## When to Use What
+
+### Use React Query When:
+
+1. **Fetching data from the API**
+   - Scenes, workspaces, collections, user profiles
+   - Any data that comes from the backend
+
+2. **You need caching and deduplication**
+   - Multiple components showing same data share one request
+   - Data stays fresh with background refetching
+
+3. **You need loading/error states**
+   - React Query provides `isLoading`, `error`, `isRefetching` automatically
 
 ### Use Jotai Atom When:
 
@@ -432,19 +526,21 @@ export const someActionAtom = atom(null, (get, set) => {
 ```
 excalidraw-app/
 ├── app-jotai.ts              # Jotai provider setup, authUserAtom
+├── lib/                      # Shared utilities
+│   ├── queryClient.ts        # React Query client + query keys
+│   └── index.ts              # Re-exports
 ├── hooks/                    # Extracted logic hooks
 │   ├── useAutoSave.ts        # Save state machine, debounce, retry
 │   ├── useSceneLoader.ts     # Scene loading from workspace URLs
 │   ├── useUrlRouting.ts      # Popstate, URL parsing
 │   ├── useKeyboardShortcuts.ts  # Global keyboard handlers
-│   ├── useWorkspaceData.ts   # Workspace/collections loading
 │   ├── useSceneActions.ts    # Scene CRUD operations
-│   ├── useScenesCache.ts     # Centralized scenes cache
-│   ├── useCollections.ts     # Collection operations
-│   └── useWorkspaces.ts      # Workspace operations
+│   ├── useScenesCache.ts     # Scenes fetching (React Query)
+│   ├── useCollections.ts     # Collection operations (React Query)
+│   └── useWorkspaces.ts      # Workspace operations (React Query)
 ├── components/
 │   ├── Settings/
-│   │   ├── settingsState.ts  # Main navigation/app state atoms
+│   │   ├── settingsState.ts  # Navigation/UI state atoms (Jotai)
 │   │   └── index.ts          # Re-exports atoms
 │   └── Presentation/
 │       └── usePresentationMode.ts  # Presentation atoms
@@ -472,9 +568,11 @@ excalidraw-app/
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Added React Query for server state (scenes, workspaces, collections) |
+| 2025-12-23 | Removed manual cache atoms (`scenesCacheAtom`, `scenesRefreshAtom`) |
+| 2025-12-23 | Added `lib/queryClient.ts` with QueryClient and query key factory |
 | 2025-12-23 | Added workspace/collections atoms (workspacesAtom, currentWorkspaceAtom, collectionsAtom, etc.) |
 | 2025-12-23 | Documented App.tsx hooks (useAutoSave, useSceneLoader, etc.) |
-| 2025-12-23 | Added centralized scenes cache with `scenesCacheAtom` |
 | 2025-12-23 | Migrated `workspaceSidebarOpen` from useState to Jotai atom |
 | 2025-12-23 | Initial documentation |
 
