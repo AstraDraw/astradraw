@@ -83,4 +83,4 @@ After completing the item:
 
 ## After Completion
 
-Run `/post-implementation` to ensure all docs are updated.
+Run `/finish-tech-debt` to verify checks pass and finalize documentation.

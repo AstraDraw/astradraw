@@ -6,7 +6,7 @@ You are helping update documentation and rules after a feature or refactoring is
 
 Before running this command:
 - [ ] All code changes are committed
-- [ ] `just check-all` passes
+- [ ] `just check` passes
 - [ ] Feature tested in browser at `https://draw.local`
 - [ ] User confirms feature works
 

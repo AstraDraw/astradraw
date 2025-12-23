@@ -307,24 +307,46 @@ const deleteScene = async (sceneId: string) => {
 
 ---
 
-### 9. Missing Error Boundaries
+### 9. ✅ RESOLVED: Missing Error Boundaries
 
-**Problem:** If a component crashes, the whole app crashes.
+> **Resolved:** 2025-12-23 - Implemented granular error boundaries for key components
 
-**Recommended Solution:**
+**Was:** If a component crashed, the whole app showed the error splash page.
+
+**Fix:** Created reusable ErrorBoundary component with context-specific fallbacks:
+
+```
+components/ErrorBoundary/
+├── index.ts                    # Exports
+├── ErrorBoundary.tsx           # Main class component with reset capability
+├── ErrorBoundary.scss          # Styles with dark mode support
+├── SidebarErrorFallback.tsx    # Compact fallback for sidebar
+├── ContentErrorFallback.tsx    # Fallback for main content area
+└── GenericErrorFallback.tsx    # Reusable generic fallback
+```
+
+**Usage:**
 
 ```typescript
-// components/ErrorBoundary.tsx
-<ErrorBoundary fallback={<ErrorFallback />}>
-  <WorkspaceSidebar />
-</ErrorBoundary>
+import { ErrorBoundary, SidebarErrorFallback } from "./components/ErrorBoundary";
 
-<ErrorBoundary fallback={<DashboardErrorFallback />}>
-  <DashboardView />
+<ErrorBoundary
+  fallback={(props) => <SidebarErrorFallback {...props} />}
+  onError={(error) => console.error("[WorkspaceSidebar] Error:", error)}
+>
+  <WorkspaceSidebar />
 </ErrorBoundary>
 ```
 
-**Effort:** Low (1 day)
+**Components wrapped:**
+- `WorkspaceSidebar` - Uses `SidebarErrorFallback`
+- `WorkspaceMainContent` - Uses `ContentErrorFallback` with "Go Home" action
+
+**Features:**
+- Reset capability (retry button)
+- Dark mode support
+- Error details expandable
+- Translation keys in `en.json` and `ru-RU.json`
 
 ---
 
@@ -449,7 +471,7 @@ import styles from './WorkspaceSidebar.module.scss';
 2. ✅ Create `useSceneActions` hook to deduplicate code (done 2025-12-23)
 3. ✅ Add toast notifications (done 2025-12-23)
 4. ✅ Add loading skeletons (done 2025-12-23)
-5. Add error boundaries
+5. ✅ Add error boundaries (done 2025-12-23)
 
 ### Phase 2: Architecture (2-4 weeks)
 
@@ -523,6 +545,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                 |
 | ---------- | --------------------------------------- |
+| 2025-12-23 | Marked Error Boundaries as resolved     |
 | 2025-12-23 | Marked Loading Skeletons as resolved    |
 | 2025-12-23 | Marked Toast Notifications as resolved  |
 | 2025-12-23 | Marked useSceneActions hook as resolved |
