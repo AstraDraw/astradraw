@@ -587,7 +587,7 @@ export function useDeleteSceneMutation() {
 
 | Plan | Status | Date | Notes |
 |------|--------|------|-------|
-| 1. useSceneActions | ⬜ Not Started | | |
+| 1. useSceneActions | ✅ Completed | 2025-12-23 | Removed ~180 lines of duplicate code |
 | 2. Toast Notifications | ⬜ Not Started | | |
 | 3. Loading Skeletons | ⬜ Not Started | | |
 | 4. Error Boundaries | ⬜ Not Started | | |
@@ -595,7 +595,7 @@ export function useDeleteSceneMutation() {
 | 6. Split workspaceApi.ts | ⬜ Not Started | | |
 | 7. useCollections Hook | ⬜ Not Started | | |
 | 8. useWorkspaces Hook | ⬜ Not Started | | |
-| 9. Optimistic Updates | ⬜ Not Started | | |
+| 9. Optimistic Updates | ⬜ Not Started | | Requires Plan 2 (Toast) first |
 | 10. React Query | ⬜ Not Started | | |
 
 ---
@@ -604,5 +604,6 @@ export function useDeleteSceneMutation() {
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Implemented Plan 1: useSceneActions hook |
 | 2025-12-23 | Initial plans created |
 

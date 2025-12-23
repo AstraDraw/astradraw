@@ -181,43 +181,30 @@ const { data: scenes, isLoading, error } = useQuery(
 
 ---
 
-### 6. Duplicate Scene Operations in Multiple Components
+### 6. ✅ RESOLVED: Duplicate Scene Operations in Multiple Components
 
-**Problem:** Delete/Rename/Duplicate scene logic is duplicated in:
-- `WorkspaceSidebar.tsx`
-- `DashboardView.tsx`
-- `CollectionView.tsx`
-- `SceneCard.tsx`
+> **Resolved:** 2025-12-23 - Implemented `useSceneActions` hook
 
-**Recommended Solution:** Create a single hook:
+**Was:** Delete/Rename/Duplicate scene logic was duplicated in 4 files (~180 lines of duplicate code).
+
+**Fix:** Created `hooks/useSceneActions.ts` hook that provides:
+- `deleteScene(sceneId)` - with confirmation dialog
+- `renameScene(sceneId, newTitle)` - with optional callback for title updates
+- `duplicateScene(sceneId)` - returns the new scene
+
+**Usage:**
 ```typescript
-// hooks/useSceneActions.ts
-export function useSceneActions(options: { onSuccess?: () => void }) {
-  const triggerRefresh = useSetAtom(triggerScenesRefreshAtom);
-  
-  const deleteScene = async (sceneId: string) => {
-    if (!confirm(t("workspace.confirmDeleteScene"))) return;
-    await deleteSceneApi(sceneId);
-    triggerRefresh();
-    options.onSuccess?.();
-  };
-  
-  const renameScene = async (sceneId: string, newTitle: string) => {
-    await updateSceneApi(sceneId, { title: newTitle });
-    triggerRefresh();
-  };
-  
-  const duplicateScene = async (sceneId: string) => {
-    const newScene = await duplicateSceneApi(sceneId);
-    triggerRefresh();
-    return newScene;
-  };
-  
-  return { deleteScene, renameScene, duplicateScene };
-}
+const { deleteScene, renameScene, duplicateScene } = useSceneActions({
+  updateScenes,
+  onSceneRenamed: (sceneId, newTitle) => { /* optional callback */ },
+});
 ```
 
-**Effort:** Low (1 day)
+**Files updated:**
+- `DashboardView.tsx` - removed ~45 lines
+- `CollectionView.tsx` - removed ~45 lines
+- `SearchResultsView.tsx` - removed ~45 lines
+- `WorkspaceSidebar.tsx` - removed ~55 lines
 
 ---
 
@@ -409,7 +396,7 @@ import styles from './WorkspaceSidebar.module.scss';
 
 ### Phase 1: Quick Wins (1-2 weeks)
 1. ✅ Add scenes cache (done)
-2. Create `useSceneActions` hook to deduplicate code
+2. ✅ Create `useSceneActions` hook to deduplicate code (done 2025-12-23)
 3. Add toast notifications
 4. Add loading skeletons
 5. Add error boundaries
@@ -476,5 +463,6 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Marked useSceneActions hook as resolved |
 | 2025-12-23 | Initial analysis and documentation |
 
