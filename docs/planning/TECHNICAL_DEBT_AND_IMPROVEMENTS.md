@@ -426,135 +426,353 @@ excalidraw-app/tests/
 
 ---
 
-### 12. ✅ RESOLVED: CSS Modules Pilot Migration
+### 12. 🟡 IN PROGRESS: CSS Modules Migration with Component Folder Reorganization
 
-> **Resolved:** 2025-12-23 - Pilot migration of 3 components to CSS Modules
+> **Started:** 2025-12-23 - Full migration with component folder structure
+> **Status:** Batch 1 complete (8 components), 30 remaining
 
-**Was:** All SCSS files were global with BEM naming conventions, risking naming conflicts.
+**Goal:** Migrate all 38 global SCSS files to CSS Modules while reorganizing into component folders following modern React best practices.
 
-**Fix:** Migrated 3 pilot components to CSS Modules to establish patterns:
+#### What's Been Done
+
+**Phase 0: Shared Styles Infrastructure** ✅
+
+Created `excalidraw-app/styles/` directory with reusable SCSS:
 
 ```
-components/Skeletons/
-├── Skeleton.module.scss      # Shimmer animation, dark mode
-├── SceneCardSkeleton.tsx     # Uses styles.sceneCardSkeleton
-└── CollectionItemSkeleton.tsx
-
-components/ErrorBoundary/
-├── ErrorBoundary.module.scss # Fallback styles, variants
-├── ErrorBoundary.tsx
-├── SidebarErrorFallback.tsx
-├── ContentErrorFallback.tsx
-└── GenericErrorFallback.tsx
-
-components/SaveStatusIndicator/
-├── SaveStatusIndicator.module.scss  # Status colors, animations
-└── SaveStatusIndicator.tsx
+styles/
+├── _variables.scss    # $ui-font, spacing vars ($spacing-xs, etc.)
+├── _mixins.scss       # @mixin dark-mode, @mixin within-excalidraw
+├── _animations.scss   # shimmer, fadeIn, spin keyframes
+└── index.scss         # Re-exports all
 ```
 
-**Key patterns established:**
+**Key mixin - Dark mode wrapper:**
+```scss
+// Usage: @include dark-mode { .card { background: #232329; } }
+@mixin dark-mode {
+  :global(.excalidraw.theme--dark),
+  :global(.excalidraw-app.theme--dark) {
+    @content;
+  }
+}
+```
 
-1. **Dark mode** - Use `:global()` for theme selectors:
+**Batch 1: Simple Components** ✅ (8 files migrated)
+
+| Component | Old Location | New Location |
+|-----------|--------------|--------------|
+| AstradrawLogo | `components/AstradrawLogo.tsx` | `components/AstradrawLogo/` |
+| AppFooter | `components/AppFooter.tsx` | `components/AppFooter/` |
+| AppSidebar | `components/AppSidebar.tsx` | `components/AppSidebar/` |
+| CollabError | `collab/CollabError.tsx` | `collab/CollabError/` |
+| PenToolbar | `pens/PenToolbar.tsx` | `pens/PenToolbar/` |
+| WorkspaceMainContent | `Workspace/WorkspaceMainContent.tsx` | `Workspace/WorkspaceMainContent/` |
+| WorkspaceSidebarTrigger | `Workspace/WorkspaceSidebarTrigger.tsx` | `Workspace/WorkspaceSidebarTrigger/` |
+| BoardModeNav | `Workspace/BoardModeNav.tsx` | `Workspace/BoardModeNav/` |
+
+Each component folder contains:
+```
+ComponentName/
+├── index.ts                    # Re-export for backward compatibility
+├── ComponentName.tsx           # Component with styles import
+└── ComponentName.module.scss   # CSS Module
+```
+
+**Batch 2: Settings Pages** ⬜ (Not started)
+
+- ⬜ `Settings/PreferencesPage/` (153 lines)
+- ⬜ `Settings/ProfilePage/` (531 lines)
+- ⬜ `Settings/MembersPage/` (603 lines)
+- ⬜ `Settings/WorkspaceSettingsPage/` (427 lines)
+- ⬜ `Settings/TeamsCollectionsPage/` (1073 lines - largest file!)
+
+#### What Remains
+
+**Batch 2: Settings Pages** (4 files, ~2,600 lines)
+- `ProfilePage.scss` (531 lines)
+- `MembersPage.scss` (603 lines)
+- `WorkspaceSettingsPage.scss` (427 lines)
+- `TeamsCollectionsPage.scss` (1073 lines)
+
+**Batch 3: Workspace Views** (8 files, ~2,400 lines)
+- `DashboardView.scss` (180 lines)
+- `CollectionView.scss` (~200 lines)
+- `SearchResultsView.scss` (207 lines)
+- `SceneCard.scss` (292 lines)
+- `SceneCardGrid.scss` (305 lines)
+- `UserMenu.scss` (158 lines)
+- `CopyMoveDialog.scss` (45 lines)
+- `InviteAcceptPage.scss` (238 lines)
+
+**Batch 4: Feature Components** (9 files, ~2,700 lines)
+- `TalktrackToolbar.scss` (147 lines)
+- `TalktrackSetupDialog.scss` (219 lines)
+- `TalktrackPanel.scss` (391 lines)
+- `PresentationControls.scss` (130 lines)
+- `PresentationPanel.scss` (513 lines)
+- `SlidesLayoutDialog.scss` (349 lines)
+- `PenSettingsModal.scss` (242 lines)
+- `StickersPanel.scss` (333 lines)
+- `EmojiPicker.scss` (327 lines)
+
+**Batch 5: Complex Components** (8 files, ~2,000 lines)
+- `WorkspaceSidebar.scss` (835 lines) - Already a folder, just needs .module.scss
+- `FullModeNav.scss` (370 lines)
+- `LoginDialog.scss` (263 lines)
+- `UserProfileDialog.scss` (421 lines)
+- `QuickSearchModal.scss` (396 lines)
+- `ShareDialog.scss` (166 lines)
+- `WelcomeScreenBackground.scss` (254 lines)
+- `index.scss` (~100 lines) - Keep as global entry point
+
+#### Per-Component Migration Process
+
+For each component:
+
+1. **Create folder:**
+   ```bash
+   mkdir -p components/Workspace/SceneCard
+   ```
+
+2. **Move files:**
+   ```bash
+   mv SceneCard.tsx SceneCard/SceneCard.tsx
+   mv SceneCard.scss SceneCard/SceneCard.module.scss
+   ```
+
+3. **Create index.ts:**
+   ```typescript
+   export { SceneCard } from "./SceneCard";
+   export type { SceneCardProps } from "./SceneCard";
+   ```
+
+4. **Convert SCSS:**
    ```scss
-   :global(.excalidraw.theme--dark),
-   :global(.excalidraw-app.theme--dark) {
-     .container { ... }
-   }
+   // Before (BEM global)
+   .scene-card { &__title { } &--active { } }
+   .excalidraw.theme--dark { .scene-card { } }
+   
+   // After (CSS Module with mixin)
+   @use "../../../styles/mixins" as *;
+   .card { }
+   .title { }
+   .active { }
+   @include dark-mode { .card { } }
    ```
 
-2. **Animations** - Keyframes are locally scoped automatically
-
-3. **Class composition** - Use template literals for multiple classes:
+5. **Update component:**
    ```typescript
-   className={`${styles.status} ${styles.statusSaved}`}
+   // Before
+   import "./SceneCard.scss";
+   className="scene-card"
+   
+   // After
+   import styles from "./SceneCard.module.scss";
+   className={styles.card}
    ```
 
-4. **Type safety** - Added declarations to `vite-env.d.ts`:
-   ```typescript
-   declare module "*.module.scss" {
-     const classes: { readonly [key: string]: string };
-     export default classes;
-   }
+6. **Delete old files** and verify imports still work via index.ts
+
+7. **Run checks:**
+   ```bash
+   just check-frontend
    ```
 
-**Benefits:**
-- Guaranteed class name uniqueness
-- Better IDE autocomplete for styles
-- Clear dependency between component and styles
-- Foundation for broader migration if desired
+#### Key Patterns Established
 
-**Remaining:** 38 global SCSS files in `excalidraw-app/` (optional future migration)
-
-#### Full Migration Guide (If Proceeding)
-
-If you decide to migrate all 38 remaining SCSS files, follow these guidelines:
-
-**Migration Order (by complexity):**
-
-1. **Simple components first** - Small files with no dark mode or animations
-   - `AstradrawLogo.scss`, `AppFooter.scss`, `WelcomeScreenBackground.scss`
-
-2. **Settings pages** - Self-contained, rarely change
-   - `ProfilePage.scss`, `PreferencesPage.scss`, `MembersPage.scss`, etc.
-
-3. **Workspace components** - Core UI, test thoroughly
-   - `SceneCard.scss`, `DashboardView.scss`, `CollectionView.scss`
-
-4. **Complex components last** - Large files with many interactions
-   - `WorkspaceSidebar.scss` (835 lines), `FullModeNav.scss`, `LoginDialog.scss`
-
-**Checklist per component:**
-
-```markdown
-- [ ] Rename `Component.scss` → `Component.module.scss`
-- [ ] Convert BEM names to camelCase (`.scene-card__title` → `.title`)
-- [ ] Wrap dark mode selectors with `:global()`
-- [ ] Update component imports: `import styles from "./Component.module.scss"`
-- [ ] Replace className strings with `styles.className`
-- [ ] Test light mode
-- [ ] Test dark mode
-- [ ] Run `just check-frontend`
+**1. Dark mode mixin:**
+```scss
+@use "../../../styles/mixins" as *;
+@include dark-mode { .card { background: #232329; } }
 ```
 
-**Common patterns to handle:**
+**2. Dynamic class names:**
+```typescript
+className={`${styles.card} ${isActive ? styles.active : ""}`}
+```
 
-| Pattern | Before (Global) | After (CSS Modules) |
-|---------|-----------------|---------------------|
-| BEM element | `.card__title` | `.title` |
-| BEM modifier | `.card--active` | `.cardActive` or separate `.active` |
-| Dark mode | `.theme--dark .card` | `:global(.theme--dark) .card` |
-| Pseudo-class | `.card:hover` | `.card:hover` (unchanged) |
-| Nested hover | `.card:hover .title` | `.card:hover .title` (unchanged) |
-| Animation | `@keyframes spin` | `@keyframes spin` (auto-scoped) |
+**3. Size variants (AstradrawLogo example):**
+```scss
+.logo { }
+.mobile { .icon { height: var(--logo-icon--mobile); } }
+.small { .icon { height: var(--logo-icon--small); } }
+```
+```typescript
+const sizeClasses = { mobile: styles.mobile, small: styles.small, ... };
+className={`${styles.logo} ${sizeClasses[size]}`}
+```
 
-**Potential issues to watch:**
+**4. Default exports for backward compatibility:**
+```typescript
+// index.ts
+export { default, default as CollabError, collabErrorIndicatorAtom } from "./CollabError";
+```
 
-1. **Cross-component styling** - If `ComponentA.scss` styles elements inside `ComponentB`, you'll need to either:
-   - Move those styles to `ComponentB.module.scss`
-   - Use `:global()` for the cross-component selectors
-   - Pass className as prop
+#### Estimated Remaining Effort
 
-2. **Dynamic class names** - If you build class names dynamically:
-   ```typescript
-   // Before (won't work with modules)
-   className={`scene-card scene-card--${status}`}
-   
-   // After (use object lookup)
-   const statusClasses = { active: styles.active, pending: styles.pending };
-   className={`${styles.card} ${statusClasses[status]}`}
-   ```
+| Batch | Files | Lines | Time |
+|-------|-------|-------|------|
+| Batch 2 (Settings) | 4 | ~2,600 | 2 hours |
+| Batch 3 (Workspace) | 8 | ~2,400 | 2.5 hours |
+| Batch 4 (Features) | 9 | ~2,700 | 2.5 hours |
+| Batch 5 (Complex) | 8 | ~2,000 | 3 hours |
+| **Total** | **29** | **~9,700** | **~10 hours** |
 
-3. **Third-party component styling** - Use `:global()` when overriding library styles
+#### Files Already Using CSS Modules (11 total)
 
-4. **CSS cascade order** - Dev and prod builds may order styles differently. If you see inconsistent styling, consider adding `@layer` declarations for explicit cascade control.
-
-**Estimated effort:** 2-3 days for full migration (38 files)
-
-**Recommendation:** Only proceed if you're experiencing actual naming conflicts or need the tree-shaking benefits. The current BEM approach works fine for most cases.
+From pilot + Batch 1:
+- `components/Skeletons/Skeleton.module.scss`
+- `components/ErrorBoundary/ErrorBoundary.module.scss`
+- `components/SaveStatusIndicator/SaveStatusIndicator.module.scss`
+- `components/AstradrawLogo/AstradrawLogo.module.scss`
+- `components/AppFooter/AppFooter.module.scss`
+- `components/AppSidebar/AppSidebar.module.scss`
+- `collab/CollabError/CollabError.module.scss`
+- `pens/PenToolbar/PenToolbar.module.scss`
+- `Workspace/WorkspaceMainContent/WorkspaceMainContent.module.scss`
+- `Workspace/WorkspaceSidebarTrigger/WorkspaceSidebarTrigger.module.scss`
+- `Workspace/BoardModeNav/BoardModeNav.module.scss`
 
 ---
 
-### 13. ✅ RESOLVED: Internationalization for AstraDraw-Specific Strings
+### 13. 🟡 ANALYSIS: Real-Time Collaboration Performance (Socket.io)
+
+> **Analyzed:** 2025-12-23 - Evaluated alternatives and identified optimization path
+> **Status:** Keep Socket.io, optimize hot path first; consider Yjs for future
+
+**Issue:** During local testing, collaborator cursors were not moving smoothly on the canvas. Investigated whether Socket.io should be replaced with alternatives.
+
+#### Current Implementation
+
+The room-service is a minimal relay server (~155 lines) using Socket.io 4.6.1:
+
+```
+room-service/src/index.ts
+├── transports: ["websocket", "polling"]  # WebSocket preferred, polling fallback
+├── socket.volatile.broadcast              # For cursor positions (can drop packets)
+├── Encrypted payloads                     # Web Crypto API for all messages
+├── Room-based architecture                # Isolation between collaboration sessions
+└── CURSOR_SYNC_TIMEOUT = 33ms             # ~30fps throttle on client
+```
+
+#### Root Cause Analysis
+
+The cursor lag is likely **not** Socket.io's fault. Identified bottlenecks:
+
+**1. Encryption overhead per message (~1-3ms each)**
+```typescript
+// Portal.tsx - Every cursor update encrypts
+const json = JSON.stringify(data);
+const encoded = new TextEncoder().encode(json);
+const { encryptedBuffer, iv } = await encryptData(this.roomKey!, encoded);
+```
+At 30fps = 30-90ms of CPU time per second just for cursor sync.
+
+**2. React state updates per cursor move**
+```typescript
+// Collab.tsx:950-965 - Creates new Map and triggers render per update
+updateCollaborator = (socketId, updates) => {
+  const collaborators = new Map(this.collaborators);  // Clone entire map
+  this.excalidrawAPI.updateScene({ collaborators });  // Triggers render
+};
+```
+
+**3. No batching of incoming cursor updates**
+Each WebSocket message immediately triggers a state update and re-render.
+
+#### Alternatives Evaluated
+
+| Factor | Socket.io (Current) | Raw `ws` | Yjs + y-websocket |
+|--------|---------------------|----------|-------------------|
+| **Migration effort** | 0 | Medium (2-3 days) | High (1-2 weeks) |
+| **Cursor smoothness** | ~50-100ms | ~5-10ms | ~10-20ms |
+| **Conflict resolution** | Manual (version tracking) | Manual | **Automatic CRDT** |
+| **Offline support** | ❌ | ❌ | ✅ |
+| **Excalidraw compatibility** | ✅ Native | 🟡 Needs adapter | 🟡 Needs refactor |
+| **Bundle size impact** | 0 | -47kb | +20kb |
+| **Reconnection handling** | ✅ Built-in | ❌ Manual | ✅ Built-in |
+
+#### Decision: Keep Socket.io, Optimize First
+
+**Rationale:**
+- Socket.io is battle-tested and already integrated with Excalidraw
+- Raw `ws` gains are marginal and loses reconnection handling
+- Yjs is excellent but requires significant refactor of element model
+- The actual bottleneck is client-side processing, not transport
+
+#### Recommended Optimizations (Phase 1)
+
+**1. Batch cursor updates with RAF** (Highest impact)
+```typescript
+// Collab.tsx - Add batching to updateCollaborator
+private pendingCollaboratorUpdates = new Map<SocketId, Partial<Collaborator>>();
+
+updateCollaborator = (socketId: SocketId, updates: Partial<Collaborator>) => {
+  this.pendingCollaboratorUpdates.set(socketId, {
+    ...this.pendingCollaboratorUpdates.get(socketId),
+    ...updates,
+  });
+  this.flushCollaboratorUpdates();
+};
+
+private flushCollaboratorUpdates = throttleRAF(() => {
+  if (this.pendingCollaboratorUpdates.size === 0) return;
+  
+  const collaborators = new Map(this.collaborators);
+  for (const [socketId, updates] of this.pendingCollaboratorUpdates) {
+    collaborators.set(socketId, { 
+      ...collaborators.get(socketId), 
+      ...updates,
+      isCurrentUser: socketId === this.portal.socket?.id,
+    });
+  }
+  this.pendingCollaboratorUpdates.clear();
+  this.collaborators = collaborators;
+  this.excalidrawAPI.updateScene({ collaborators });
+});
+```
+
+**2. Consider unencrypted volatile channel for cursors** (Optional, security trade-off)
+- Cursor positions are ephemeral and non-sensitive
+- Could skip encryption for `MOUSE_LOCATION` messages only
+- Saves ~1-3ms per message
+
+**3. Adjust throttle if needed**
+```typescript
+// app_constants.ts - Try 20fps instead of 30fps
+export const CURSOR_SYNC_TIMEOUT = 50; // Was 33
+```
+
+#### Future Consideration: Yjs Migration
+
+Consider Yjs **only if** these features become requirements:
+- **Offline editing** with automatic sync on reconnect
+- **Conflict-free concurrent edits** (eliminate version tracking)
+- **Better UX on unreliable networks** (mobile, poor WiFi)
+
+Migration would involve:
+1. Mapping Excalidraw elements to Yjs data structures (Y.Map, Y.Array)
+2. Replacing `_reconcileElements` with CRDT merge
+3. Setting up y-websocket server (can coexist with current room-service)
+4. Adding IndexedDB persistence for offline support
+
+**Estimated effort:** 1-2 weeks for proof-of-concept, 1 month for production-ready
+
+#### Files Involved
+
+| File | Purpose |
+|------|---------|
+| `room-service/src/index.ts` | WebSocket relay server |
+| `frontend/excalidraw-app/collab/Portal.tsx` | Socket connection, message broadcasting |
+| `frontend/excalidraw-app/collab/Collab.tsx` | Collaboration state, cursor handling |
+| `frontend/excalidraw-app/app_constants.ts` | `CURSOR_SYNC_TIMEOUT` setting |
+
+---
+
+### 14. ✅ RESOLVED: Internationalization for AstraDraw-Specific Strings
+
+> **Note:** Section numbers 14-16 were renumbered from 13-15 after adding collaboration analysis.
 
 > **Resolved:** 2025-12-23 - Audited and fixed hardcoded strings across components
 
@@ -582,7 +800,7 @@ If you decide to migrate all 38 remaining SCSS files, follow these guidelines:
 
 ---
 
-### 14. ✅ RESOLVED: Efficient API Payloads with Field Filtering
+### 15. ✅ RESOLVED: Efficient API Payloads with Field Filtering
 
 > **Resolved:** 2025-12-23 - Added `?fields=` query parameter to scenes and collections endpoints
 
@@ -645,7 +863,7 @@ export async function listUsers(options?: { fields?: string[] }) {
 
 ---
 
-### 15. ✅ RESOLVED: Excalidraw Test Failures Caused by AstraDraw Changes
+### 16. ✅ RESOLVED: Excalidraw Test Failures Caused by AstraDraw Changes
 
 > **Resolved:** 2025-12-23 - Fixed test infrastructure and updated snapshots
 
@@ -765,6 +983,8 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Added collaboration performance analysis: keep Socket.io, optimize cursor batching |
+| 2025-12-23 | CSS Modules migration: Batch 1 complete (8 components), shared styles infrastructure |
 | 2025-12-23 | Added efficient payloads with `?fields=` parameter for scenes and collections |
 | 2025-12-23 | Fixed all test failures (140 tests), updated 134 snapshots |
 | 2025-12-23 | Fixed localStorage mock, documented remaining test issues |
