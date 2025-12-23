@@ -426,6 +426,60 @@ excalidraw-app/tests/
 
 ---
 
+### 11b. 🔵 FUTURE: Backend Unit Tests
+
+> **Status:** Not started - Add when implementing new backend features
+
+**Current state:** Backend has only a placeholder e2e test. No unit tests for services.
+
+**Recommended approach:** Add unit tests for NestJS services using Jest with mocked Prisma:
+
+```
+backend/src/comments/
+├── comments.service.spec.ts    # Unit tests for CommentsService
+└── comments.controller.spec.ts # Controller tests (optional)
+```
+
+**Pattern to follow:**
+```typescript
+// comments.service.spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { CommentsService } from './comments.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { SceneAccessService } from '../workspace/scene-access.service';
+
+describe('CommentsService', () => {
+  let service: CommentsService;
+  let prisma: jest.Mocked<PrismaService>;
+  let sceneAccess: jest.Mocked<SceneAccessService>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CommentsService,
+        { provide: PrismaService, useValue: { commentThread: {}, comment: {} } },
+        { provide: SceneAccessService, useValue: { checkAccess: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get<CommentsService>(CommentsService);
+    prisma = module.get(PrismaService);
+    sceneAccess = module.get(SceneAccessService);
+  });
+
+  it('should create a thread with first comment', async () => {
+    // Test implementation
+  });
+});
+```
+
+**Priority:** Add tests when:
+- Implementing complex business logic
+- Fixing bugs (write test first to reproduce)
+- Before major refactoring
+
+---
+
 ### 12. 🟡 IN PROGRESS: CSS Modules Migration with Component Folder Reorganization
 
 > **Started:** 2025-12-23 - Full migration with component folder structure
@@ -506,16 +560,16 @@ ComponentName/
 - ✅ `CopyMoveDialog.scss` (45 lines) → `CopyMoveDialog/CopyMoveDialog.module.scss`
 - ✅ `InviteAcceptPage.scss` (238 lines) → `InviteAcceptPage/InviteAcceptPage.module.scss`
 
-**Batch 4: Feature Components** (9 files, ~2,700 lines)
-- `TalktrackToolbar.scss` (147 lines)
-- `TalktrackSetupDialog.scss` (219 lines)
-- `TalktrackPanel.scss` (391 lines)
-- `PresentationControls.scss` (130 lines)
-- `PresentationPanel.scss` (513 lines)
-- `SlidesLayoutDialog.scss` (349 lines)
-- `PenSettingsModal.scss` (242 lines)
-- `StickersPanel.scss` (333 lines)
-- `EmojiPicker.scss` (327 lines)
+**Batch 4: Feature Components** (9 files, ~2,700 lines) ✅ **COMPLETED 2025-12-23**
+- ✅ `TalktrackToolbar.scss` (147 lines) → `TalktrackToolbar/TalktrackToolbar.module.scss`
+- ✅ `TalktrackSetupDialog.scss` (219 lines) → `TalktrackSetupDialog/TalktrackSetupDialog.module.scss`
+- ✅ `TalktrackPanel.scss` (391 lines) → `TalktrackPanel/TalktrackPanel.module.scss`
+- ✅ `PresentationControls.scss` (130 lines) → `PresentationControls/PresentationControls.module.scss`
+- ✅ `PresentationPanel.scss` (513 lines) → `PresentationPanel/PresentationPanel.module.scss`
+- ✅ `SlidesLayoutDialog.scss` (349 lines) → `SlidesLayoutDialog/SlidesLayoutDialog.module.scss`
+- ✅ `PenSettingsModal.scss` (242 lines) → `PenSettingsModal/PenSettingsModal.module.scss`
+- ✅ `StickersPanel.scss` (333 lines) → `StickersPanel/StickersPanel.module.scss`
+- ✅ `EmojiPicker.scss` (327 lines) → `EmojiPicker/EmojiPicker.module.scss`
 
 **Batch 5: Complex Components** (8 files, ~2,000 lines)
 - `WorkspaceSidebar.scss` (835 lines) - Already a folder, just needs .module.scss
@@ -616,9 +670,9 @@ export { default, default as CollabError, collabErrorIndicatorAtom } from "./Col
 |-------|-------|-------|------|
 | ~~Batch 2 (Settings)~~ | ~~5~~ | ~~~2,787~~ | ✅ Done |
 | ~~Batch 3 (Workspace)~~ | ~~8~~ | ~~~1,625~~ | ✅ Done |
-| Batch 4 (Features) | 9 | ~2,700 | 2.5 hours |
+| ~~Batch 4 (Features)~~ | ~~9~~ | ~~~2,700~~ | ✅ Done |
 | Batch 5 (Complex) | 8 | ~2,000 | 3 hours |
-| **Total Remaining** | **17** | **~4,700** | **~5.5 hours** |
+| **Total Remaining** | **8** | **~2,000** | **~3 hours** |
 
 #### Files Already Using CSS Modules (24 total)
 
@@ -1073,6 +1127,8 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Comment System: Phase 1 Backend complete (schema, module, endpoints) |
+| 2025-12-23 | Added backend unit tests as future task (item 11b) |
 | 2025-12-23 | CSS Modules migration: Batch 3 complete (8 Workspace View components) |
 | 2025-12-23 | Collaboration profiling: LAN test confirmed excellent performance (<1ms P99), no changes needed |
 | 2025-12-23 | Added collaboration profiling utility with AI-exportable reports |
