@@ -410,6 +410,7 @@ excalidraw-app/
 - [URL_ROUTING.md](URL_ROUTING.md) - How navigation atoms interact with URLs
 - [CRITICAL_CSS_HIDE_SHOW_FIX.md](CRITICAL_CSS_HIDE_SHOW_FIX.md) - Why appMode uses CSS hide/show
 - [QUICK_SEARCH.md](QUICK_SEARCH.md) - Quick Search atoms usage
+- [SCENES_CACHE.md](SCENES_CACHE.md) - Centralized scenes caching system
 
 ---
 
@@ -417,6 +418,7 @@ excalidraw-app/
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Added centralized scenes cache with `scenesCacheAtom` |
 | 2025-12-23 | Migrated `workspaceSidebarOpen` from useState to Jotai atom |
 | 2025-12-23 | Initial documentation |
 

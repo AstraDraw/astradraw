@@ -265,6 +265,7 @@ Translation keys in `packages/excalidraw/locales/`:
 
 ## Related Documentation
 
+- [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) - Jotai atoms and state management patterns
 - [ROLES_TEAMS_COLLECTIONS.md](ROLES_TEAMS_COLLECTIONS.md) - Access control rules
 - [URL_ROUTING.md](URL_ROUTING.md) - URL patterns for navigation
 - [CRITICAL_CSS_HIDE_SHOW_FIX.md](CRITICAL_CSS_HIDE_SHOW_FIX.md) - Why hotkey works in both modes

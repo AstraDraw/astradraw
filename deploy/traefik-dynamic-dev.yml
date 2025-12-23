@@ -1,7 +1,7 @@
 # Traefik dynamic configuration for Hybrid Development
 #
 # Routes requests to native services running on the host machine:
-# - Frontend (Vite): host.docker.internal:5173
+# - Frontend (Vite): host.docker.internal:3000
 # - Backend (NestJS): host.docker.internal:8080
 # - Room (Socket.io): host.docker.internal:3002
 # - MinIO: stays in Docker network (minio:9000)
