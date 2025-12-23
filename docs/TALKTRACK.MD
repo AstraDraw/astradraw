@@ -186,18 +186,29 @@ export function disposeTalktrackRecorder(): void {
 The recording captures the Excalidraw canvas at its current size. If the **left workspace sidebar** is open when recording starts, the canvas is narrower, which causes **black bars** on the sides of the recorded video.
 
 **Solution implemented:** When recording starts, the `TalktrackManager`:
-1. Closes the workspace sidebar via `onCloseWorkspaceSidebar` callback
+1. Closes the workspace sidebar via `closeWorkspaceSidebarAtom` (Jotai action atom)
 2. Waits 300ms for the sidebar animation to complete
 3. Then captures the canvas dimensions for the compositor
 
 ```typescript
-// TalktrackManager.tsx - startRecording()
-onCloseWorkspaceSidebar?.();
+// TalktrackManager.tsx - uses atom directly
+import { useSetAtom } from "../../app-jotai";
+import { closeWorkspaceSidebarAtom } from "../Settings/settingsState";
+
+const closeWorkspaceSidebar = useSetAtom(closeWorkspaceSidebarAtom);
+
+// In startRecording():
+closeWorkspaceSidebar();
 await new Promise((resolve) => setTimeout(resolve, 300));
 await recorderRef.current.prepare({ ... });
 ```
 
-**Props chain:** `App.tsx` → `AppSidebar` → `TalktrackManager`
+**Why close instead of toggle?** We explicitly **close** (not toggle) the sidebar because:
+- The goal is to ensure the canvas is at maximum width for recording
+- If we toggled and the sidebar was already closed, it would open (making canvas narrower)
+- Using `closeWorkspaceSidebarAtom` guarantees the sidebar is closed regardless of its current state
+
+**State management:** `TalktrackManager` uses `useSetAtom(closeWorkspaceSidebarAtom)` directly - no props needed
 
 ### Canvas Compositing
 
@@ -232,7 +243,7 @@ ctx.drawImage(staticCanvas, 0, 0, srcWidth, srcHeight, 0, 0, width, height);
 **Cause:** The workspace sidebar (left) was open when recording started, making the canvas narrower.
 
 **Solution:** The sidebar should auto-close when recording starts. If it doesn't:
-1. Check that `onCloseWorkspaceSidebar` prop is passed through `App.tsx` → `AppSidebar` → `TalktrackManager`
+1. Check that `TalktrackManager` imports and uses `closeWorkspaceSidebarAtom` directly
 2. Try a hard refresh (Cmd+Shift+R / Ctrl+Shift+R) to clear cached JavaScript
 
 ### "Kinescope not configured" message
@@ -315,6 +326,7 @@ Currently, all Talktrack recordings are uploaded to a single Kinescope project d
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Migrated sidebar control to use `closeWorkspaceSidebarAtom` directly (no props) |
 | 2025-12-21 | Fixed singleton pattern to properly reset on component unmount (prevents "Compositor canvas not initialized" error) |
 | 2025-12-21 | Added auto-close of workspace sidebar before recording to prevent black bars |
 | 2025-12-21 | Improved canvas compositing: white background fill, proper resolution scaling |

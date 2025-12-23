@@ -231,6 +231,49 @@ useEffect(() => {
 - After creating, renaming, duplicating, or deleting scenes
 - When data is modified in one component but displayed in another
 
+### 8b. When to Migrate useState to Jotai Atom
+
+**Problem:** You have a `useState` in a parent component that's being passed as props to multiple children (prop drilling).
+
+**Signs you should migrate to Jotai:**
+1. The same prop is passed through 3+ component levels
+2. Multiple unrelated components need to read/write the same state
+3. An action atom needs to set this state (e.g., navigation should auto-open sidebar)
+4. The state needs localStorage persistence and is accessed from multiple places
+
+**Migration Pattern:**
+
+```typescript
+// BEFORE: useState with prop drilling
+// App.tsx
+const [sidebarOpen, setSidebarOpen] = useState(false);
+<ChildA isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+<ChildB onOpen={() => setSidebarOpen(true)} />
+
+// AFTER: Jotai atom
+// settingsState.ts
+export const sidebarOpenAtom = atom<boolean>(false);
+export const openSidebarAtom = atom(null, (get, set) => set(sidebarOpenAtom, true));
+export const closeSidebarAtom = atom(null, (get, set) => set(sidebarOpenAtom, false));
+
+// App.tsx - just read
+const sidebarOpen = useAtomValue(sidebarOpenAtom);
+
+// ChildA.tsx - reads and closes
+const isOpen = useAtomValue(sidebarOpenAtom);
+const close = useSetAtom(closeSidebarAtom);
+
+// ChildB.tsx - opens
+const open = useSetAtom(openSidebarAtom);
+```
+
+**Don't migrate to Jotai when:**
+- State is truly local to one component (form inputs, loading states)
+- State is temporary/transient (hover, animation)
+- Only one component ever uses this state
+
+**See:** `/docs/STATE_MANAGEMENT.md` for complete atom reference.
+
 ### 9. 🚨 CRITICAL: Infinite Loop in URL Navigation (Stack Overflow)
 
 **Problem:** App crashes with "Maximum call stack size exceeded" when navigating or on page load.

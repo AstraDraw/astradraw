@@ -37,13 +37,131 @@ frontend/
 - **React useState/useEffect** for component state
 - **ExcalidrawAPI** for canvas operations
 
+**See `/docs/STATE_MANAGEMENT.md` for detailed documentation on all Jotai atoms and when to use what.**
+
+### When to Use Jotai Atoms vs useState
+
+**Use Jotai Atom when:**
+
+1. **Multiple components need the same state** (avoid prop drilling)
+   ```typescript
+   // ❌ BAD: Prop drilling through 3+ levels
+   <Parent state={x} setState={setX}>
+     <Child state={x} setState={setX}>
+       <GrandChild state={x} setState={setX} />
+     </Child>
+   </Parent>
+   
+   // ✅ GOOD: Any component reads atom directly
+   const [x, setX] = useAtom(xAtom);
+   ```
+
+2. **State needs to be set by action atoms** (navigation, complex updates)
+   ```typescript
+   // Navigation atoms need to set multiple state pieces at once
+   export const navigateToDashboardAtom = atom(null, (get, set) => {
+     set(appModeAtom, "dashboard");
+     set(dashboardViewAtom, "home");
+     set(workspaceSidebarOpenAtom, true); // Auto-open sidebar
+   });
+   ```
+
+3. **Cross-component communication** (refresh triggers)
+   ```typescript
+   // Component A modifies data
+   const triggerRefresh = useSetAtom(triggerCollectionsRefreshAtom);
+   await createCollection(...);
+   triggerRefresh(); // Notify all subscribers
+   
+   // Component B re-fetches when notified
+   const refreshCounter = useAtomValue(collectionsRefreshAtom);
+   useEffect(() => { loadCollections(); }, [refreshCounter]);
+   ```
+
+4. **State is part of URL/routing** (workspace, scene, collection IDs)
+
+5. **State needs localStorage persistence** (sidebar open, theme preference)
+   ```typescript
+   export const workspaceSidebarOpenAtom = atom<boolean>(
+     typeof window !== "undefined"
+       ? localStorage.getItem("key") === "true"
+       : false
+   );
+   ```
+
+**Use useState when:**
+
+1. **State is truly component-local** (form inputs, loading states)
+2. **State is temporary/transient** (hover, focus, animation)
+3. **State doesn't need to survive component unmount**
+4. **Only one component ever reads/writes this state**
+
+### Jotai Usage Patterns
+
 ```typescript
-// Example: Using Jotai atoms
-import { atom, useAtom } from "jotai";
-const myAtom = atom<boolean>(false);
+// Import from app-jotai (NOT directly from jotai)
+import { useAtom, useAtomValue, useSetAtom } from "../../app-jotai";
+
+// Read-only (component re-renders when atom changes)
+const value = useAtomValue(myAtom);
+
+// Read and write
 const [value, setValue] = useAtom(myAtom);
 
-// Example: Using ExcalidrawAPI
+// Write-only (no re-render when atom changes - for actions)
+const setValue = useSetAtom(myAtom);
+```
+
+### Creating New Atoms
+
+**Location:** Add to `excalidraw-app/components/Settings/settingsState.ts`
+
+```typescript
+// Simple state atom
+export const myStateAtom = atom<string>("");
+
+// Atom with localStorage persistence
+const STORAGE_KEY = "my_preference";
+export const myPreferenceAtom = atom<boolean>(
+  typeof window !== "undefined"
+    ? localStorage.getItem(STORAGE_KEY) === "true"
+    : false
+);
+
+// Action atom (write-only, encapsulates logic)
+export const myActionAtom = atom(null, (get, set, params: MyParams) => {
+  const currentValue = get(someOtherAtom);
+  set(myStateAtom, newValue);
+  // Can also persist to localStorage, call navigateTo(), etc.
+});
+
+// Derived atom (computed from other atoms)
+export const derivedAtom = atom((get) => {
+  const a = get(atomA);
+  const b = get(atomB);
+  return a + b;
+});
+```
+
+**Export from index.ts:**
+```typescript
+export { myStateAtom, myActionAtom } from "./settingsState";
+```
+
+### Existing Atoms Reference
+
+| Category | Atoms |
+|----------|-------|
+| **Navigation** | `appModeAtom`, `dashboardViewAtom`, `activeCollectionIdAtom` |
+| **Navigation Actions** | `navigateToDashboardAtom`, `navigateToCollectionAtom`, `navigateToSceneAtom`, `navigateToCanvasAtom` |
+| **Workspace** | `currentWorkspaceSlugAtom`, `currentSceneIdAtom`, `currentSceneTitleAtom` |
+| **Sidebar** | `workspaceSidebarOpenAtom`, `toggleWorkspaceSidebarAtom`, `openWorkspaceSidebarAtom`, `closeWorkspaceSidebarAtom` |
+| **Refresh Triggers** | `collectionsRefreshAtom`, `scenesRefreshAtom`, `triggerCollectionsRefreshAtom`, `triggerScenesRefreshAtom` |
+| **Search** | `quickSearchOpenAtom`, `searchQueryAtom` |
+
+### Example: Using ExcalidrawAPI
+
+```typescript
 excalidrawAPI.updateScene({ elements, appState });
 excalidrawAPI.scrollToContent(element, { animate: true });
 ```
@@ -132,6 +250,8 @@ navigateTo(buildSceneUrl(workspaceSlug, sceneId));
 
 ```typescript
 // Example: Creating a new scene from a collection's context menu
+const openWorkspaceSidebar = useSetAtom(openWorkspaceSidebarAtom);
+
 const handleNewScene = useCallback(async (collectionId?: string) => {
   // 1. Create the scene in backend (with the collection ID!)
   const scene = await createScene({ title, collectionId });
@@ -149,14 +269,14 @@ const handleNewScene = useCallback(async (collectionId?: string) => {
   }
   
   // 5. Keep sidebar open to show the new scene in the collection's scene list
-  setWorkspaceSidebarOpen(true);
+  openWorkspaceSidebar();  // Uses Jotai atom action
   
   // 6. Switch to canvas mode - sidebar auto-switches to "board" mode
   navigateToCanvas();
   
   // 7. Save initial scene data
   await updateSceneData(scene.id, blob);
-}, [excalidrawAPI, navigateToCanvas, setActiveCollectionId]);
+}, [excalidrawAPI, navigateToCanvas, setActiveCollectionId, openWorkspaceSidebar]);
 ```
 
 **Key behavior:** When creating a scene from a collection:

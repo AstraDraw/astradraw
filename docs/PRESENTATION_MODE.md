@@ -103,12 +103,19 @@ Portal wrapper that:
 
 ### Entering Presentation Mode
 
-1. Sidebar closes automatically
+1. Both sidebars close automatically:
+   - Left workspace sidebar (via `closeWorkspaceSidebarAtom`) - explicitly **closed**, not toggled
+   - Right default sidebar (via `excalidrawAPI.toggleSidebar`)
 2. View mode and Zen mode are enabled (hides UI)
 3. Pen toolbar is hidden
 4. Laser tool is activated by default
 5. First slide is displayed with smooth animation (800ms)
 6. Keyboard listeners are attached
+
+**Why close instead of toggle?** The left workspace sidebar is explicitly **closed** (not toggled) because:
+- We need to guarantee the canvas is at full width for optimal slide display
+- If we toggled and the sidebar was already closed, it would open (reducing canvas space)
+- Using `closeWorkspaceSidebarAtom` ensures consistent behavior regardless of sidebar's current state
 
 ### Slide Navigation
 
@@ -201,7 +208,13 @@ excalidrawAPI.getAppState()
 
 // UI control
 excalidrawAPI.updateScene({ appState: { viewModeEnabled, zenModeEnabled } })
-excalidrawAPI.toggleSidebar({ name: "default", force: false })
+excalidrawAPI.toggleSidebar({ name: "default", force: false })  // Right sidebar
+
+// Workspace sidebar (left) - via Jotai atom
+import { useSetAtom } from "../../app-jotai";
+import { closeWorkspaceSidebarAtom } from "../Settings/settingsState";
+const closeWorkspaceSidebar = useSetAtom(closeWorkspaceSidebarAtom);
+closeWorkspaceSidebar();
 ```
 
 ## Future Improvements
@@ -212,3 +225,12 @@ excalidrawAPI.toggleSidebar({ name: "default", force: false })
 - [ ] Slide timing/auto-advance
 - [ ] Export to PDF/images
 - [ ] Remote control support
+
+---
+
+## Changelog
+
+| Date | Changes |
+|------|---------|
+| 2025-12-23 | Added auto-close of left workspace sidebar via `closeWorkspaceSidebarAtom` |
+| 2025-12-23 | Documented why close (not toggle) is used for sidebar control |
