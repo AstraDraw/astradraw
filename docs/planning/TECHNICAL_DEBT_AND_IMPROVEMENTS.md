@@ -582,17 +582,66 @@ If you decide to migrate all 38 remaining SCSS files, follow these guidelines:
 
 ---
 
-### 14. Backend API Could Return More Efficient Payloads
+### 14. ✅ RESOLVED: Efficient API Payloads with Field Filtering
 
-**Problem:** Some endpoints return more data than needed.
+> **Resolved:** 2025-12-23 - Added `?fields=` query parameter to scenes and collections endpoints
 
-**Example:** `listWorkspaceScenes` returns full scene objects when we only need:
+**Was:** List endpoints returned full objects when the frontend only needed a subset:
+- Scenes: 12 fields returned, 6 used (~50% overhead)
+- Collections: 13 fields returned, 8 used (~40% overhead)
 
-- id, title, thumbnailUrl, updatedAt, collectionId
+**Fix:** Added `?fields=` query parameter support to filter response fields:
 
-**Solution:** Add `?fields=id,title,thumbnailUrl,updatedAt` query param support.
+```
+GET /workspace/scenes?workspaceId=xxx&fields=id,title,thumbnailUrl,updatedAt,isPublic,canEdit
+GET /workspaces/:id/collections?fields=id,name,icon,isPrivate,sceneCount,canWrite,isOwner
+```
 
-**Effort:** Medium (backend + frontend changes)
+**Implementation:**
+
+1. **Reusable utility** at `backend/src/utils/field-filter.ts`:
+   - `parseFields()` - Parses comma-separated fields, validates against allowed list
+   - `filterResponse()` - Filters object to include only requested fields
+   - `filterResponseArray()` - Filters array of objects
+
+2. **Backend endpoints updated:**
+   - `GET /workspace/scenes` - Accepts `?fields=` parameter
+   - `GET /workspaces/:id/collections` - Accepts `?fields=` parameter
+
+3. **Frontend hooks updated:**
+   - `useScenesCache` - Requests only fields needed for scene cards
+   - `useCollections` - Requests only fields needed for sidebar/nav
+
+**Usage pattern for future endpoints:**
+
+```typescript
+// Backend controller
+import { parseFields, filterResponseArray } from '../utils/field-filter';
+
+const ALLOWED_FIELDS = ['id', 'name', 'email'] as const;
+
+@Get('users')
+async listUsers(@Query('fields') fieldsParam?: string) {
+  const fields = parseFields(fieldsParam, ALLOWED_FIELDS);
+  const users = await this.service.list();
+  return filterResponseArray(users.map(u => this.toResponse(u)), fields);
+}
+
+// Frontend API function
+export async function listUsers(options?: { fields?: string[] }) {
+  const params = new URLSearchParams();
+  if (options?.fields?.length) {
+    params.append("fields", options.fields.join(","));
+  }
+  return apiRequest(`/users?${params.toString()}`, { ... });
+}
+```
+
+**Benefits:**
+- ~50% smaller payloads for scene list views
+- ~40% smaller payloads for collection list views
+- Backward compatible - existing clients work unchanged
+- Reusable pattern for other endpoints if needed
 
 ---
 
@@ -716,6 +765,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Added efficient payloads with `?fields=` parameter for scenes and collections |
 | 2025-12-23 | Fixed all test failures (140 tests), updated 134 snapshots |
 | 2025-12-23 | Fixed localStorage mock, documented remaining test issues |
 | 2025-12-23 | CSS Modules pilot migration (3 components)  |
