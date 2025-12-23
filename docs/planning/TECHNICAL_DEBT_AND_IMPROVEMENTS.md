@@ -596,80 +596,41 @@ If you decide to migrate all 38 remaining SCSS files, follow these guidelines:
 
 ---
 
-### 15. Excalidraw Test Failures Caused by AstraDraw Changes
+### 15. ✅ RESOLVED: Excalidraw Test Failures Caused by AstraDraw Changes
 
-**Problem:** Running `yarn test:app --run` shows 138 failed tests out of 1,130 total (12% failure rate).
+> **Resolved:** 2025-12-23 - Fixed test infrastructure and updated snapshots
 
-**Test results:**
-- **AstraDraw-specific tests:** ✅ 51/51 passing (in `excalidraw-app/tests/hooks/`, `excalidraw-app/tests/api/`)
-- **Excalidraw tests affected by our changes:** ❌ 138 failing
-- **Snapshots:** ~100 need updating
+**Was:** 140 tests failing (12% failure rate) due to missing providers and snapshot drift.
 
-**Root causes - all related to AstraDraw changes:**
+**Root causes fixed:**
 
-1. **React Query integration (tech debt #5)** - We added `QueryClientProvider` to the app, but some existing Excalidraw tests don't have this provider in their test setup:
-   ```
-   Error: No QueryClient set, use QueryClientProvider to set one
-   ```
-   **Affected tests:** `LanguageList.test.tsx`, `MobileMenu.test.tsx`, `collab.test.tsx`
+1. **React Query integration** - Tests rendering `ExcalidrawApp` needed `QueryClientProvider`
+2. **Snapshot drift** - UI changes (AstraDraw logo, custom components) caused snapshot mismatches
 
-2. **Jotai state migration (tech debt #3)** - We added global Jotai atoms for workspace/collections state. Excalidraw tests use `createIsolation()` for test isolation, but our atoms aren't included:
-   ```
-   Error: Missing Provider from createIsolation
-   ```
-   **Affected tests:** Any test rendering components that use our atoms
+**Fix:** Created `renderExcalidrawApp()` wrapper in `excalidraw-app/tests/testUtils.tsx`:
 
-3. **Snapshot drift** - Our UI changes (new components, modified layouts, additional CSS classes) cause snapshot mismatches:
-   ```diff
-   - <div class="excalidraw">
-   + <div class="excalidraw excalidraw-app">
-   ```
-   **Affected tests:** `regressionTests.test.tsx`, `contextmenu.test.tsx`, and others
+```typescript
+export async function renderExcalidrawApp() {
+  const queryClient = createTestQueryClient();
+  return await rtlRender(
+    <QueryClientProvider client={queryClient}>
+      <ExcalidrawApp />
+    </QueryClientProvider>,
+  );
+}
+```
 
-**Previously fixed (2025-12-23):**
+**Files updated:**
+- `excalidraw-app/tests/testUtils.tsx` - Added `renderExcalidrawApp()` wrapper
+- `excalidraw-app/tests/LanguageList.test.tsx` - Uses new wrapper, updated assertions
+- `excalidraw-app/tests/MobileMenu.test.tsx` - Uses new wrapper
+- `excalidraw-app/tests/collab.test.tsx` - Uses new wrapper
+- `excalidraw-app/tests/hooks/useSceneActions.test.tsx` - Fixed i18n mock to use `importOriginal`
+- 134 snapshot files updated
 
-4. ~~**localStorage not mocked**~~ - ✅ Fixed by adding localStorage/sessionStorage mocks to `setupTests.ts`. This fixed 244 tests.
-
-**Current test setup (`setupTests.ts`):**
-- ✅ `vitest-canvas-mock` - Canvas mock
-- ✅ `fake-indexeddb/auto` - IndexedDB mock
-- ✅ `localStorage` / `sessionStorage` mocks (added 2025-12-23)
-- ✅ `matchMedia` mock
-- ✅ `FontFace` and `document.fonts` mocks
-- ❌ **Missing:** QueryClientProvider wrapper for affected tests
-- ❌ **Missing:** Jotai atoms in test isolation
-
-**Fixes needed:**
-
-1. **Wrap affected tests with QueryClientProvider:**
-   ```typescript
-   // In test file or testUtils
-   import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-   
-   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-   
-   render(
-     <QueryClientProvider client={queryClient}>
-       <ComponentUnderTest />
-     </QueryClientProvider>
-   );
-   ```
-
-2. **Add Jotai atoms to test isolation** or provide default values in tests
-
-3. **Update snapshots** after reviewing changes are intentional:
-   ```bash
-   yarn test:app --run --update
-   ```
-
-**Impact:** These failures don't affect production. The app works correctly. These are test infrastructure issues caused by our architectural improvements.
-
-**Effort:** Medium (1-2 days)
-- Add QueryClientProvider to ~5 test files
-- Review and update ~100 snapshots
-- Consider creating shared test utilities for provider wrapping
-
-**Recommendation:** Fix incrementally when touching related code, or dedicate a session to update all tests at once
+**Test results after fix:**
+- **All tests passing:** 1,083 passed | 46 skipped | 1 todo (1,130 total)
+- **Test files:** 92 passed (92)
 
 ---
 
@@ -755,6 +716,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Fixed all test failures (140 tests), updated 134 snapshots |
 | 2025-12-23 | Fixed localStorage mock, documented remaining test issues |
 | 2025-12-23 | CSS Modules pilot migration (3 components)  |
 | 2025-12-23 | Fixed internationalization for UI strings   |
