@@ -5,7 +5,6 @@ deploy/secrets/
 deploy/certs/
 deploy/logs/*.log
 deploy/.env
-deploy/docker-compose.override.yml
 
 # =============================================================================
 # LOCAL DEVELOPMENT CLONES (separate git repos)
@@ -41,5 +40,4 @@ minio_data/
 secrets/
 certs/
 .env
-docker-compose.override.yml
 libraries/

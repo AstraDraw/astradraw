@@ -1,13 +1,17 @@
 ---
 description: "Backend development patterns for AstraDraw API (NestJS)"
-alwaysApply: true
+globs: ["backend/**/*.ts", "backend/prisma/**/*"]
 ---
 
 # Backend Development Patterns
 
+**Related rules and files:**
+- For common issues, see @common-issues-backend
+- Database schema: @backend/prisma/schema.prisma
+
 ## Project Location
 
-Backend code is in `backend/` (formerly `excalidraw-storage-backend/`). It's a NestJS application.
+Backend code is in `backend/`. It's a NestJS application.
 
 ## Key Directories
 
@@ -20,15 +24,9 @@ backend/
 │   │   ├── jwt.guard.ts      # NOT jwt-auth.guard.ts!
 │   │   └── jwt.strategy.ts
 │   ├── users/                # User management
-│   │   ├── users.controller.ts
-│   │   ├── users.service.ts
-│   │   └── users.module.ts
 │   ├── workspace/            # Scene management
-│   │   └── workspace-scenes.controller.ts
 │   ├── talktrack/            # Video recordings
-│   │   └── scene-talktrack.controller.ts
 │   ├── storage/              # S3/MinIO storage
-│   │   └── s3-storage.service.ts
 │   ├── prisma/               # Database service
 │   └── app.module.ts         # Main module
 ├── prisma/
@@ -59,16 +57,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req: any) {
     const userId = req.user.sub;  // User ID from JWT
-    // ...
   }
 }
 ```
 
 ## Database (Prisma)
-
-### Schema Location
-
-`backend/prisma/schema.prisma`
 
 ### Key Models
 
@@ -80,8 +73,6 @@ model User {
   avatarUrl    String?
   oidcId       String?  @unique  // For SSO users
   passwordHash String?           // For local auth users
-  scenes       Scene[]
-  talktrackRecordings TalktrackRecording[]
 }
 
 model Scene {
@@ -89,16 +80,6 @@ model Scene {
   title        String
   storageKey   String   @unique  // S3 key
   userId       String
-  user         User     @relation(...)
-  talktrackRecordings TalktrackRecording[]
-}
-
-model TalktrackRecording {
-  id               String @id @default(cuid())
-  title            String
-  kinescopeVideoId String @unique
-  sceneId          String
-  userId           String
 }
 ```
 
@@ -147,37 +128,25 @@ async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
 cd backend
 npm install               # Install dependencies
 npm run start:dev         # Development with watch
-
-# Required checks before release:
 npm run build             # Build (includes TypeScript)
 npm run format            # Prettier formatting
 npm run lint              # ESLint code quality
-npm run test              # Jest unit tests
-
-# Prisma commands:
 npm run prisma:generate   # Generate Prisma client
-npm run prisma:migrate    # Run migrations (production)
 npm run prisma:migrate:dev # Run migrations (development)
-npm run prisma:studio     # Open Prisma Studio GUI
 ```
 
 ## Environment Variables & Docker Secrets
 
 All sensitive configuration supports Docker secrets via the `_FILE` suffix pattern.
-See `/docs/DOCKER_SECRETS.md` for complete documentation.
+See `/docs/deployment/DOCKER_SECRETS.md` for complete documentation.
 
 ### Using Secrets in Code
 
-**Always use `getSecret()` for sensitive configuration:**
-
 ```typescript
-import { getSecret } from '../utils/secrets';
+import { getSecret, getSecretOrThrow } from '../utils/secrets';
 
-// Checks JWT_SECRET_FILE first, then JWT_SECRET, then uses fallback
+// Checks JWT_SECRET_FILE first, then JWT_SECRET
 const jwtSecret = getSecret('JWT_SECRET', 'fallback-value');
-
-// For required secrets, use getSecretOrThrow
-import { getSecretOrThrow } from '../utils/secrets';
 const password = getSecretOrThrow('POSTGRES_PASSWORD');
 ```
 
@@ -186,38 +155,8 @@ const password = getSecretOrThrow('POSTGRES_PASSWORD');
 | Variable | Description | Supports `_FILE` |
 |----------|-------------|------------------|
 | `DATABASE_URL` | PostgreSQL connection string | ✅ |
-| `POSTGRES_USER` | Database username | ✅ |
-| `POSTGRES_PASSWORD` | Database password | ✅ |
-| `POSTGRES_DB` | Database name | ✅ |
-| `POSTGRES_HOST` | Database host | ❌ |
-| `POSTGRES_PORT` | Database port | ❌ |
 | `JWT_SECRET` | JWT signing secret | ✅ |
 | `OIDC_ISSUER_URL` | OIDC provider URL | ✅ |
-| `OIDC_CLIENT_ID` | OIDC client ID | ✅ |
 | `OIDC_CLIENT_SECRET` | OIDC client secret | ✅ |
-| `OIDC_INTERNAL_URL` | Internal OIDC URL (Docker) | ✅ |
-| `ADMIN_PASSWORD` | Default admin password | ✅ |
-| `SUPERADMIN_EMAILS` | Super admin emails | ✅ |
-| `KINESCOPE_API_KEY` | Video hosting API key | ✅ |
-| `KINESCOPE_PROJECT_ID` | Video hosting project | ✅ |
 | `S3_ACCESS_KEY` | S3/MinIO access key | ✅ |
 | `S3_SECRET_KEY` | S3/MinIO secret key | ✅ |
-
-### External PostgreSQL
-
-To use an external PostgreSQL server:
-
-```bash
-# In deploy/.env
-POSTGRES_HOST=10.1.125.55
-POSTGRES_PORT=5000
-
-# Create secrets
-echo "db_user" > deploy/secrets/postgres_user
-echo "db_password" > deploy/secrets/postgres_password
-echo "db_name" > deploy/secrets/postgres_db
-
-# Start without built-in postgres
-docker compose up -d --scale postgres=0
-```
-

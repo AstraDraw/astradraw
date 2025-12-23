@@ -1,0 +1,127 @@
+---
+description: "Common backend issues and solutions for AstraDraw"
+globs: ["backend/**/*.ts", "backend/prisma/**/*"]
+---
+
+# Common Backend Issues
+
+## 1. Build Fails: "Cannot find module '../auth/jwt-auth.guard'"
+
+**Cause:** Wrong import path.
+
+**Solution:**
+```typescript
+// CORRECT
+import { JwtAuthGuard } from '../auth/jwt.guard';
+
+// WRONG
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+```
+
+## 2. Build Fails: Express.Multer.File Type Error
+
+**Cause:** Missing `@types/multer` package.
+
+**Solution:**
+```bash
+npm install --save-dev @types/multer
+```
+
+## 3. OIDC Discovery Fails in Docker
+
+**Cause:** API container can't resolve external hostname.
+
+**Solution:** Use `OIDC_INTERNAL_URL` in `deploy/.env`:
+```bash
+OIDC_ISSUER_URL=https://auth.example.com/dex  # External URL
+OIDC_INTERNAL_URL=http://dex:5556/dex         # Internal Docker URL
+```
+
+## 4. Prisma Migration Issues
+
+**Solution:** For fresh deployments, consolidate migrations:
+```bash
+rm -rf prisma/migrations/*
+npx prisma migrate dev --name init
+```
+
+## 5. User Not Found After SSO Login
+
+**Cause:** User not being created/linked properly.
+
+**Check:** `UsersService.upsertFromOidc()` logic:
+- First checks by OIDC ID
+- Then checks by email (migration case)
+- Creates new user if neither found
+
+## 6. Scene Data Not Loading
+
+**Check:**
+1. Scene exists in PostgreSQL (metadata)
+2. Scene data exists in MinIO (actual content)
+3. Storage key matches between both
+
+## 7. 401 Unauthorized After Login
+
+**Cause:** JWT cookie not being sent.
+
+**Solution:** Ensure `credentials: "include"` in all fetch calls:
+```typescript
+fetch(url, { credentials: "include" });
+```
+
+## Auto-Collaboration Issues
+
+### Encryption Key Length Error
+
+**Error:** `DataError: The JWK "k" member did not include the right length of key data`
+
+**Cause:** Room key is not 22 characters.
+
+**Solution:**
+```typescript
+private generateRoomKey(): string {
+  return randomBytes(16).toString('base64url'); // Returns 22 chars
+}
+```
+
+### Scene Data Lost on First Load
+
+**Problem:** Opening a shared scene shows blank canvas.
+
+**Solution:** Pass `isAutoCollab: true`:
+```typescript
+await collabAPI.startCollaboration({
+  roomId: loaded.roomId,
+  roomKey: loaded.roomKey,
+  isAutoCollab: true, // Don't reset scene
+});
+```
+
+## Thumbnail URL Issues
+
+### MinIO URLs Not Resolving
+
+**Problem:** Browser shows `ERR_NAME_NOT_RESOLVED` for `minio:9000/...`
+
+**Solutions:**
+
+1. **Development:** Expose MinIO via Traefik at `/s3/` path
+2. **Production:** Set `S3_PUBLIC_URL=https://s3.example.com`
+
+**URL generation:**
+```typescript
+if (s3PublicUrl) {
+  thumbnailUrl = `${s3PublicUrl}/${bucket}/thumbnails/${key}`;
+} else {
+  thumbnailUrl = `/s3/${bucket}/thumbnails/${key}`;
+}
+```
+
+### URL Malformed with Double Slashes
+
+**Solution:** Always sanitize:
+```typescript
+const baseUrl = s3PublicUrl.replace(/\/+$/, '');
+const bucket = (process.env.S3_BUCKET || 'excalidraw').replace(/^\//, '');
+```

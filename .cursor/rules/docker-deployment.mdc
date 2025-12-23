@@ -1,61 +1,49 @@
 ---
 description: "Docker deployment patterns for AstraDraw"
-alwaysApply: true
+globs: ["deploy/**/*", "docker-compose*.yml", "Dockerfile", "**/Dockerfile"]
 ---
 
 # Docker Deployment Patterns
 
+**Key files for context:**
+@deploy/docker-compose.yml
+
 ## Deploy Folder Structure
 
-All deployment and testing files are in `deploy/`:
+All deployment files are in `deploy/`:
 
 ```
 deploy/
 ├── docker-compose.yml              # Main config (GHCR images)
 ├── docker-compose.override.yml     # Local builds (gitignored)
-├── docker-compose.override.yml.disabled  # Template for local builds
 ├── .env                            # Environment variables (gitignored)
 ├── env.example                     # Environment template
 ├── dex-config.yaml                 # OIDC test provider config
 ├── traefik-dynamic.yml             # Traefik TLS config
 ├── certs/                          # SSL certificates (gitignored)
-│   ├── server.crt
-│   └── server.key
 ├── secrets/                        # Docker secrets (gitignored)
-│   ├── postgres_user               # Database username
-│   ├── postgres_password           # Database password
-│   ├── postgres_db                 # Database name
-│   ├── jwt_secret                  # JWT signing key
-│   ├── minio_access_key            # MinIO access key
-│   ├── minio_secret_key            # MinIO secret key
-│   ├── oidc_client_secret          # OIDC client secret (if using)
-│   └── superadmin_emails           # Super admin emails (optional)
 └── libraries/                      # Excalidraw shape libraries
-    └── *.excalidrawlib
 ```
 
-> **See also:** `/docs/DOCKER_SECRETS.md` for complete secrets documentation.
+> **See also:** `/docs/deployment/DOCKER_SECRETS.md` for complete secrets documentation.
 
 ## Running the Application
 
 ```bash
-# Navigate to deploy folder first
 cd deploy
 
 # Copy and configure environment
 cp env.example .env
-# Edit .env with your settings
 
 # Start with production images
 docker compose up -d
 
-# Start with local builds (requires frontend/, backend/ repos)
+# Start with local builds
 cp docker-compose.override.yml.disabled docker-compose.override.yml
 docker compose up -d --build
 
 # View logs
 docker compose logs -f api
-docker compose logs -f app
 ```
 
 ## Services
@@ -68,8 +56,6 @@ docker compose logs -f app
 | room | ghcr.io/astrateam-net/astradraw-room | 80 | WebSocket |
 | postgres | postgres:16-alpine | 5432 | Database |
 | minio | minio/minio | 9000/9001 | Object storage |
-| dex | ghcr.io/dexidp/dex (profile: oidc) | 5556 | OIDC testing |
-| pgadmin | dpage/pgadmin4 (profile: admin) | 80 | DB admin |
 
 ## Image Versioning
 
@@ -78,45 +64,18 @@ When releasing new versions:
 1. Update `CHANGELOG.md` in the respective repo
 2. Tag and push:
    ```bash
-   # Frontend
-   cd frontend
-   git tag v0.18.0-beta0.XX
-   git push origin main --tags
-
-   # Backend
-   cd backend
-   git tag v0.5.X
-   git push origin main --tags
+   cd frontend && git tag v0.18.0-beta0.XX && git push origin main --tags
+   cd backend && git tag v0.5.X && git push origin main --tags
    ```
-3. Update `deploy/docker-compose.yml` with new image versions:
-   ```yaml
-   app:
-     image: ghcr.io/astrateam-net/astradraw-app:0.18.0-beta0.XX
-   api:
-     image: ghcr.io/astrateam-net/astradraw-api:0.5.X
-   ```
-
-## Local Development Builds
-
-The override file uses paths relative to `deploy/`:
-
-```yaml
-services:
-  app:
-    build:
-      context: ../frontend    # Goes up to project root, then into frontend/
-  api:
-    build:
-      context: ../backend
-```
+3. Update `deploy/docker-compose.yml` with new image versions
 
 ## Environment Variables
 
 Key variables in `deploy/.env`:
 
 ```bash
-APP_DOMAIN=localhost          # Or your domain
-APP_PROTOCOL=https            # http or https
+APP_DOMAIN=localhost
+APP_PROTOCOL=https
 POSTGRES_USER=excalidraw
 POSTGRES_PASSWORD=<secure>
 POSTGRES_DB=excalidraw
@@ -126,59 +85,12 @@ OIDC_ISSUER_URL=https://auth.example.com/...
 OIDC_CLIENT_ID=astradraw
 OIDC_CLIENT_SECRET=<secret>
 OIDC_INTERNAL_URL=http://dex:5556/dex  # For Docker networking
-
-# Optional features
-GIPHY_API_KEY=<key>
-KINESCOPE_API_KEY=<key>
-KINESCOPE_PROJECT_ID=<id>
-```
-
-## Testing with Dex (OIDC)
-
-```bash
-cd deploy
-
-# Start with OIDC profile
-docker compose --profile oidc up -d
-
-# Test users (in dex-config.yaml):
-# admin@example.com / admin123
-# user@example.com / user123
-```
-
-## Fresh Start
-
-To reset all data:
-
-```bash
-cd deploy
-docker compose down -v
-docker volume rm astradraw_postgres_data astradraw_minio_data
-docker compose up -d
-```
-
-## Creating Certificates
-
-For local HTTPS testing:
-
-```bash
-cd deploy
-mkdir -p certs
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout certs/server.key -out certs/server.crt \
-  -subj "/CN=localhost"
 ```
 
 ## Creating Secrets
 
-All sensitive configuration supports Docker secrets via the `_FILE` suffix.
-See `/docs/DOCKER_SECRETS.md` for complete documentation.
-
-### Quick Setup
-
 ```bash
-cd deploy
-mkdir -p secrets
+cd deploy && mkdir -p secrets
 
 # Database credentials
 echo "excalidraw" > secrets/postgres_user
@@ -193,35 +105,13 @@ echo "minioadmin" > secrets/minio_access_key
 openssl rand -base64 32 > secrets/minio_secret_key
 ```
 
-### External PostgreSQL
+## Fresh Start
 
-To use an external PostgreSQL server:
+To reset all data:
 
 ```bash
-# Set host/port in .env
-POSTGRES_HOST=10.1.125.55
-POSTGRES_PORT=5000
-
-# Create secrets
-echo "db_user" > secrets/postgres_user
-echo "db_password" > secrets/postgres_password
-echo "db_name" > secrets/postgres_db
-
-# Start without built-in postgres
-docker compose up -d --scale postgres=0
+cd deploy
+docker compose down -v
+docker volume rm astradraw_postgres_data astradraw_minio_data
+docker compose up -d
 ```
-
-### Supported Secrets
-
-| Secret File | Environment Variable | Description |
-|-------------|---------------------|-------------|
-| `postgres_user` | `POSTGRES_USER_FILE` | Database username |
-| `postgres_password` | `POSTGRES_PASSWORD_FILE` | Database password |
-| `postgres_db` | `POSTGRES_DB_FILE` | Database name |
-| `jwt_secret` | `JWT_SECRET_FILE` | JWT signing key |
-| `minio_access_key` | `S3_ACCESS_KEY_FILE` | MinIO access key |
-| `minio_secret_key` | `S3_SECRET_KEY_FILE` | MinIO secret key |
-| `oidc_client_secret` | `OIDC_CLIENT_SECRET_FILE` | OIDC client secret |
-| `superadmin_emails` | `SUPERADMIN_EMAILS_FILE` | Super admin emails |
-| `admin_password` | `ADMIN_PASSWORD_FILE` | Default admin password |
-| `kinescope_api_key` | `KINESCOPE_API_KEY_FILE` | Kinescope API key |

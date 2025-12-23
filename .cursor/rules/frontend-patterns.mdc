@@ -1,444 +1,85 @@
 ---
 description: "Frontend development patterns for AstraDraw (React/Excalidraw)"
-alwaysApply: true
+globs: ["frontend/**/*.ts", "frontend/**/*.tsx", "frontend/**/*.scss", "frontend/**/*.css"]
 ---
 
 # Frontend Development Patterns
 
-## Project Location
+**Related rules:**
+- For state management details, see @frontend-state
+- For common issues, see @common-issues-frontend
 
-Frontend code is in `frontend/` (formerly `excalidraw/`). It's a fork of the upstream Excalidraw repository.
-
-## Key Directories
+## Project Structure
 
 ```
 frontend/
 ├── excalidraw-app/           # AstraDraw-specific code
 │   ├── auth/                 # Authentication (AuthProvider, workspaceApi)
 │   ├── components/           # Custom components
-│   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog, UserProfile
-│   │   ├── Settings/         # ProfilePage, MembersPage, TeamsCollectionsPage
+│   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
+│   │   ├── Settings/         # ProfilePage, MembersPage
 │   │   ├── EmojiPicker/      # Emoji picker for collection icons
 │   │   ├── Talktrack/        # Recording feature
-│   │   ├── Presentation/     # Slideshow mode
-│   │   ├── Stickers/         # GIPHY integration (twemojiApi for EmojiPicker)
-│   │   └── AppSidebar.tsx    # Main sidebar with tabs
-│   ├── pens/                 # Custom pen presets
+│   │   └── Presentation/     # Slideshow mode
 │   └── App.tsx               # Main app component
 ├── packages/excalidraw/      # Core Excalidraw library
-│   ├── components/           # Core UI components
 │   ├── locales/              # Translation files (en.json, ru-RU.json)
-│   └── types.ts              # TypeScript types
 ```
 
-## State Management
+## App Mode & Navigation
 
-- **Jotai** for global state (atoms)
-- **React useState/useEffect** for component state
-- **ExcalidrawAPI** for canvas operations
-
-**See `/docs/STATE_MANAGEMENT.md` for detailed documentation on all Jotai atoms and when to use what.**
-
-### When to Use Jotai Atoms vs useState
-
-**Use Jotai Atom when:**
-
-1. **Multiple components need the same state** (avoid prop drilling)
-   ```typescript
-   // ❌ BAD: Prop drilling through 3+ levels
-   <Parent state={x} setState={setX}>
-     <Child state={x} setState={setX}>
-       <GrandChild state={x} setState={setX} />
-     </Child>
-   </Parent>
-   
-   // ✅ GOOD: Any component reads atom directly
-   const [x, setX] = useAtom(xAtom);
-   ```
-
-2. **State needs to be set by action atoms** (navigation, complex updates)
-   ```typescript
-   // Navigation atoms need to set multiple state pieces at once
-   export const navigateToDashboardAtom = atom(null, (get, set) => {
-     set(appModeAtom, "dashboard");
-     set(dashboardViewAtom, "home");
-     set(workspaceSidebarOpenAtom, true); // Auto-open sidebar
-   });
-   ```
-
-3. **Cross-component communication** (refresh triggers)
-   ```typescript
-   // Component A modifies data
-   const triggerRefresh = useSetAtom(triggerCollectionsRefreshAtom);
-   await createCollection(...);
-   triggerRefresh(); // Notify all subscribers
-   
-   // Component B re-fetches when notified
-   const refreshCounter = useAtomValue(collectionsRefreshAtom);
-   useEffect(() => { loadCollections(); }, [refreshCounter]);
-   ```
-
-4. **State is part of URL/routing** (workspace, scene, collection IDs)
-
-5. **State needs localStorage persistence** (sidebar open, theme preference)
-   ```typescript
-   export const workspaceSidebarOpenAtom = atom<boolean>(
-     typeof window !== "undefined"
-       ? localStorage.getItem("key") === "true"
-       : false
-   );
-   ```
-
-**Use useState when:**
-
-1. **State is truly component-local** (form inputs, loading states)
-2. **State is temporary/transient** (hover, focus, animation)
-3. **State doesn't need to survive component unmount**
-4. **Only one component ever reads/writes this state**
-
-### Jotai Usage Patterns
-
-```typescript
-// Import from app-jotai (NOT directly from jotai)
-import { useAtom, useAtomValue, useSetAtom } from "../../app-jotai";
-
-// Read-only (component re-renders when atom changes)
-const value = useAtomValue(myAtom);
-
-// Read and write
-const [value, setValue] = useAtom(myAtom);
-
-// Write-only (no re-render when atom changes - for actions)
-const setValue = useSetAtom(myAtom);
-```
-
-### Creating New Atoms
-
-**Location:** Add to `excalidraw-app/components/Settings/settingsState.ts`
-
-```typescript
-// Simple state atom
-export const myStateAtom = atom<string>("");
-
-// Atom with localStorage persistence
-const STORAGE_KEY = "my_preference";
-export const myPreferenceAtom = atom<boolean>(
-  typeof window !== "undefined"
-    ? localStorage.getItem(STORAGE_KEY) === "true"
-    : false
-);
-
-// Action atom (write-only, encapsulates logic)
-export const myActionAtom = atom(null, (get, set, params: MyParams) => {
-  const currentValue = get(someOtherAtom);
-  set(myStateAtom, newValue);
-  // Can also persist to localStorage, call navigateTo(), etc.
-});
-
-// Derived atom (computed from other atoms)
-export const derivedAtom = atom((get) => {
-  const a = get(atomA);
-  const b = get(atomB);
-  return a + b;
-});
-```
-
-**Export from index.ts:**
-```typescript
-export { myStateAtom, myActionAtom } from "./settingsState";
-```
-
-### Existing Atoms Reference
-
-| Category | Atoms |
-|----------|-------|
-| **Navigation** | `appModeAtom`, `dashboardViewAtom`, `activeCollectionIdAtom` |
-| **Navigation Actions** | `navigateToDashboardAtom`, `navigateToCollectionAtom`, `navigateToSceneAtom`, `navigateToCanvasAtom` |
-| **Workspace** | `currentWorkspaceSlugAtom`, `currentSceneIdAtom`, `currentSceneTitleAtom` |
-| **Sidebar** | `workspaceSidebarOpenAtom`, `toggleWorkspaceSidebarAtom`, `openWorkspaceSidebarAtom`, `closeWorkspaceSidebarAtom` |
-| **Refresh Triggers** | `collectionsRefreshAtom`, `scenesRefreshAtom`, `triggerCollectionsRefreshAtom`, `triggerScenesRefreshAtom` |
-| **Search** | `quickSearchOpenAtom`, `searchQueryAtom` |
-
-### Example: Using ExcalidrawAPI
-
-```typescript
-excalidrawAPI.updateScene({ elements, appState });
-excalidrawAPI.scrollToContent(element, { animate: true });
-```
-
-## App Mode & Navigation (Dashboard ↔ Canvas)
-
-AstraDraw has two main modes controlled by Jotai atoms in `components/Settings/settingsState.ts`:
-
-| Mode | `appModeAtom` Value | What's Displayed |
-|------|---------------------|------------------|
-| Dashboard | `"dashboard"` | Dashboard, Collections, Settings pages |
+| Mode | `appModeAtom` | What's Displayed |
+|------|---------------|------------------|
+| Dashboard | `"dashboard"` | Dashboard, Collections, Settings |
 | Canvas | `"canvas"` | Excalidraw drawing canvas |
 
-### URL-Based Navigation
+### URL Patterns
 
-**All navigation actions update the browser URL.** This ensures:
-- Browser back/forward buttons work correctly
-- Pages can be refreshed without losing context
-- URLs can be shared and bookmarked
-
-URL patterns:
 - Dashboard: `/workspace/{slug}/dashboard`
-- Collection: `/workspace/{slug}/collection/{id}` or `/workspace/{slug}/private`
+- Collection: `/workspace/{slug}/collection/{id}`
 - Scene: `/workspace/{slug}/scene/{id}`
 - Settings: `/workspace/{slug}/settings`
-- Members: `/workspace/{slug}/members`
-- Teams: `/workspace/{slug}/teams`
 - Profile: `/profile`
-
-See `/docs/URL_ROUTING.md` for full documentation.
 
 ### Navigation Atoms
 
 ```typescript
 import {
-  appModeAtom,
   navigateToCanvasAtom,
   navigateToDashboardAtom,
   navigateToCollectionAtom,
-  navigateToProfileAtom,
   navigateToSceneAtom,
-  activeCollectionIdAtom,
-  dashboardViewAtom,
-  currentWorkspaceSlugAtom,
-  currentSceneIdAtom,
 } from "./components/Settings/settingsState";
 
-// Reading current mode
-const appMode = useAtomValue(appModeAtom);
-
-// Navigation actions (use useSetAtom, not useAtom)
-// These automatically push URLs to browser history
-const navigateToCanvas = useSetAtom(navigateToCanvasAtom);
-const navigateToDashboard = useSetAtom(navigateToDashboardAtom);
-const navigateToCollection = useSetAtom(navigateToCollectionAtom);
-```
-
-### URL Router Utilities
-
-For building URLs or parsing the current route:
-
-```typescript
-import {
-  parseUrl,
-  buildSceneUrl,
-  buildDashboardUrl,
-  buildCollectionUrl,
-  navigateTo,
-  type RouteType,
-} from "../../router";
-
-// Parse current URL
-const route = parseUrl(); // Returns RouteType
-
-// Build URLs
-const sceneUrl = buildSceneUrl(workspaceSlug, sceneId);
-const dashboardUrl = buildDashboardUrl(workspaceSlug);
-
-// Navigate programmatically (pushes to history)
-navigateTo(buildSceneUrl(workspaceSlug, sceneId));
-```
-
-### Switching from Dashboard to Canvas
-
-**CRITICAL:** When creating a new scene or opening a scene from the dashboard, you MUST call `navigateToCanvas()` to switch to canvas mode. Otherwise, the app stays in dashboard mode and the canvas is not visible.
-
-```typescript
-// Example: Creating a new scene from a collection's context menu
-const openWorkspaceSidebar = useSetAtom(openWorkspaceSidebarAtom);
-
-const handleNewScene = useCallback(async (collectionId?: string) => {
-  // 1. Create the scene in backend (with the collection ID!)
-  const scene = await createScene({ title, collectionId });
-  
-  // 2. Reset and prepare the canvas
-  excalidrawAPI.resetScene();
-  
-  // 3. Set current scene state
-  setCurrentSceneId(scene.id);
-  setCurrentSceneTitle(title);
-  
-  // 4. IMPORTANT: Set the active collection so sidebar shows scenes from this collection
-  if (collectionId) {
-    setActiveCollectionId(collectionId);
-  }
-  
-  // 5. Keep sidebar open to show the new scene in the collection's scene list
-  openWorkspaceSidebar();  // Uses Jotai atom action
-  
-  // 6. Switch to canvas mode - sidebar auto-switches to "board" mode
-  navigateToCanvas();
-  
-  // 7. Save initial scene data
-  await updateSceneData(scene.id, blob);
-}, [excalidrawAPI, navigateToCanvas, setActiveCollectionId, openWorkspaceSidebar]);
-```
-
-**Key behavior:** When creating a scene from a collection:
-- The scene is created in that specific collection
-- The sidebar stays open showing the collection's scenes (in "board" mode)
-- The new scene appears in the scene list and is selected
-- User can immediately start drawing on the canvas
-
-### Switching from Canvas to Dashboard
-
-```typescript
-// Example: Going back to dashboard
-const handleBackToDashboard = useCallback(() => {
-  navigateToDashboard();
-}, [navigateToDashboard]);
-
-// Example: Opening a specific collection
-const handleCollectionClick = useCallback((collectionId: string) => {
-  navigateToCollection(collectionId);
-}, [navigateToCollection]);
-```
-
-### Opening an Existing Scene
-
-> ⚠️ **Work in Progress (December 2025)**: This pattern is functional but needs further testing across all navigation scenarios.
-
-**IMPORTANT:** Scene loading is centralized in `App.tsx`. Child components should NOT load scene data directly. Instead, they use `navigateToSceneAtom` which triggers URL-based navigation.
-
-```typescript
-// In DashboardView, CollectionView, or WorkspaceSidebar:
-import { useSetAtom, useAtomValue } from "../../app-jotai";
-import { navigateToSceneAtom, currentWorkspaceSlugAtom } from "../Settings/settingsState";
-
 const navigateToScene = useSetAtom(navigateToSceneAtom);
-const currentWorkspaceSlug = useAtomValue(currentWorkspaceSlugAtom);
-
-const handleOpenScene = useCallback(
-  (scene: WorkspaceScene) => {
-    if (currentWorkspaceSlug) {
-      navigateToScene({
-        workspaceSlug: currentWorkspaceSlug,
-        sceneId: scene.id,
-        title: scene.title,
-      });
-    }
-  },
-  [navigateToScene, currentWorkspaceSlug],
-);
+navigateToScene({ workspaceSlug, sceneId, title });
 ```
 
-**How it works:**
-1. `navigateToSceneAtom` sets Jotai atoms and calls `navigateTo()` with the scene URL
-2. `navigateTo()` pushes URL and dispatches a `popstate` event
-3. `handlePopState` in `App.tsx` sets `appMode("canvas")` and calls `loadSceneFromUrlRef.current()`
-4. `loadSceneFromUrl()` fetches scene data, updates canvas, and handles collaboration
+**See:** `/docs/architecture/URL_ROUTING.md` for full documentation.
 
-**Key principle - One-Way URL Flow:**
-- **User action** → Navigation atom → Push URL → Dispatch popstate
-- **Popstate handler** → Parse URL → Set state directly (**NO URL push**)
+## CSS Hide/Show Pattern
 
-**Why this pattern?**
-- Prevents infinite loops (popstate handlers must not push URLs)
-- Single source of truth for scene loading logic
-- Browser back/forward buttons work correctly
-- No duplicate API calls
+> ⚠️ **CRITICAL:** Read `/docs/troubleshooting/CRITICAL_CSS_HIDE_SHOW_FIX.md`
 
-### Dashboard Views
-
-Within dashboard mode, different views are controlled by `dashboardViewAtom`:
-
-| View | Value | Component |
-|------|-------|-----------|
-| Home | `"home"` | `DashboardView` |
-| Collection | `"collection"` | `CollectionView` |
-| Profile | `"profile"` | `ProfilePage` |
-| Workspace Settings | `"workspace"` | `WorkspaceSettingsPage` |
-| Team Members | `"members"` | `MembersPage` |
-| Teams & Collections | `"teams-collections"` | `TeamsCollectionsPage` |
-
-### Key Files
-
-- `frontend/excalidraw-app/router.ts` - URL routing utilities (parseUrl, buildUrl, navigateTo)
-- `frontend/excalidraw-app/components/Settings/settingsState.ts` - Navigation atoms with URL support
-- `frontend/excalidraw-app/App.tsx` - Main app with URL sync and mode switching
-- `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx` - Sidebar navigation
-- `frontend/excalidraw-app/components/Workspace/WorkspaceMainContent.tsx` - Dashboard content router
-
-### Scene Loading Architecture (CSS Hide/Show Pattern)
-
-> ⚠️ **CRITICAL:** Read `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` before modifying mode switching code!
-
-**CSS Hide/Show Pattern:**
-- Both Dashboard and Canvas are **always mounted**
-- CSS `display: none` toggles visibility (no unmount/remount)
-- Excalidraw state is preserved when switching modes
-- Scene data is loaded via `excalidrawAPI.updateScene()`
-
-**Why NOT conditional rendering:**
-```typescript
-// ❌ WRONG - causes Excalidraw to unmount/remount, losing state
-if (appMode === "dashboard") {
-  return <Dashboard />;
-}
-return <Excalidraw />;
-
-// ✅ CORRECT - CSS Hide/Show, Excalidraw always mounted
-return (
-  <>
-    <div style={{ display: appMode === "dashboard" ? "block" : "none" }}>
-      <Dashboard />
-    </div>
-    <div 
-      style={{ display: appMode === "canvas" ? "block" : "none" }}
-      inert={appMode !== "canvas" ? true : undefined}
-    >
-      <Excalidraw 
-        handleKeyboardGlobally={appMode === "canvas"}
-        autoFocus={appMode === "canvas"}
-      />
-    </div>
-  </>
-);
-```
-
-**Scene Loading Flow:**
-1. User clicks scene → `navigateToSceneAtom` pushes URL
-2. `handlePopState` sets `appMode("canvas")` (CSS shows the canvas)
-3. `loadSceneFromUrl()` fetches data
-4. `excalidrawAPI.updateScene()` loads data into already-mounted Excalidraw
-5. Scene appears with all drawings ✅
-
-**Race Condition Handling:**
-
-When user rapidly switches scenes, only apply the latest request:
+Both Dashboard and Canvas are **always mounted**. CSS toggles visibility:
 
 ```typescript
-let currentLoadingSceneId: string | null = null;
-
-const loadSceneFromUrl = async (workspaceSlug, sceneId) => {
-  currentLoadingSceneId = sceneId;  // Track current request
-  
-  const loaded = await loadWorkspaceScene(workspaceSlug, sceneId);
-  
-  // Ignore stale results
-  if (currentLoadingSceneId !== sceneId) {
-    return;  // Another scene was requested, ignore this one
-  }
-  
-  // Apply scene data via updateScene (Excalidraw is already mounted)
-  excalidrawAPI.updateScene({ elements, appState, files });
-};
+// ✅ CORRECT - Excalidraw always mounted
+<div style={{ display: appMode === "dashboard" ? "block" : "none" }}>
+  <Dashboard />
+</div>
+<div style={{ display: appMode === "canvas" ? "block" : "none" }}>
+  <Excalidraw />
+</div>
 ```
 
-**See:** `/docs/CRITICAL_CSS_HIDE_SHOW_FIX.md` for complete documentation.
+**Why?** Conditional rendering unmounts Excalidraw, losing all state.
 
 ## Localization
 
-**Always add translation keys** for new UI text:
-
-1. Add to `packages/excalidraw/locales/en.json`
-2. Add to `packages/excalidraw/locales/ru-RU.json`
-3. Use `t("key.path")` in components
+**Always add translation keys** to both files:
+- `packages/excalidraw/locales/en.json`
+- `packages/excalidraw/locales/ru-RU.json`
 
 ```typescript
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -447,21 +88,18 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 ## Input Fields in Dialogs
 
-**Critical:** Stop keyboard event propagation in input fields to prevent canvas shortcuts:
+**Critical:** Stop keyboard event propagation:
 
 ```typescript
 <input
   onKeyDown={(e) => e.stopPropagation()}
   onKeyUp={(e) => e.stopPropagation()}
-  ...
 />
 ```
 
 ## Styling
 
-- Use SCSS modules (`.scss` files alongside components)
-- Support dark mode via CSS variables
-- Use `var(--island-bg-color)`, `var(--text-primary-color)`, etc.
+### Dark Mode Support
 
 ```scss
 .my-component {
@@ -469,77 +107,31 @@ import { t } from "@excalidraw/excalidraw/i18n";
   color: var(--text-primary-color, #1b1b1f);
 }
 
-.excalidraw.theme--dark {
+// Use BOTH selectors for workspace components
+.excalidraw.theme--dark,
+.excalidraw-app.theme--dark {
   .my-component {
     background: var(--island-bg-color, #232329);
   }
 }
 ```
 
-### Creating New Components Outside `.excalidraw`
+### Components Outside `.excalidraw`
 
-**CRITICAL:** Components in `excalidraw-app/components/` (Workspace, Settings, EmojiPicker, etc.) render outside the main `.excalidraw` container and don't inherit global CSS variables.
-
-**Always add this at the root of new component SCSS files:**
+**CRITICAL:** Add `--ui-font` at root of SCSS files:
 
 ```scss
 .my-new-component {
-  // Define --ui-font locally since component is outside .excalidraw container
   --ui-font: Assistant, system-ui, BlinkMacSystemFont, -apple-system, Segoe UI,
     Roboto, Helvetica, Arial, sans-serif;
   font-family: var(--ui-font);
-
-  // ... rest of styles
 }
-```
-
-**Why?** Without this, text falls back to Times New Roman or other serif fonts.
-
-## Reusable UI Patterns
-
-### Emoji Picker
-
-Use the `EmojiPicker` component for icon selection:
-
-```typescript
-import { EmojiPicker } from "../EmojiPicker";
-
-<EmojiPicker
-  value={selectedEmoji}      // Current emoji or empty string
-  onSelect={setSelectedEmoji} // Callback when emoji selected
-/>
-```
-
-Features: category tabs, search, frequently used, random, remove button.
-
-### Click-Outside Handler for Menus
-
-For dropdowns/context menus that should close on outside click:
-
-```typescript
-const menuRef = useRef<HTMLDivElement>(null);
-const [menuOpen, setMenuOpen] = useState<string | null>(null);
-
-useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-      setMenuOpen(null);
-    }
-  };
-
-  if (menuOpen) {
-    document.addEventListener("mousedown", handleClickOutside);
-  }
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, [menuOpen]);
 ```
 
 ## API Calls
 
-Use functions from `auth/workspaceApi.ts`:
-
 ```typescript
-import { listScenes, createScene, getUserProfile } from "../../auth/workspaceApi";
+import { listScenes, createScene } from "../../auth/workspaceApi";
 
 // All API calls use credentials: "include" for JWT cookies
 const scenes = await listScenes();
@@ -547,155 +139,26 @@ const scenes = await listScenes();
 
 ## Environment Variables in Docker
 
-**CRITICAL:** Vite environment variables (`import.meta.env.VITE_*`) are baked in at build time. In Docker, we need runtime configuration.
+**Runtime config via `window.__ENV__`:**
 
-### How It Works
-
-1. **Build time:** Dockerfile sets placeholder values:
-   ```dockerfile
-   ENV VITE_APP_WS_SERVER_URL=__VITE_APP_WS_SERVER_URL__ \
-       VITE_DEBUG_NAVIGATION=__VITE_DEBUG_NAVIGATION__
-   ```
-
-2. **Runtime:** `docker-entrypoint.sh` creates `/usr/share/nginx/html/env-config.js`:
-   ```javascript
-   window.__ENV__ = {
-     VITE_APP_WS_SERVER_URL: "https://actual-domain.com",
-     VITE_DEBUG_NAVIGATION: "true"
-   };
-   ```
-
-3. **Code access:** Check `window.__ENV__` first, fall back to `import.meta.env`:
-   ```typescript
-   function getEnvVar(name: string, defaultValue: string = ""): string {
-     // Runtime env (Docker) takes precedence
-     if (typeof window !== "undefined" && window.__ENV__?.[name]) {
-       return window.__ENV__[name];
-     }
-     // Fall back to build-time env (Vite dev server)
-     return import.meta.env[name] ?? defaultValue;
-   }
-   ```
-
-### 🚨 CRITICAL: Window.__ENV__ Type Declaration
-
-**NEVER duplicate the `Window.__ENV__` type declaration!** It must be declared only once.
-
-**Rules:**
-1. **Single source of truth:** `frontend/excalidraw-app/env.ts` is the ONLY file that should declare `Window.__ENV__`
-2. **Correct type:** Must allow `undefined` values: `Record<string, string | undefined>`
-3. **No inline type casts:** Don't use inline types like `(window as { __ENV__?: Record<string, string> })` - just use `window.__ENV__` directly
-4. **No duplicate declarations:** Never add `declare global { interface Window { __ENV__?: ... } }` in other files
-
-**Correct pattern in `env.ts`:**
 ```typescript
-declare global {
-  interface Window {
-    __ENV__?: Record<string, string | undefined>;
-    __BUNDLED_LIBRARIES__?: LibraryItem[];
+function getEnvVar(name: string, defaultValue: string = ""): string {
+  if (typeof window !== "undefined" && window.__ENV__?.[name]) {
+    return window.__ENV__[name];
   }
+  return import.meta.env[name] ?? defaultValue;
 }
 ```
 
-**Why `string | undefined`?**
-Environment variables might not be set, so the value can be `undefined`. Using `Record<string, string>` causes TypeScript errors when accessing properties that might not exist.
+**NEVER duplicate the `Window.__ENV__` type declaration!** It's defined only in `frontend/excalidraw-app/env.ts`.
 
-**TypeScript error if violated:**
-```
-error TS2717: Subsequent property declarations must have the same type.
-Property '__ENV__' must be of type 'Record<string, string> | undefined',
-but here has type '{ [key: string]: string | undefined; } | undefined'.
-```
-
-**Files to check if this error occurs:**
-- `frontend/excalidraw-app/env.ts` - Should be the only file with `declare global { interface Window { __ENV__?: ... } }`
-- `frontend/excalidraw-app/debug/navigationLogger.ts` - Should NOT have duplicate declaration
-- `frontend/excalidraw-app/auth/workspaceApi.ts` - Should NOT have inline type cast
-- `frontend/excalidraw-app/auth/authApi.ts` - Should NOT have inline type cast
-
-### Adding a New Environment Variable
-
-When adding a new `VITE_*` environment variable:
-
-1. **Dockerfile** - Add to build-time ENV block:
-   ```dockerfile
-   ENV VITE_MY_NEW_VAR=__VITE_MY_NEW_VAR__
-   ```
-
-2. **docker-entrypoint.sh** - Add extraction and output:
-   ```bash
-   # In the get_secret section:
-   MY_NEW_VAR=$(get_secret "VITE_MY_NEW_VAR" "default_value")
-   
-   # In the cat > env-config.js section:
-   VITE_MY_NEW_VAR: "${MY_NEW_VAR}",
-   ```
-
-3. **docker-compose.yml** - Add to app service environment:
-   ```yaml
-   app:
-     environment:
-       - VITE_MY_NEW_VAR=${MY_NEW_VAR:-default}
-   ```
-
-4. **TypeScript** - ⚠️ DO NOT add new type declarations! The global `Window.__ENV__` type in `env.ts` already allows any string keys via `Record<string, string | undefined>`. Just use the variable directly:
-   ```typescript
-   // ✅ CORRECT - Just use it (already typed in env.ts)
-   if (window.__ENV__?.VITE_MY_NEW_VAR) {
-     // Use the value
-   }
-   
-   // ❌ WRONG - Don't create duplicate type declarations
-   declare global {
-     interface Window {
-       __ENV__?: {
-         VITE_MY_NEW_VAR?: string;
-       };
-     }
-   }
-   ```
-
-### Example: Checking a Feature Flag
-
-```typescript
-// Helper function pattern
-function isFeatureEnabled(envVar: string): boolean {
-  if (typeof window !== "undefined" && window.__ENV__?.[envVar]) {
-    return window.__ENV__[envVar] === "true";
-  }
-  return import.meta.env[envVar] === "true";
-}
-
-// Usage
-const DEBUG_ENABLED = isFeatureEnabled("VITE_DEBUG_NAVIGATION");
-```
-
-### Files Involved
-
-| File | Purpose |
-|------|---------|
-| `frontend/Dockerfile` | Build-time placeholder ENV vars |
-| `frontend/docker-entrypoint.sh` | Runtime env injection via `window.__ENV__` |
-| `frontend/excalidraw-app/env.ts` | Helper to read env vars (if exists) |
-| `deploy/docker-compose.yml` | Pass env vars to containers |
-
-## Build & Check Commands
+## Build Commands
 
 ```bash
 cd frontend
 yarn install              # Install dependencies
 yarn start                # Development server
-yarn build:app:docker     # Production build for Docker
-
-# Required checks before release:
-yarn test:typecheck       # TypeScript type checking
-yarn test:other           # Prettier formatting check
-yarn test:code            # ESLint code quality
-yarn test:all             # Run ALL checks + tests
-
-# Auto-fix commands:
-yarn fix:other            # Auto-fix Prettier
-yarn fix:code             # Auto-fix ESLint
-yarn fix                  # Fix both
+yarn test:typecheck       # TypeScript check
+yarn test:all             # Run ALL checks
+yarn fix                  # Auto-fix formatting
 ```
-

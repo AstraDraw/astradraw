@@ -1,0 +1,35 @@
+# =============================================================================
+# Docker Compose - Local Builds
+# =============================================================================
+# Use with: just up-local
+# Or manually: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#
+# This file overrides production images with local builds from source.
+# Prerequisites:
+#   - Clone astradraw-app to ../frontend/
+#   - Clone astradraw-api to ../backend/
+#   - Clone astradraw-room to ../room-service/
+#
+# NOTE: For daily development, use `just dev` instead (hot-reload, no Docker rebuilds)
+
+services:
+  # Build frontend from local source
+  app:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: astradraw-app:local
+
+  # Build API backend from local source
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: astradraw-api:local
+
+  # Build room server from local source (uncomment if needed)
+  # room:
+  #   build:
+  #     context: ../room-service
+  #     dockerfile: Dockerfile
+  #   image: astradraw-room:local

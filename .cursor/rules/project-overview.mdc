@@ -1,94 +1,62 @@
 ---
-description: "AstraDraw project overview - architecture, folder structure, and key concepts"
+description: "AstraDraw project overview - minimal context for all chats"
 alwaysApply: true
 ---
 
 # AstraDraw Project Overview
 
-AstraDraw is a self-hosted fork of Excalidraw with enterprise features. This rule provides essential context for understanding the project.
+AstraDraw is a self-hosted Excalidraw fork with enterprise features: user authentication (OIDC/local), workspaces, collaboration, video recordings (Talktrack), and presentation mode.
 
-## Repository Structure
+## Tech Stack
 
-```
-astradraw/                    # Main orchestration repo
-├── frontend/                 # React app (Excalidraw fork) - SEPARATE GIT REPO
-├── backend/                  # NestJS API - SEPARATE GIT REPO
-├── room-service/             # WebSocket server - SEPARATE GIT REPO
-├── docs/                     # Feature documentation
-├── deploy/                   # Docker Compose, configs, secrets
-│   ├── docker-compose.yml
-│   ├── .env, certs/, secrets/
-│   └── libraries/
-└── .cursor/rules/            # AI assistant rules
-```
+| Layer | Technology |
+|-------|------------|
+| Frontend | React, Vite, TypeScript, Jotai |
+| Backend | NestJS, Prisma, PostgreSQL |
+| Storage | S3/MinIO via `IStorageService` abstraction |
+| Realtime | Socket.io room server |
+| Routing | Traefik (HTTPS, path-based, sticky sessions) |
+| Auth | JWT in HTTP-only cookies, OIDC support |
+| Infrastructure | Docker, secrets via `_FILE` env pattern |
 
-| Folder | Description | Tech Stack |
-|--------|-------------|------------|
-| `frontend/` | Excalidraw fork with AstraDraw features | React, Vite, TypeScript, Jotai |
-| `backend/` | NestJS API for auth, workspace, storage | NestJS, Prisma, PostgreSQL |
-| `room-service/` | WebSocket collaboration server | Node.js, Socket.io |
-| `deploy/` | All files needed to run/test the app | Docker Compose, Traefik |
-| `docs/` | Feature documentation | Markdown |
-
-**Important:** `frontend/`, `backend/`, `room-service/` are separate git repositories. Do NOT commit changes to the parent astradraw repo that include these folders.
-
-## Architecture
-
-```
-Traefik (HTTPS) → Routes to:
-  /           → frontend (React app, port 80)
-  /socket.io  → room-service (WebSocket, port 80)
-  /api/v2/*   → backend (NestJS, port 8080)
-
-Backend connects to:
-  - PostgreSQL (users, scenes, metadata via Prisma)
-  - MinIO/S3 (scene data, files, rooms)
-  - Kinescope API (video hosting for Talktrack)
-```
-
-## Key Features
-
-1. **Workspace** - User accounts, scene management, auto-save
-2. **Talktrack** - Video recordings with camera PIP, stored per-scene
-3. **Presentation Mode** - Frames as slides with laser pointer
-4. **Custom Pens** - Highlighter, fountain, marker presets
-5. **Stickers & GIFs** - GIPHY integration
-6. **Libraries** - Pre-bundled shape collections
-
-## Development Quick Start
-
-**For daily development with hot-reload:**
-```bash
-just dev          # Start everything
-just dev-status   # Check status
-just dev-stop     # Stop when done
-```
-
-Access the app at `https://draw.local`
-
-**See:** `/docs/DEVELOPMENT.md` for full development guide.
+**Important:** `frontend/`, `backend/`, `room-service/` are separate git repositories.
 
 ## Documentation
 
-**Development:**
-- `/docs/DEVELOPMENT.md` - **Development guide with hot-reload setup**
+**Start here:** `/docs/README.md` - Full documentation index.
 
-**Architecture & Setup:**
-- `/CONTRIBUTING.md` - How to set up for development
-- `/docs/ARCHITECTURE.md` - Technical architecture and design decisions
-- `/docs/ROADMAP.md` - Planned features and specifications
+| Category | Path |
+|----------|------|
+| Getting Started | `/docs/getting-started/` |
+| Architecture | `/docs/architecture/` |
+| Features | `/docs/features/` |
+| Deployment | `/docs/deployment/` |
+| Guides | `/docs/guides/` |
+| Troubleshooting | `/docs/troubleshooting/` |
+| Planning | `/docs/planning/` |
 
-**Core Navigation & State:**
-- `/docs/URL_ROUTING.md` - URL routing architecture
-- `/docs/SCENE_NAVIGATION.md` - Scene loading and navigation (Excalidraw Plus pattern)
+## Key Invariants
 
-**Feature Documentation:**
-- `/docs/WORKSPACE.md` - Authentication and scene management
-- `/docs/USER_PROFILE.md` - Profile management
-- `/docs/TALKTRACK.MD` - Video recording feature
-- `/docs/PRESENTATION_MODE.md` - Slideshow functionality
-- `/docs/PENS_IMPLEMENTATION.md` - Custom pen presets
-- `/docs/GIPHY_SUPPORT.md` - Stickers & GIFs
-- `/docs/LIBRARIES_SYSTEM.md` - Shape library system
+### Authentication
+- JWT stored only in HTTP-only cookies (never localStorage)
+- OIDC user linking: match by OIDC ID → fallback to email → create new
 
-**Always read relevant docs before implementing features.**
+### Data Model
+- Each new user gets a default PERSONAL workspace (ADMIN role)
+- Workspace types: PERSONAL (no collaboration) vs SHARED (full collaboration)
+- Role hierarchy: ADMIN > MEMBER > VIEWER
+
+### Infrastructure
+- Traefik routes: `/` → frontend, `/socket.io` → room, `/api` → backend
+- Use `getSecret()` / `getSecretOrThrow()` for Docker secrets
+- HTTPS required in production (Web Crypto API needs secure context)
+
+## Quick Start
+
+```bash
+just dev          # Start with hot-reload
+just dev-status   # Check status
+just check-all    # Run all checks
+```
+
+Access: `https://draw.local`

@@ -1,0 +1,85 @@
+---
+description: "AI navigation guide - lightweight entry point for all tasks"
+alwaysApply: true
+---
+
+# AI Navigation Guide
+
+AstraDraw is a self-hosted Excalidraw fork with enterprise features: workspaces, authentication, collaboration, video recordings (Talktrack), and presentation mode.
+
+## Quick Task Reference
+
+| Task | Rule to Request | Documentation |
+|------|-----------------|---------------|
+| Frontend UI/components | `@frontend-patterns` | [UI Styling](/docs/guides/WORKSPACE_UI_STYLING.md) |
+| Frontend state (Jotai) | `@frontend-state` | [State Management](/docs/architecture/STATE_MANAGEMENT.md) |
+| Backend API | `@backend-patterns` | [Architecture](/docs/architecture/ARCHITECTURE.md) |
+| Frontend issues | `@common-issues-frontend` | [Troubleshooting](/docs/troubleshooting/) |
+| Backend issues | `@common-issues-backend` | - |
+| Dev/Docker issues | `@common-issues-dev` | - |
+| Docker/deployment | `@docker-deployment` | [Deployment](/docs/deployment/) |
+| Git workflow/release | `@git-workflow` | - |
+| New feature planning | `@feature-implementation` | [Implementation Plans](/docs/planning/IMPLEMENTATION_PLANS.md) |
+| Collaboration | `@collaboration-system` | [Collaboration](/docs/features/COLLABORATION.md) |
+
+**Full documentation index:** `/docs/README.md`
+
+## Repository Structure
+
+```
+astradraw/                    # Main orchestration repo
+├── frontend/                 # React app (Excalidraw fork) - SEPARATE GIT REPO
+├── backend/                  # NestJS API - SEPARATE GIT REPO
+├── room-service/             # WebSocket server - SEPARATE GIT REPO
+├── docs/                     # Feature documentation (organized by category)
+├── deploy/                   # Docker Compose, configs, secrets
+└── .cursor/rules/            # AI assistant rules (.mdc format)
+```
+
+## Essential Commands
+
+```bash
+# Daily development (hot-reload)
+just dev              # Start everything
+just dev-status       # Check status
+just dev-stop         # Stop everything
+
+# Code checks (run before commits)
+just check-all        # All checks (frontend + backend + room)
+just check-frontend   # TypeScript + Prettier + ESLint
+just check-backend    # Build + Prettier + ESLint
+
+# Docker
+just up-dev           # Local builds
+just fresh-dev        # Fresh start with local builds
+```
+
+## Key File Locations
+
+| Purpose | Path |
+|---------|------|
+| Frontend entry | `frontend/excalidraw-app/App.tsx` |
+| State atoms | `frontend/excalidraw-app/components/Settings/settingsState.ts` |
+| API client | `frontend/excalidraw-app/auth/workspaceApi.ts` |
+| URL router | `frontend/excalidraw-app/router.ts` |
+| Backend entry | `backend/src/main.ts` |
+| Prisma schema | `backend/prisma/schema.prisma` |
+| Docker config | `deploy/docker-compose.yml` |
+
+## Critical Patterns
+
+1. **CSS Hide/Show for Dashboard/Canvas** - Both are always mounted, use `display: none` to toggle. See [CSS Hide/Show Fix](/docs/troubleshooting/CRITICAL_CSS_HIDE_SHOW_FIX.md)
+
+2. **One-Way URL Flow** - Navigation atoms push URLs; `handlePopState` sets state directly (no URL push). Prevents infinite loops.
+
+3. **Input Fields** - Always add `onKeyDown={(e) => e.stopPropagation()}` to prevent canvas shortcuts.
+
+4. **Dark Mode** - Use both selectors: `.excalidraw.theme--dark, .excalidraw-app.theme--dark`
+
+5. **API Calls** - Always include `credentials: "include"` for JWT cookies.
+
+## When to Start a New Chat
+
+- Topic shift to unrelated feature
+- Context accumulated 15+ tool calls
+- Original task complete, new feature requested

@@ -9,6 +9,7 @@ Thank you for your interest in contributing to AstraDraw! This guide will help y
 - **npm** 9+ (for backend)
 - **Docker** and **Docker Compose**
 - **Git**
+- **just** (command runner) - `brew install just` or see [just installation](https://github.com/casey/just#installation)
 
 ## Repository Structure
 
@@ -76,9 +77,26 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 cp docker-compose.override.yml.disabled docker-compose.override.yml
 ```
 
-> **Note:** See [Docker Secrets Documentation](docs/DOCKER_SECRETS.md) for complete secrets management guide.
+> **Note:** See [Docker Secrets Documentation](docs/deployment/DOCKER_SECRETS.md) for complete secrets management guide.
 
-### 4. Build and Run
+### 4. Start Development
+
+**Recommended: Use `just` commands** (from project root):
+
+```bash
+cd ..  # Back to astradraw root
+
+# Start all services with hot-reload
+just dev
+
+# Check status
+just dev-status
+
+# Stop everything
+just dev-stop
+```
+
+**Alternative: Docker Compose directly:**
 
 ```bash
 # From the deploy/ folder
@@ -95,6 +113,23 @@ Open https://localhost in your browser (accept the self-signed certificate warni
 
 ## Development Workflow
 
+### Essential Commands
+
+```bash
+# Daily development
+just dev              # Start everything with hot-reload
+just dev-status       # Check what's running
+just dev-stop         # Stop everything
+
+# Code checks (run before commits!)
+just check-all        # All checks (frontend + backend + room)
+just check-frontend   # TypeScript + Prettier + ESLint
+just check-backend    # Build + Prettier + ESLint
+
+# Git status across all repos
+just status           # Show git status for all repos
+```
+
 ### Working on Frontend
 
 ```bash
@@ -105,6 +140,8 @@ yarn start          # Development server on http://localhost:5173
 
 **Before committing:**
 ```bash
+just check-frontend
+# Or manually:
 yarn test:typecheck    # TypeScript type checking
 yarn test:other        # Prettier formatting
 yarn test:code         # ESLint code quality
@@ -120,6 +157,8 @@ npm run start:dev      # Development server with hot reload
 
 **Before committing:**
 ```bash
+just check-backend
+# Or manually:
 npm run build          # Build (includes TypeScript)
 npm run format         # Prettier formatting
 npm run lint           # ESLint code quality
@@ -172,6 +211,9 @@ docker compose --profile oidc up -d
 Create branches in **all affected repositories** with the same name:
 
 ```bash
+# Check git status first
+just status
+
 # If changing frontend
 cd frontend
 git checkout -b feature/my-feature
@@ -184,33 +226,38 @@ git checkout -b feature/my-feature
 ### 2. Make Your Changes
 
 Follow the patterns documented in:
-- `docs/ARCHITECTURE.md` - Technical architecture
+- [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture
 - `.cursor/rules/` - Development patterns (if using Cursor IDE)
 
 ### 3. Test Locally
 
 ```bash
-# Run checks
-cd frontend && yarn test:all
-cd backend && npm run build && npm run lint
+# Run all checks
+just check-all
 
 # Test with Docker
-cd deploy && docker compose up -d --build
+just fresh-dev  # Fresh start with local builds
 ```
 
 ### 4. Commit and Push
+
+Use descriptive commit messages (these will be used for changelog at release):
 
 ```bash
 # Frontend
 cd frontend
 git add -A
-git commit -m "feat: description of changes"
+git commit -m "feat(workspace): add auto-save functionality
+
+- Added debounced save on canvas changes
+- Shows save indicator in toolbar
+- Handles offline/online transitions"
 git push origin feature/my-feature
 
 # Backend (if changed)
 cd backend
 git add -A
-git commit -m "feat: description of changes"
+git commit -m "feat(api): add scene versioning endpoint"
 git push origin feature/my-feature
 ```
 
@@ -225,7 +272,7 @@ We use conventional commits:
 ```
 type(scope): description
 
-[optional body]
+[optional body with details]
 ```
 
 **Types:**
@@ -241,6 +288,7 @@ type(scope): description
 feat(workspace): add auto-save functionality
 fix(auth): resolve JWT cookie not being sent
 docs: update API documentation
+refactor(collab): simplify room key encryption
 ```
 
 ## Code Style
@@ -249,23 +297,24 @@ docs: update API documentation
 - Use functional components with hooks
 - Use Jotai for shared state
 - Add translations to both `en.json` and `ru-RU.json`
-- Stop keyboard event propagation in input fields
+- Stop keyboard event propagation in input fields: `onKeyDown={(e) => e.stopPropagation()}`
 
 ### Backend (TypeScript/NestJS)
 - Use Prisma for database operations
 - JWT guard is at `auth/jwt.guard.ts`
 - Use `@types/multer` for file uploads
+- Use `getSecret()` / `getSecretOrThrow()` for Docker secrets
 
 ## Getting Help
 
 - Check existing documentation in `docs/`
-  - [Architecture](docs/ARCHITECTURE.md) - System overview
-  - [Docker Secrets](docs/DOCKER_SECRETS.md) - Secure credential management
-  - [Workspace & Auth](docs/WORKSPACE.md) - Authentication details
+  - [Architecture](docs/architecture/ARCHITECTURE.md) - System overview
+  - [Docker Secrets](docs/deployment/DOCKER_SECRETS.md) - Secure credential management
+  - [Workspace & Auth](docs/features/WORKSPACE.md) - Authentication details
+  - [Full documentation index](docs/README.md)
 - Look at similar features for patterns
 - Open an issue for questions
 
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
-

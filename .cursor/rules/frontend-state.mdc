@@ -1,0 +1,137 @@
+---
+description: "Jotai state management patterns for AstraDraw frontend"
+globs: ["frontend/excalidraw-app/components/Settings/settingsState.ts", "frontend/excalidraw-app/App.tsx"]
+---
+
+# Frontend State Management
+
+**Key files for context:**
+@frontend/excalidraw-app/components/Settings/settingsState.ts
+@frontend/excalidraw-app/router.ts
+
+## Jotai vs useState
+
+**Use Jotai Atom when:**
+1. Multiple components need the same state (avoid prop drilling)
+2. State needs to be set by action atoms (navigation)
+3. Cross-component communication (refresh triggers)
+4. State is part of URL/routing
+5. State needs localStorage persistence
+
+**Use useState when:**
+1. State is truly component-local (form inputs)
+2. State is temporary/transient (hover, animation)
+3. Only one component reads/writes this state
+
+## Jotai Usage Patterns
+
+```typescript
+// Import from app-jotai (NOT directly from jotai)
+import { useAtom, useAtomValue, useSetAtom } from "../../app-jotai";
+
+// Read-only
+const value = useAtomValue(myAtom);
+
+// Read and write
+const [value, setValue] = useAtom(myAtom);
+
+// Write-only (for actions)
+const setValue = useSetAtom(myAtom);
+```
+
+## Creating New Atoms
+
+**Location:** `excalidraw-app/components/Settings/settingsState.ts`
+
+```typescript
+// Simple state atom
+export const myStateAtom = atom<string>("");
+
+// With localStorage persistence
+const STORAGE_KEY = "my_preference";
+export const myPreferenceAtom = atom<boolean>(
+  typeof window !== "undefined"
+    ? localStorage.getItem(STORAGE_KEY) === "true"
+    : false
+);
+
+// Action atom (write-only)
+export const myActionAtom = atom(null, (get, set, params: MyParams) => {
+  set(myStateAtom, newValue);
+});
+
+// Derived atom
+export const derivedAtom = atom((get) => get(atomA) + get(atomB));
+```
+
+## Existing Atoms Reference
+
+| Category | Atoms |
+|----------|-------|
+| **Navigation** | `appModeAtom`, `dashboardViewAtom`, `activeCollectionIdAtom` |
+| **Navigation Actions** | `navigateToDashboardAtom`, `navigateToCollectionAtom`, `navigateToSceneAtom` |
+| **Workspace** | `currentWorkspaceSlugAtom`, `currentSceneIdAtom`, `currentSceneTitleAtom` |
+| **Sidebar** | `workspaceSidebarOpenAtom`, `toggleWorkspaceSidebarAtom` |
+| **Refresh Triggers** | `collectionsRefreshAtom`, `scenesRefreshAtom`, `triggerCollectionsRefreshAtom` |
+
+## Cross-Component Communication
+
+Use refresh trigger atoms:
+
+```typescript
+// Component that modifies data
+const triggerRefresh = useSetAtom(triggerCollectionsRefreshAtom);
+await createCollection(...);
+triggerRefresh();
+
+// Component that displays data
+const refreshCounter = useAtomValue(collectionsRefreshAtom);
+useEffect(() => { loadCollections(); }, [refreshCounter]);
+```
+
+## Navigation Pattern
+
+**Key principle - One-Way URL Flow:**
+- **User action** → Navigation atom → Push URL → Dispatch popstate
+- **Popstate handler** → Parse URL → Set state directly (**NO URL push**)
+
+```typescript
+// User clicks scene
+const navigateToScene = useSetAtom(navigateToSceneAtom);
+navigateToScene({ workspaceSlug, sceneId, title });
+
+// In App.tsx handlePopState - set state DIRECTLY
+const handlePopState = () => {
+  const route = parseUrl();
+  if (route.type === "dashboard") {
+    setAppMode("dashboard");    // ✅ Direct state set
+    setDashboardView("home");   // ✅ No URL push
+  }
+};
+```
+
+**Rule:** `handlePopState` should NEVER call navigation atoms that push URLs.
+
+## Migration: useState to Jotai
+
+**Signs you should migrate:**
+1. Same prop passed through 3+ levels
+2. Multiple unrelated components need same state
+3. Action atom needs to set this state
+4. State needs localStorage persistence
+
+```typescript
+// BEFORE: useState with prop drilling
+const [sidebarOpen, setSidebarOpen] = useState(false);
+<Child isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+// AFTER: Jotai atom
+// In settingsState.ts
+export const sidebarOpenAtom = atom<boolean>(false);
+
+// Any component can read/write directly
+const isOpen = useAtomValue(sidebarOpenAtom);
+const close = useSetAtom(closeSidebarAtom);
+```
+
+**See:** `/docs/architecture/STATE_MANAGEMENT.md` for complete documentation.

@@ -1,6 +1,5 @@
 ---
 description: "Collaboration system architecture, permissions, and patterns for AstraDraw"
-alwaysApply: false
 globs:
   - "frontend/excalidraw-app/collab/**"
   - "frontend/excalidraw-app/share/**"
@@ -18,16 +17,16 @@ globs:
 
 # Collaboration System Rules
 
-This rule describes the collaboration system architecture and key decisions for AstraDraw.
+**Related rules and files:**
+- For frontend patterns, see @frontend-patterns
+- Full documentation: @docs/features/COLLABORATION.md
 
 ## Two Collaboration Modes
-
-AstraDraw has two distinct collaboration modes:
 
 | Mode | URL Pattern | Auth Required | Use Case |
 |------|-------------|---------------|----------|
 | **Workspace Collaboration** | `/workspace/{slug}/scene/{id}#key={roomKey}` | Yes | Team collaboration |
-| **Legacy Anonymous** | `/#room={roomId},{roomKey}` | No | Quick sharing, backward compat |
+| **Legacy Anonymous** | `/#room={roomId},{roomKey}` | No | Quick sharing |
 
 **Important:** These modes must remain separate. Never mix them.
 
@@ -40,14 +39,9 @@ enum WorkspaceType {
 }
 ```
 
-**Key Rule:** Personal workspaces NEVER allow:
-- Inviting members
-- Creating teams
-- Collaboration on scenes
+**Key Rule:** Personal workspaces NEVER allow inviting members, creating teams, or collaboration.
 
 ## Permission Chain
-
-Access to a scene is determined by this chain:
 
 ```
 User → WorkspaceMember (role) → TeamMember → Team → TeamCollection (accessLevel) → Collection → Scene
@@ -66,9 +60,9 @@ enum CollectionAccessLevel {
 
 ```typescript
 interface SceneAccessResult {
-  canView: boolean;        // Can load and see the scene
-  canEdit: boolean;        // Can modify scene content
-  canCollaborate: boolean; // Can join real-time collaboration
+  canView: boolean;
+  canEdit: boolean;
+  canCollaborate: boolean;
 }
 ```
 
@@ -76,10 +70,7 @@ interface SceneAccessResult {
 
 ### SceneAccessService
 
-Always use `SceneAccessService.checkAccess(sceneId, userId)` before:
-- Loading scene data
-- Starting collaboration
-- Modifying scene
+Always use `SceneAccessService.checkAccess(sceneId, userId)` before loading/modifying scenes:
 
 ```typescript
 // CORRECT
@@ -89,41 +80,24 @@ if (!access.canView) {
 }
 
 // WRONG - Don't check just ownership
-if (scene.userId !== user.id) {
-  throw new ForbiddenException('Access denied');
-}
+if (scene.userId !== user.id) { ... }
 ```
 
 ### Workspace Type Guards
 
-When creating workspace-related resources, always check workspace type:
-
 ```typescript
-// In workspaces.service.ts
 async inviteMember(workspaceId: string, ...) {
   const workspace = await this.prisma.workspace.findUnique({ where: { id: workspaceId } });
   
   if (workspace.type === 'PERSONAL') {
     throw new ForbiddenException('Cannot invite members to a personal workspace');
   }
-  // ... proceed with invite
 }
 ```
-
-### Room Key Storage
-
-Room keys are encrypted server-side in `Scene.roomKeyEncrypted`. 
-
-**Never:**
-- Log room keys
-- Return room keys to users without permission check
-- Store room keys in plain text
 
 ## Frontend API Integration
 
 **File:** `frontend/excalidraw-app/auth/workspaceApi.ts`
-
-### Collaboration Endpoints
 
 ```typescript
 // Load scene with permissions via workspace slug
@@ -135,259 +109,36 @@ await startSceneCollaboration(sceneId);
 // Get collaboration credentials (GET)
 const creds = await getSceneCollaboration(sceneId);
 // Returns: { roomId: string, roomKey: string }
-
-// Copy collection to another workspace
-await copyCollectionToWorkspace(collectionId, targetWorkspaceId);
-
-// Move collection to another workspace
-await moveCollectionToWorkspace(collectionId, targetWorkspaceId);
 ```
 
-### API Response Types
-
-```typescript
-interface SceneWithAccess {
-  scene: {
-    id: string;
-    title: string;
-    roomId: string | null;
-    collaborationEnabled: boolean;
-    // ... other fields
-  };
-  data: string;  // Base64-encoded scene data
-  access: {
-    canView: boolean;
-    canEdit: boolean;
-    canCollaborate: boolean;
-  };
-}
-```
-
-## Key Frontend Patterns
-
-### URL Detection
-
-In `App.tsx`, detect URL patterns in this order:
+## URL Detection (App.tsx)
 
 ```typescript
 // 1. Check for workspace scene URL
 const sceneMatch = pathname.match(/^\/workspace\/([^/]+)\/scene\/([^/#]+)/);
-if (sceneMatch) {
-  // Load workspace scene with permission check
-}
+if (sceneMatch) { /* Load workspace scene */ }
 
 // 2. Check for legacy room URL
 const roomMatch = hash.match(/^#room=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/);
-if (roomMatch) {
-  // Load legacy anonymous room
-}
+if (roomMatch) { /* Load legacy anonymous room */ }
 
 // 3. Default to dashboard/workspace view
-```
-
-### Collaboration State
-
-When opening a workspace scene:
-
-```typescript
-// 1. Load scene with access check
-const { scene, data, access } = await loadWorkspaceScene(slug, sceneId);
-
-// 2. Update canvas
-excalidrawAPI.updateScene({ elements: data.elements });
-
-// 3. Update URL (without page reload)
-window.history.pushState({}, '', `/workspace/${slug}/scene/${sceneId}`);
-
-// 4. Join collaboration if enabled AND user has access
-if (access.canCollaborate && scene.collaborationEnabled) {
-  const creds = await getCollaborationCredentials(scene.id);
-  if (creds) {
-    collabAPI.startCollaboration(creds);
-  }
-}
-```
-
-### Share Dialog Behavior
-
-| Workspace Type | Scene Location | Share Options |
-|----------------|----------------|---------------|
-| Personal | Any collection | No sharing (show "Move to shared workspace" hint) |
-| Shared | Private collection | Owner can share |
-| Shared | Team collection | "Enable collaboration" button |
-
-### Workspace Scene Loader
-
-**File:** `frontend/excalidraw-app/data/workspaceSceneLoader.ts`
-
-Load workspace scenes with permission checks:
-
-```typescript
-import { loadWorkspaceScene, getCollaborationCredentials } from './data/workspaceSceneLoader';
-
-// Load scene with access check
-const { scene, data, access } = await loadWorkspaceScene(workspaceSlug, sceneId);
-
-// Check permissions
-if (!access.canView) {
-  // Redirect to dashboard or show error
-}
-
-// Auto-join collaboration if enabled
-if (access.canCollaborate && scene.roomId) {
-  const creds = await getCollaborationCredentials(scene.id);
-  if (creds?.roomKey) {
-    await collabAPI.startCollaboration({
-      roomId: creds.roomId,
-      roomKey: creds.roomKey,
-    });
-  }
-}
-```
-
-### Copy/Move Collections
-
-**File:** `frontend/excalidraw-app/components/Workspace/CopyMoveDialog.tsx`
-
-Allow users to copy or move collections between workspaces:
-
-```typescript
-import { CopyMoveDialog } from './components/Workspace';
-
-// In WorkspaceSidebar:
-<CopyMoveDialog
-  isOpen={copyMoveState.isOpen}
-  onClose={() => setCopyMoveState({ isOpen: false })}
-  collectionId={copyMoveState.collectionId}
-  collectionName={copyMoveState.collectionName}
-  mode={copyMoveState.mode}  // "copy" or "move"
-/>
-```
-
-**Key Rules:**
-- Personal workspaces are excluded from target workspace list
-- Only show copy/move for collections user has EDIT access to
-- After move, redirect to target workspace
-- After copy, stay in current workspace
-
-### URL Routing in App.tsx
-
-**Pattern:** Check workspace URLs before legacy URLs
-
-```typescript
-const SCENE_URL_PATTERN = /^\/workspace\/([^/]+)\/scene\/([^/#]+)/;
-const LEGACY_ROOM_PATTERN = /^#room=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/;
-
-// 1. First check workspace scene URLs
-const sceneMatch = pathname.match(SCENE_URL_PATTERN);
-if (sceneMatch) {
-  const [, workspaceSlug, sceneId] = sceneMatch;
-  const roomKey = new URLSearchParams(hash.slice(1)).get('key');
-  await handleWorkspaceUrl();
-  return;
-}
-
-// 2. Then check legacy room URLs
-const roomMatch = hash.match(LEGACY_ROOM_PATTERN);
-if (roomMatch) {
-  // Handle legacy anonymous collaboration
-  return;
-}
-
-// 3. Default flow (dashboard/workspace)
-```
-
-## Database Schema Key Fields
-
-### Scene Model
-
-```prisma
-model Scene {
-  // ... existing fields
-  
-  roomId               String?   // Collaboration room ID
-  roomKeyEncrypted     String?   // Encrypted with server key
-  collaborationEnabled Boolean   @default(true)
-}
-```
-
-### Workspace Model
-
-```prisma
-model Workspace {
-  // ... existing fields
-  
-  type WorkspaceType @default(PERSONAL)
-}
-```
-
-### TeamCollection Model
-
-```prisma
-model TeamCollection {
-  // ... existing fields
-  
-  accessLevel CollectionAccessLevel @default(EDIT)
-}
 ```
 
 ## Common Mistakes to Avoid
 
 ### Backend
-1. **Don't bypass permission checks** - Always use `SceneAccessService`
-2. **Don't allow collaboration in personal workspaces** - Check workspace type
-3. **Don't store room keys unencrypted** - Use `roomKeyEncrypted` field
-4. **Don't return room key without checking `canCollaborate`** - VIEW users shouldn't get edit access
+1. Don't bypass permission checks - Always use `SceneAccessService`
+2. Don't allow collaboration in personal workspaces
+3. Don't store room keys unencrypted
 
 ### Frontend
-5. **Don't mix URL patterns** - Keep workspace and legacy modes separate
-6. **Don't forget to call `navigateToCanvas()`** - After loading a workspace scene from dashboard
-7. **Don't auto-join collaboration without checking `access.canCollaborate`** - Respect permissions
-8. **Don't show copy/move for personal workspaces** - Filter them out from target list
-9. **Don't forget to update URL when opening scenes** - Use `window.history.pushState()` or `replaceState()`
-10. **Don't pass workspace context to ShareDialog in legacy mode** - Keep modes separate
+4. Don't mix URL patterns - Keep workspace and legacy modes separate
+5. Don't auto-join collaboration without checking `access.canCollaborate`
+6. Don't show copy/move for personal workspaces
 
 ## Related Documentation
 
-- `/docs/COLLABORATION.md` - Full system documentation
-- `/docs/COLLABORATION_IMPLEMENTATION_PLAN.md` - Implementation details
-- `/docs/ROLES_TEAMS_COLLECTIONS.md` - Permission model details
-
-## Implementation Status
-
-| Branch | Repository | Status |
-|--------|------------|--------|
-| `feature/collab-permissions-backend` | `backend/` | ✅ **MERGED** (Dec 21, 2025) |
-| `feature/collab-permissions-frontend` | `frontend/` | ✅ **MERGED** (Dec 21, 2025) |
-| `feature/collab-permissions-room-service` | `room-service/` | ⏳ If needed |
-
-### Backend Implementation ✅
-
-The backend is fully implemented and tested. Run `just test-api` to verify:
-- 32 tests pass
-- All workspace types, permissions, and collaboration endpoints work
-- Super admin functionality verified
-
-### Frontend Implementation ✅
-
-The frontend is complete and all checks pass:
-- URL routing for workspace scenes (`/workspace/{slug}/scene/{id}#key={roomKey}`)
-- Auto-join collaboration with permission checks
-- Copy/move collections between workspaces
-- Legacy anonymous mode preserved
-- All translation keys added (English + Russian)
-
-**Commit:** `ad520df` - feat: implement frontend collaboration permissions (Phase 3-6)
-
-**Verify frontend:**
-```bash
-just check-frontend  # All checks pass ✅
-```
-
-### Next Steps
-
-1. **Manual Testing:** Test the new collaboration features end-to-end
-2. **Room Service:** Determine if permission checks are needed at WebSocket layer
-3. **Documentation:** Update user-facing docs for workspace collaboration
-
-**Always:** Backend first, then room service (if needed), then frontend.
+- `/docs/features/COLLABORATION.md` - Full system documentation
+- `/docs/planning/COLLABORATION_IMPLEMENTATION_PLAN.md` - Implementation details
+- `/docs/guides/ROLES_TEAMS_COLLECTIONS.md` - Permission model details

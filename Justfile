@@ -1,284 +1,60 @@
+# =============================================================================
 # AstraDraw Development Commands
+# =============================================================================
 # Run `just` to see all available commands
+#
+# QUICK REFERENCE:
+#   just dev          - Start everything with hot-reload
+#   just dev-stop     - Stop everything
+#   just check        - Run all code checks before commit
+#   just up           - Start with Docker (production images)
+#   just up-local     - Start with Docker (local builds)
+# =============================================================================
 
 # Default: show help
 default:
     @just --list
 
-# ============================================
-# DOCKER DEPLOYMENT
-# ============================================
+# =============================================================================
+# DAILY DEVELOPMENT (most used commands)
+# =============================================================================
+# Use these for day-to-day development with hot-reload.
+# Native services (frontend/backend/room) + Docker infrastructure.
 
-# Start with production images (from GHCR)
-up:
-    @test ! -f deploy/docker-compose.override.yml || (echo "Warning: override file exists, using local builds. Run 'just up-prod' to force production images." && exit 1)
-    cd deploy && docker compose up -d
-
-# Start with production images (ignores override file)
-up-prod:
-    cd deploy && docker compose -f docker-compose.yml up -d
-
-# Start with local builds (enables override file)
-up-dev:
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose up -d --build
-
-# Build local images without starting
-build:
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose build
-
-# Build local images without Docker cache (use when changes aren't being picked up)
-build-no-cache:
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose build --no-cache
-
-# Build and restart a specific service without cache
-rebuild service:
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose build --no-cache {{service}}
-    cd deploy && docker compose up -d {{service}}
-
-# Stop all services (including OIDC/admin profiles)
-down:
-    cd deploy && docker compose --profile oidc --profile admin down
-
-# Restart all services
-restart:
-    cd deploy && docker compose restart
-
-# View logs (all services)
-logs:
-    cd deploy && docker compose logs -f
-
-# View API logs
-logs-api:
-    cd deploy && docker compose logs -f api
-
-# View frontend logs
-logs-app:
-    cd deploy && docker compose logs -f app
-
-# Fresh start with production images (removes volumes)
-fresh:
-    cd deploy && docker compose --profile oidc --profile admin down -v
-    docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
-    @test ! -f deploy/docker-compose.override.yml || rm deploy/docker-compose.override.yml
-    cd deploy && docker compose up -d
-
-# Fresh start with local builds (removes volumes)
-fresh-dev:
-    cd deploy && docker compose --profile oidc --profile admin down -v
-    docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose up -d --build
-
-# Pull latest production images
-pull:
-    cd deploy && docker compose -f docker-compose.yml pull
-
-# Pull third-party images only (traefik, postgres, minio, etc.) then build local app images
-pull-and-build:
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose pull traefik postgres minio
-    cd deploy && docker compose build
-
-# Pull third-party images and start with local builds
-up-dev-pull:
-    @test -f deploy/docker-compose.override.yml || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    cd deploy && docker compose pull traefik postgres minio
-    cd deploy && docker compose up -d --build
-
-# Enable local builds (copy override file)
-enable-dev:
-    @test -f deploy/docker-compose.override.yml && echo "Already enabled" || cp deploy/docker-compose.override.yml.disabled deploy/docker-compose.override.yml
-    @echo "Local builds enabled. Run 'just up-dev' to start."
-
-# Disable local builds (remove override file)
-disable-dev:
-    @test -f deploy/docker-compose.override.yml && rm deploy/docker-compose.override.yml && echo "Local builds disabled" || echo "Already disabled"
-    @echo "Production images enabled. Run 'just up' to start."
-
-# Show current mode (production or development)
-mode:
-    @test -f deploy/docker-compose.override.yml && echo "Mode: DEVELOPMENT (local builds)" || echo "Mode: PRODUCTION (GHCR images)"
-
-# Start with OIDC testing (Dex)
-up-oidc:
-    cd deploy && docker compose --profile oidc up -d
-
-# Start with admin tools (pgAdmin, MinIO Console)
-up-admin:
-    cd deploy && docker compose --profile admin up -d
-
-# ============================================
-# FRONTEND CHECKS
-# ============================================
-
-# Run all frontend checks
-check-frontend:
-    cd frontend && yarn test:typecheck && yarn test:other && yarn test:code
-
-# Frontend TypeScript check
-check-frontend-types:
-    cd frontend && yarn test:typecheck
-
-# Frontend Prettier check
-check-frontend-format:
-    cd frontend && yarn test:other
-
-# Frontend ESLint check
-check-frontend-lint:
-    cd frontend && yarn test:code
-
-# Fix frontend formatting issues
-fix-frontend:
-    cd frontend && yarn fix
-
-# Run frontend tests
-test-frontend:
-    cd frontend && yarn test:all
-
-# ============================================
-# BACKEND CHECKS
-# ============================================
-
-# Run all backend checks
-check-backend:
-    cd backend && npm run build && npm run format && npm run lint
-
-# Backend TypeScript build
-check-backend-build:
-    cd backend && npm run build
-
-# Backend Prettier check
-check-backend-format:
-    cd backend && npm run format
-
-# Backend ESLint check
-check-backend-lint:
-    cd backend && npm run lint
-
-# Run backend tests
-test-backend:
-    cd backend && npm run test
-
-# ============================================
-# ROOM SERVICE CHECKS
-# ============================================
-
-# Run all room service checks
-check-room:
-    cd room-service && yarn build && yarn test
-
-# Fix room service formatting
-fix-room:
-    cd room-service && yarn fix
-
-# ============================================
-# ALL CHECKS
-# ============================================
-
-# Run all checks (frontend + backend + room)
-check-all: check-frontend check-backend check-room
-
-# Fix all formatting issues
-fix-all: fix-frontend fix-room
-    cd backend && npm run format
-
-# ============================================
-# DEVELOPMENT
-# ============================================
-
-# Start frontend dev server (with prefix for logs)
-dev-frontend:
-    cd frontend && yarn start 2>&1 | sed 's/^/[frontend] /'
-
-# Start backend dev server (with prefix for logs)
-dev-backend:
-    cd backend && npm run start:dev 2>&1 | sed 's/^/[backend] /'
-
-# Start room service dev server (with prefix for logs)
-dev-room:
-    cd room-service && yarn start:dev 2>&1 | sed 's/^/[room] /'
-
-# Install all dependencies
-install:
-    cd frontend && yarn install
-    cd backend && npm install
-    cd room-service && yarn install
-
-# ============================================
-# HYBRID DEVELOPMENT (Native + Docker Infra)
-# ============================================
-# Run frontend/backend/room natively with hot-reload while
-# infrastructure (Postgres, MinIO, Traefik) runs in Docker.
-# CSS/code changes apply instantly without Docker rebuilds!
-
-# Start infrastructure only (Postgres, MinIO, Traefik)
-up-infra:
-    cd deploy && docker compose -f docker-compose.infra.yml up -d
-
-# Stop infrastructure (including OIDC/admin profiles)
-down-infra:
-    cd deploy && docker compose -f docker-compose.infra.yml --profile oidc --profile admin down
-
-# Fresh infrastructure start (removes volumes)
-fresh-infra:
-    cd deploy && docker compose -f docker-compose.infra.yml --profile oidc --profile admin down -v
-    docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
-    cd deploy && docker compose -f docker-compose.infra.yml up -d
-
-# View infrastructure logs
-logs-infra:
-    cd deploy && docker compose -f docker-compose.infra.yml logs -f
-
-# Start infrastructure with OIDC (Dex)
-up-infra-oidc:
-    cd deploy && docker compose -f docker-compose.infra.yml --profile oidc up -d
-
-# Start infrastructure with admin tools (pgAdmin)
-up-infra-admin:
-    cd deploy && docker compose -f docker-compose.infra.yml --profile admin up -d
-
-# Start EVERYTHING for development (infra + all native services)
-# Infra: Postgres, MinIO, Traefik, Dex (OIDC)
-# Native: Frontend, Backend, Room
+# Start everything for development (infrastructure + native services with hot-reload)
 dev:
     #!/usr/bin/env bash
     set -e
     
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║           AstraDraw Hybrid Development Mode                ║"
+    echo "║           AstraDraw Development Mode                       ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     
-    # Step 0: Check if draw.local is in /etc/hosts
+    # Check if draw.local is in /etc/hosts
     if ! grep -q "draw.local" /etc/hosts 2>/dev/null; then
         echo "⚠️  WARNING: 'draw.local' is not in /etc/hosts!"
         echo ""
         echo "   Add it with:"
         echo "   sudo sh -c 'echo \"127.0.0.1 draw.local\" >> /etc/hosts'"
         echo ""
-        echo "   Without this, https://draw.local will not work."
-        echo ""
         read -p "   Press Enter to continue anyway, or Ctrl+C to abort..."
         echo ""
     fi
     
-    # Step 1: Clean up any existing processes
+    # Clean up any existing processes
     echo "🧹 Cleaning up existing processes..."
     pkill -f "vite" 2>/dev/null || true
     pkill -f "nest start" 2>/dev/null || true
     pkill -f "ts-node-dev" 2>/dev/null || true
     sleep 1
     
-    # Step 2: Start infrastructure
+    # Start infrastructure
     echo ""
     echo "🐳 Starting Docker infrastructure..."
-    just up-infra-oidc
+    just _up-infra-oidc
     
-    # Step 3: Wait for infrastructure to be healthy
+    # Wait for infrastructure
     echo ""
     echo "⏳ Waiting for infrastructure to be ready..."
     for i in {1..30}; do
@@ -292,23 +68,23 @@ dev:
         sleep 1
     done
     
-    # Step 3.5: Configure MinIO thumbnails public access
+    # Configure MinIO thumbnails
     echo ""
     echo "🖼️  Configuring MinIO thumbnails public access..."
-    just dev-configure-minio-thumbnails
+    just _configure-minio-thumbnails
     
-    # Step 4: Generate frontend env
+    # Generate frontend env
     echo ""
     echo "📝 Generating frontend env-config.js..."
-    just dev-env-frontend
+    just _generate-frontend-env
     
-    # Step 5: Run migrations
+    # Run migrations
     echo ""
     echo "🗄️  Running database migrations..."
     cd backend && npx prisma migrate deploy 2>&1 | sed 's/^/   /' || echo "   ⚠️  Migration warning (may be OK if already applied)"
     cd ..
     
-    # Step 6: Start services with proper logging
+    # Start services
     echo ""
     echo "🚀 Starting native services..."
     echo ""
@@ -327,88 +103,26 @@ dev:
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
     
-    # Start all services in background and wait
-    just dev-frontend &
+    # Start all services in background
+    just _dev-frontend &
     FRONTEND_PID=$!
-    just dev-backend &
+    just _dev-backend &
     BACKEND_PID=$!
-    just dev-room &
+    just _dev-room &
     ROOM_PID=$!
     
-    # Trap Ctrl+C to clean up properly
-    trap 'echo ""; echo "🛑 Stopping services..."; kill $FRONTEND_PID $BACKEND_PID $ROOM_PID 2>/dev/null; just down-infra; echo "✅ All services stopped."; exit 0' INT TERM
+    # Trap Ctrl+C
+    trap 'echo ""; echo "🛑 Stopping services..."; kill $FRONTEND_PID $BACKEND_PID $ROOM_PID 2>/dev/null; just _down-infra; echo "✅ All services stopped."; exit 0' INT TERM
     
-    # Wait for any process to exit
     wait
 
-# Generate frontend env-config.js for native development
-# Reads from deploy/.env and creates frontend/public/env-config.js
-dev-env-frontend:
-    #!/usr/bin/env bash
-    set -e
-    # Source deploy/.env if it exists
-    if [ -f deploy/.env ]; then
-        set -a
-        source deploy/.env
-        set +a
-    fi
-    # Set defaults
-    APP_PROTOCOL="${APP_PROTOCOL:-https}"
-    APP_DOMAIN="${APP_DOMAIN:-draw.local}"
-    GIPHY_API_KEY="${GIPHY_API_KEY:-}"
-    DEBUG_NAVIGATION="${DEBUG_NAVIGATION:-false}"
-    # Generate env-config.js
-    cat > frontend/public/env-config.js << ENVEOF
-    // Runtime environment configuration - generated by 'just dev'
-    // This file is gitignored and regenerated on each 'just dev' run
-    window.__ENV__ = {
-      VITE_APP_WS_SERVER_URL: "${APP_PROTOCOL}://${APP_DOMAIN}",
-      VITE_APP_BACKEND_V2_GET_URL: "${APP_PROTOCOL}://${APP_DOMAIN}/api/v2/scenes/",
-      VITE_APP_BACKEND_V2_POST_URL: "${APP_PROTOCOL}://${APP_DOMAIN}/api/v2/scenes/",
-      VITE_APP_STORAGE_BACKEND: "http",
-      VITE_APP_HTTP_STORAGE_BACKEND_URL: "${APP_PROTOCOL}://${APP_DOMAIN}/api/v2",
-      VITE_APP_FIREBASE_CONFIG: "",
-      VITE_APP_DISABLE_TRACKING: "true",
-      VITE_APP_GIPHY_API_KEY: "${GIPHY_API_KEY}",
-      VITE_DEBUG_NAVIGATION: "${DEBUG_NAVIGATION}"
-    };
-    ENVEOF
-    echo "Created frontend/public/env-config.js"
-
-# Configure MinIO to make thumbnails publicly readable
-dev-configure-minio-thumbnails:
-    #!/usr/bin/env bash
-    set -e
-    
-    # Source deploy/.env to get bucket name
-    if [ -f deploy/.env ]; then
-        set -a
-        source deploy/.env
-        set +a
-    fi
-    
-    BUCKET="${S3_BUCKET:-excalidraw}"
-    
-    # Wait a moment for MinIO to be fully ready
-    sleep 2
-    
-    # Read credentials from Docker secrets inside the container and configure
-    docker exec deploy-minio-1 sh -c '
-        ACCESS_KEY=$(cat /run/secrets/minio_access_key)
-        SECRET_KEY=$(cat /run/secrets/minio_secret_key)
-        mc alias set local http://localhost:9000 "$ACCESS_KEY" "$SECRET_KEY" 2>/dev/null || true
-        mc anonymous set download local/'"$BUCKET"'/thumbnails 2>/dev/null || true
-    ' > /dev/null 2>&1 && echo "   ✅ Thumbnails folder configured for public read" || echo "   ⚠️  Could not configure thumbnails (bucket may not exist yet)"
-
-# Stop all native services and infrastructure
+# Stop all development services
 dev-stop:
     #!/usr/bin/env bash
     echo "🛑 Stopping AstraDraw development environment..."
     echo ""
     
-    # Stop native services
     echo "Stopping native services..."
-    
     if pgrep -f "vite" > /dev/null 2>&1; then
         pkill -f "vite" && echo "   ✅ Frontend stopped"
     else
@@ -429,12 +143,12 @@ dev-stop:
     
     echo ""
     echo "Stopping Docker infrastructure..."
-    just down-infra
+    just _down-infra
     
     echo ""
     echo "✅ All services stopped."
 
-# Check status of all dev services
+# Check status of all services
 dev-status:
     #!/usr/bin/env bash
     echo "╔════════════════════════════════════════════════════════════╗"
@@ -450,7 +164,6 @@ dev-status:
     echo "💻 Native Services:"
     echo "───────────────────"
     
-    # Check Frontend (Vite)
     if pgrep -f "vite" > /dev/null 2>&1; then
         if curl -s http://localhost:3000 > /dev/null 2>&1; then
             echo "   ✅ Frontend: running on http://localhost:3000"
@@ -461,7 +174,6 @@ dev-status:
         echo "   ❌ Frontend: not running"
     fi
     
-    # Check Backend (NestJS)
     if pgrep -f "nest start" > /dev/null 2>&1; then
         if curl -s http://localhost:8080/api/v2/auth/status > /dev/null 2>&1; then
             echo "   ✅ Backend: running on http://localhost:8080"
@@ -472,7 +184,6 @@ dev-status:
         echo "   ❌ Backend: not running"
     fi
     
-    # Check Room Service
     if pgrep -f "ts-node-dev" > /dev/null 2>&1; then
         if curl -s http://localhost:3002 > /dev/null 2>&1; then
             echo "   ✅ Room: running on http://localhost:3002"
@@ -484,37 +195,147 @@ dev-status:
     fi
     
     echo ""
-    echo "🌐 Traefik Routing (https://draw.local):"
-    echo "─────────────────────────────────────────"
+    echo "🌐 Traefik Routing:"
+    echo "───────────────────"
     if curl -sk https://draw.local > /dev/null 2>&1; then
         echo "   ✅ https://draw.local is accessible"
     else
         echo "   ❌ https://draw.local is not accessible"
     fi
 
-# Show hybrid dev instructions
-dev-hybrid:
-    @echo "=== Hybrid Development Mode ==="
-    @echo ""
-    @echo "Quick start (recommended):"
-    @echo "   just dev              # Starts everything!"
-    @echo ""
-    @echo "Or manually:"
-    @echo "   just up-infra         # Start Docker infrastructure"
-    @echo "   just dev-frontend     # Frontend at :3000 (Vite HMR)"
-    @echo "   just dev-backend      # Backend at :8080 (NestJS watch)"
-    @echo "   just dev-room         # Room at :3002 (Socket.io)"
-    @echo ""
-    @echo "Access at: https://draw.local"
-    @echo ""
-    @echo "Stop everything:"
-    @echo "   just dev-stop         # Stops native services + infrastructure"
-    @echo ""
-    @echo "CSS/React changes apply instantly. No Docker rebuild needed!"
+# =============================================================================
+# CODE QUALITY (run before commits)
+# =============================================================================
 
-# ============================================
+# Run all checks (frontend + backend + room)
+check: check-frontend check-backend check-room
+
+# Run frontend checks (TypeScript + Prettier + ESLint)
+check-frontend:
+    cd frontend && yarn test:typecheck && yarn test:other && yarn test:code
+
+# Run backend checks (Build + Prettier + ESLint)
+check-backend:
+    cd backend && npm run build && npm run format && npm run lint
+
+# Run room service checks
+check-room:
+    cd room-service && yarn build && yarn test
+
+# Fix all formatting issues
+fix:
+    cd frontend && yarn fix
+    cd backend && npm run format
+    cd room-service && yarn fix
+
+# =============================================================================
+# DOCKER DEPLOYMENT
+# =============================================================================
+# Use these when you want to run everything in Docker containers.
+# For daily development, use `just dev` instead (hot-reload, no Docker rebuilds).
+
+# Start with production images (from GHCR)
+up:
+    cd deploy && docker compose up -d
+
+# Start with local builds (builds from ../frontend, ../backend)
+up-local:
+    cd deploy && docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+
+# Start with OIDC testing (Dex)
+up-oidc:
+    cd deploy && docker compose --profile oidc up -d
+
+# Start with admin tools (pgAdmin, MinIO Console)
+up-admin:
+    cd deploy && docker compose --profile admin up -d
+
+# Stop all Docker containers
+down:
+    cd deploy && docker compose --profile oidc --profile admin down
+
+# View logs (all services)
+logs:
+    cd deploy && docker compose logs -f
+
+# View API logs only
+logs-api:
+    cd deploy && docker compose logs -f api
+
+# View frontend logs only
+logs-app:
+    cd deploy && docker compose logs -f app
+
+# Restart all services
+restart:
+    cd deploy && docker compose restart
+
+# Fresh start with production images (removes all data)
+fresh:
+    cd deploy && docker compose --profile oidc --profile admin down -v
+    docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
+    cd deploy && docker compose up -d
+
+# Fresh start with local builds (removes all data)
+fresh-local:
+    cd deploy && docker compose --profile oidc --profile admin down -v
+    docker volume rm astradraw_postgres_data astradraw_minio_data 2>/dev/null || true
+    cd deploy && docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+
+# Build local images without starting
+build:
+    cd deploy && docker compose -f docker-compose.yml -f docker-compose.local.yml build
+
+# Build without cache (use when changes aren't being picked up)
+build-no-cache:
+    cd deploy && docker compose -f docker-compose.yml -f docker-compose.local.yml build --no-cache
+
+# Pull latest production images
+pull:
+    cd deploy && docker compose pull
+
+# Clean up Docker resources (old images, build cache, etc.)
+clean:
+    #!/usr/bin/env bash
+    set -e
+    echo "🧹 Cleaning up Docker resources..."
+    echo ""
+    
+    # Remove dangling images (untagged)
+    echo "Removing dangling images..."
+    docker image prune -f
+    
+    # Remove unused build cache
+    echo ""
+    echo "Removing build cache..."
+    docker builder prune -f
+    
+    echo ""
+    echo "✅ Cleanup complete!"
+    echo ""
+    echo "📊 Current disk usage:"
+    docker system df
+
+# Deep clean - removes ALL unused data (images, containers, volumes, networks)
+clean-all:
+    #!/usr/bin/env bash
+    set -e
+    echo "🧹 Deep cleaning Docker resources..."
+    echo "⚠️  This will remove ALL unused images, containers, volumes, and networks!"
+    echo ""
+    read -p "Are you sure? (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        docker system prune -a --volumes -f
+        echo ""
+        echo "✅ Deep cleanup complete!"
+    else
+        echo "Cancelled."
+    fi
+
+# =============================================================================
 # DATABASE
-# ============================================
+# =============================================================================
 
 # Run Prisma migrations
 db-migrate:
@@ -524,7 +345,7 @@ db-migrate:
 db-generate:
     cd backend && npx prisma generate
 
-# Open Prisma Studio
+# Open Prisma Studio (database GUI)
 db-studio:
     cd backend && npx prisma studio
 
@@ -532,33 +353,9 @@ db-studio:
 db-reset:
     cd backend && npx prisma migrate reset
 
-# ============================================
-# TESTING
-# ============================================
-
-# Run interactive scene navigation test
-test-navigation:
-    @cd deploy && node test-scene-navigation.js
-
-# ============================================
-# RELEASE (use with caution)
-# ============================================
-
-# Tag and push frontend
-release-frontend version:
-    cd frontend && git tag v{{version}} && git push origin main --tags
-
-# Tag and push backend
-release-backend version:
-    cd backend && git tag v{{version}} && git push origin main --tags
-
-# Tag and push room service
-release-room version:
-    cd room-service && git tag v{{version}} && git push origin main --tags
-
-# ============================================
-# GIT STATUS
-# ============================================
+# =============================================================================
+# GIT
+# =============================================================================
 
 # Show git status for all repos
 status:
@@ -567,54 +364,16 @@ status:
     @echo "\n=== Backend ===" && cd backend && git status -s
     @echo "\n=== Room Service ===" && cd room-service && git status -s
 
-# Pull latest from all repos (git pull)
-git-pull:
+# Pull latest from all repos
+pull-all:
     git pull origin main
     cd frontend && git pull origin main
     cd backend && git pull origin main
     cd room-service && git pull origin main
 
-# ============================================
-# API TESTING
-# ============================================
-
-# Run backend API tests (requires running services)
-test-api url="https://10.100.0.10":
-    chmod +x deploy/test-backend-api.sh
-    deploy/test-backend-api.sh {{url}}
-
-# Run API tests with custom super admin credentials
-test-api-full url="https://10.100.0.10" admin_email="admin@localhost" admin_pass="admin":
-    chmod +x deploy/test-backend-api.sh
-    SUPERADMIN_EMAIL={{admin_email}} SUPERADMIN_PASSWORD={{admin_pass}} deploy/test-backend-api.sh {{url}}
-
-# Setup test data for manual auto-collaboration testing (does NOT clean up)
-setup-collab-test url="https://10.100.0.10":
-    chmod +x deploy/setup-collab-test.sh
-    deploy/setup-collab-test.sh {{url}}
-
-# ============================================
-# SETUP
-# ============================================
-
-# Generate self-signed SSL certificate for draw.local
-generate-certs:
-    #!/usr/bin/env bash
-    set -e
-    echo "🔐 Generating SSL certificate for draw.local..."
-    mkdir -p deploy/certs
-    
-    # Generate certificate with Subject Alternative Names for both localhost and draw.local
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout deploy/certs/server.key \
-        -out deploy/certs/server.crt \
-        -subj "/CN=draw.local" \
-        -addext "subjectAltName=DNS:draw.local,DNS:localhost,IP:127.0.0.1"
-    
-    echo "✅ Certificate generated at deploy/certs/"
-    echo ""
-    echo "📝 Note: Your browser will show a security warning."
-    echo "   Click 'Advanced' → 'Proceed to draw.local' to accept it."
+# =============================================================================
+# SETUP (one-time)
+# =============================================================================
 
 # Initial setup for new developers
 setup:
@@ -664,7 +423,7 @@ setup:
     # Step 5: SSL Certificate
     echo "📋 Step 5: Generating SSL certificate..."
     if [ ! -f deploy/certs/server.crt ]; then
-        just generate-certs
+        just setup-certs
     else
         echo "   ✅ Certificate already exists"
     fi
@@ -683,3 +442,97 @@ setup:
     echo "║                                                            ║"
     echo "║  Then open: https://draw.local                             ║"
     echo "╚════════════════════════════════════════════════════════════╝"
+
+# Generate self-signed SSL certificate for draw.local
+setup-certs:
+    #!/usr/bin/env bash
+    set -e
+    echo "🔐 Generating SSL certificate for draw.local..."
+    mkdir -p deploy/certs
+    
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout deploy/certs/server.key \
+        -out deploy/certs/server.crt \
+        -subj "/CN=draw.local" \
+        -addext "subjectAltName=DNS:draw.local,DNS:localhost,IP:127.0.0.1"
+    
+    echo "✅ Certificate generated at deploy/certs/"
+    echo ""
+    echo "📝 Note: Your browser will show a security warning."
+    echo "   Click 'Advanced' → 'Proceed to draw.local' to accept it."
+
+# Install all dependencies
+install:
+    cd frontend && yarn install
+    cd backend && npm install
+    cd room-service && yarn install
+
+# =============================================================================
+# TESTING
+# =============================================================================
+
+# Run backend API tests (requires running services)
+test-api url="https://draw.local":
+    chmod +x deploy/tests/test-backend-api.sh
+    deploy/tests/test-backend-api.sh {{url}}
+
+# Run interactive scene navigation test
+test-navigation:
+    @cd deploy/tests && node test-scene-navigation.js
+
+# Setup test data for collaboration testing
+test-setup-collab url="https://draw.local":
+    chmod +x deploy/tests/setup-collab-test.sh
+    deploy/tests/setup-collab-test.sh {{url}}
+
+# =============================================================================
+# RELEASE (use with caution)
+# =============================================================================
+
+# Tag and push frontend release
+release-frontend version:
+    cd frontend && git tag v{{version}} && git push origin main --tags
+
+# Tag and push backend release
+release-backend version:
+    cd backend && git tag v{{version}} && git push origin main --tags
+
+# Tag and push room service release
+release-room version:
+    cd room-service && git tag v{{version}} && git push origin main --tags
+
+# =============================================================================
+# INTERNAL HELPERS (prefixed with _ to hide from list)
+# =============================================================================
+
+# Start frontend dev server
+_dev-frontend:
+    cd frontend && yarn start 2>&1 | sed 's/^/[frontend] /'
+
+# Start backend dev server
+_dev-backend:
+    cd backend && npm run start:dev 2>&1 | sed 's/^/[backend] /'
+
+# Start room service dev server
+_dev-room:
+    cd room-service && yarn start:dev 2>&1 | sed 's/^/[room] /'
+
+# Start infrastructure only
+_up-infra:
+    cd deploy && docker compose -f docker-compose.infra.yml up -d
+
+# Start infrastructure with OIDC
+_up-infra-oidc:
+    cd deploy && docker compose -f docker-compose.infra.yml --profile oidc up -d
+
+# Stop infrastructure
+_down-infra:
+    cd deploy && docker compose -f docker-compose.infra.yml --profile oidc --profile admin down
+
+# Generate frontend env-config.js
+_generate-frontend-env:
+    ./deploy/generate-frontend-env.sh
+
+# Configure MinIO thumbnails for public access
+_configure-minio-thumbnails:
+    ./deploy/configure-minio-thumbnails.sh

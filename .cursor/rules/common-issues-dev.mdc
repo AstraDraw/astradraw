@@ -1,0 +1,114 @@
+---
+description: "Development environment and Docker issues for AstraDraw"
+globs: ["deploy/**/*", "docker-compose*.yml", "Dockerfile", "**/Dockerfile", "Justfile"]
+---
+
+# Development & Docker Issues
+
+## 🚨 CRITICAL: Use `just dev` for Daily Development
+
+**Problem:** Using `just up-dev` for features causes slow iteration.
+
+**Why it's wrong:** Docker builds take 1-5 minutes per change.
+
+**Solution:**
+```bash
+just dev          # Start with hot-reload
+just dev-status   # Check status
+just dev-stop     # Stop when done
+```
+
+**Benefits of `just dev`:**
+- CSS changes appear instantly
+- React changes hot-reload in ~100ms
+- Backend auto-restarts on changes
+
+**When to use Docker (`just up-dev`):**
+- Testing Dockerfile changes
+- Pre-release verification
+
+## "Bad Gateway" at https://draw.local
+
+**Cause:** Native services not running.
+
+**Solution:**
+```bash
+just dev-status   # See what's running
+just dev          # Start fresh
+```
+
+## Changes Not Appearing (Hot-Reload)
+
+**Checklist:**
+1. Is `just dev` running? Check with `just dev-status`
+2. Are you accessing `https://draw.local`?
+3. Try hard refresh: `Cmd+Shift+R`
+4. Check terminal for errors
+
+## Port Already in Use
+
+**Solution:**
+```bash
+just dev-stop     # Stops all services
+
+# Or manually:
+lsof -ti:3000 | xargs kill -9  # Frontend
+lsof -ti:8080 | xargs kill -9  # Backend
+```
+
+## Authentication Not Working in Dev
+
+**Cause:** Accessing via `localhost:3000` instead of `https://draw.local`.
+
+**Solution:** Always use `https://draw.local`
+
+## "draw.local" Not Accessible
+
+**Cause:** Missing `/etc/hosts` entry.
+
+**Solution:**
+```bash
+# macOS/Linux
+sudo sh -c 'echo "127.0.0.1 draw.local" >> /etc/hosts'
+```
+
+## 🚨 Docker Build Cache Issues
+
+**Problem:** Code changes don't appear after rebuild.
+
+**Symptoms:**
+- `CACHED` next to build steps in Docker output
+- Event handlers don't fire
+- New features don't appear
+
+**Solution:**
+```bash
+just rebuild app        # Rebuild without cache
+just build-no-cache     # Rebuild all without cache
+```
+
+**When to use `--no-cache`:**
+- After code changes that aren't appearing
+- After switching git branches
+- When Docker shows `CACHED` on build step
+
+## SSL Certificate Invalid
+
+**Solution:** Accept the certificate in browser, or use Let's Encrypt for production.
+
+## Release Process Issues
+
+### Tag Already Exists
+
+```bash
+git tag -f v0.5.2
+git push origin v0.5.2 --force
+```
+
+### GitHub Actions Build Fails
+
+**Check:**
+1. Run local build first: `npm run build`
+2. Check for missing dependencies
+3. Verify import paths
+4. Ensure all translation keys exist
