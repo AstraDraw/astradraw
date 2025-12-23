@@ -429,7 +429,7 @@ excalidraw-app/tests/
 ### 12. 🟡 IN PROGRESS: CSS Modules Migration with Component Folder Reorganization
 
 > **Started:** 2025-12-23 - Full migration with component folder structure
-> **Status:** Batch 1-2 complete (13 components migrated), 25 remaining
+> **Status:** Batch 1-3 complete (21 components migrated), 17 remaining
 
 **Goal:** Migrate all 38 global SCSS files to CSS Modules while reorganizing into component folders following modern React best practices.
 
@@ -496,15 +496,15 @@ ComponentName/
 - ✅ `WorkspaceSettingsPage.scss` (427 lines) → `WorkspaceSettingsPage/WorkspaceSettingsPage.module.scss`
 - ✅ `TeamsCollectionsPage.scss` (1073 lines) → `TeamsCollectionsPage/TeamsCollectionsPage.module.scss`
 
-**Batch 3: Workspace Views** (8 files, ~2,400 lines)
-- `DashboardView.scss` (180 lines)
-- `CollectionView.scss` (~200 lines)
-- `SearchResultsView.scss` (207 lines)
-- `SceneCard.scss` (292 lines)
-- `SceneCardGrid.scss` (305 lines)
-- `UserMenu.scss` (158 lines)
-- `CopyMoveDialog.scss` (45 lines)
-- `InviteAcceptPage.scss` (238 lines)
+**Batch 3: Workspace Views** ✅ (8 files migrated, ~1,625 lines)
+- ✅ `DashboardView.scss` (180 lines) → `DashboardView/DashboardView.module.scss`
+- ✅ `CollectionView.scss` (~200 lines) → `CollectionView/CollectionView.module.scss`
+- ✅ `SearchResultsView.scss` (207 lines) → `SearchResultsView/SearchResultsView.module.scss`
+- ✅ `SceneCard.scss` (292 lines) → `SceneCard/SceneCard.module.scss`
+- ✅ `SceneCardGrid.scss` (305 lines) → `SceneCardGrid/SceneCardGrid.module.scss`
+- ✅ `UserMenu.scss` (158 lines) → `UserMenu/UserMenu.module.scss`
+- ✅ `CopyMoveDialog.scss` (45 lines) → `CopyMoveDialog/CopyMoveDialog.module.scss`
+- ✅ `InviteAcceptPage.scss` (238 lines) → `InviteAcceptPage/InviteAcceptPage.module.scss`
 
 **Batch 4: Feature Components** (9 files, ~2,700 lines)
 - `TalktrackToolbar.scss` (147 lines)
@@ -614,15 +614,15 @@ export { default, default as CollabError, collabErrorIndicatorAtom } from "./Col
 
 | Batch | Files | Lines | Time |
 |-------|-------|-------|------|
-| Batch 2 (Settings) | 4 | ~2,600 | 2 hours |
-| Batch 3 (Workspace) | 8 | ~2,400 | 2.5 hours |
+| ~~Batch 2 (Settings)~~ | ~~5~~ | ~~~2,787~~ | ✅ Done |
+| ~~Batch 3 (Workspace)~~ | ~~8~~ | ~~~1,625~~ | ✅ Done |
 | Batch 4 (Features) | 9 | ~2,700 | 2.5 hours |
 | Batch 5 (Complex) | 8 | ~2,000 | 3 hours |
-| **Total** | **29** | **~9,700** | **~10 hours** |
+| **Total Remaining** | **17** | **~4,700** | **~5.5 hours** |
 
-#### Files Already Using CSS Modules (11 total)
+#### Files Already Using CSS Modules (24 total)
 
-From pilot + Batch 1:
+From pilot + Batch 1 + Batch 2 + Batch 3:
 - `components/Skeletons/Skeleton.module.scss`
 - `components/ErrorBoundary/ErrorBoundary.module.scss`
 - `components/SaveStatusIndicator/SaveStatusIndicator.module.scss`
@@ -634,6 +634,19 @@ From pilot + Batch 1:
 - `Workspace/WorkspaceMainContent/WorkspaceMainContent.module.scss`
 - `Workspace/WorkspaceSidebarTrigger/WorkspaceSidebarTrigger.module.scss`
 - `Workspace/BoardModeNav/BoardModeNav.module.scss`
+- `Settings/PreferencesPage/PreferencesPage.module.scss`
+- `Settings/ProfilePage/ProfilePage.module.scss`
+- `Settings/MembersPage/MembersPage.module.scss`
+- `Settings/WorkspaceSettingsPage/WorkspaceSettingsPage.module.scss`
+- `Settings/TeamsCollectionsPage/TeamsCollectionsPage.module.scss`
+- `Workspace/DashboardView/DashboardView.module.scss`
+- `Workspace/CollectionView/CollectionView.module.scss`
+- `Workspace/SearchResultsView/SearchResultsView.module.scss`
+- `Workspace/SceneCard/SceneCard.module.scss`
+- `Workspace/SceneCardGrid/SceneCardGrid.module.scss`
+- `Workspace/UserMenu/UserMenu.module.scss`
+- `Workspace/CopyMoveDialog/CopyMoveDialog.module.scss`
+- `Workspace/InviteAcceptPage/InviteAcceptPage.module.scss`
 
 ---
 
@@ -1060,6 +1073,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | CSS Modules migration: Batch 3 complete (8 Workspace View components) |
 | 2025-12-23 | Collaboration profiling: LAN test confirmed excellent performance (<1ms P99), no changes needed |
 | 2025-12-23 | Added collaboration profiling utility with AI-exportable reports |
 | 2025-12-23 | Added collaboration performance analysis: keep Socket.io, optimize cursor batching |
