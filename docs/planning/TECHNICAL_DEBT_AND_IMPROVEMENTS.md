@@ -397,22 +397,32 @@ showLoading(deleteSceneApi(sceneId), {
 
 ## 🟢 Low Priority / Nice to Have
 
-### 11. No Unit Tests for Custom Components
+### 11. ✅ RESOLVED: Unit Tests for Custom Components
 
-**Problem:** Only upstream Excalidraw tests exist. No tests for:
+> **Resolved:** 2025-12-23 - Added unit tests for critical hooks and API client
 
-- WorkspaceSidebar
-- DashboardView
-- CollectionView
-- useScenesCache hook
+**Was:** Only upstream Excalidraw tests existed. No tests for AstraDraw-specific code.
 
-**Recommended:** Add tests for critical paths:
+**Fix:** Created comprehensive test suite:
 
-- Scene CRUD operations
-- Navigation between views
-- Authentication flow
+```
+excalidraw-app/tests/
+├── testUtils.tsx              # Test utilities for React Query
+├── api/
+│   └── client.test.ts         # API client tests (22 tests)
+└── hooks/
+    ├── useSceneActions.test.tsx   # Scene CRUD tests (16 tests)
+    └── useScenesCache.test.tsx    # Data fetching tests (13 tests)
+```
 
-**Effort:** Medium (ongoing)
+**Tests cover:**
+- API client error handling (ApiError, status codes, helpers)
+- Scene CRUD operations (delete, rename, duplicate)
+- Optimistic updates and rollback behavior
+- React Query caching and invalidation
+- Loading states and error handling
+
+**Total:** 51 new tests passing
 
 ---
 
@@ -493,7 +503,7 @@ import styles from './WorkspaceSidebar.module.scss';
 
 1. ✅ Add React Query for data fetching (done 2025-12-23)
 2. ✅ Add optimistic updates (done 2025-12-23)
-3. Add unit tests
+3. ✅ Add unit tests (done 2025-12-23)
 
 ---
 
@@ -554,6 +564,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Added unit tests for hooks and API client   |
 | 2025-12-23 | Added optimistic updates to scene actions   |
 | 2025-12-23 | Added React Query for data fetching         |
 | 2025-12-23 | Migrated workspace/collections to Jotai     |

@@ -235,4 +235,45 @@ yarn start                # Development server
 yarn test:typecheck       # TypeScript check
 yarn test:all             # Run ALL checks
 yarn fix                  # Auto-fix formatting
+
+# Run unit tests
+yarn test:app             # Watch mode
+yarn test:app --run       # Run once
+yarn test:app --run excalidraw-app/tests/hooks/  # Specific tests
 ```
+
+## Testing
+
+Tests are in `excalidraw-app/tests/` using Vitest + React Testing Library.
+
+### Testing Hooks with React Query
+
+```typescript
+import { renderHookWithProviders, createMockScenes } from "../testUtils";
+
+// Mock API BEFORE importing the mocked module
+vi.mock("../../auth/workspaceApi", () => ({
+  listWorkspaceScenes: vi.fn(),
+}));
+
+// Import mocked module AFTER vi.mock()
+import { listWorkspaceScenes } from "../../auth/workspaceApi";
+
+it("should fetch scenes", async () => {
+  const mockScenes = createMockScenes(3);
+  (listWorkspaceScenes as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockScenes);
+
+  const { result } = renderHookWithProviders(() =>
+    useScenesCache({ workspaceId: "ws-1" }),
+  );
+
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
+  expect(result.current.scenes).toEqual(mockScenes);
+});
+```
+
+**Key patterns:**
+- Use `renderHookWithProviders()` for hooks using React Query
+- Use `createMockScenes()` / `createMockScene()` for typed mock data
+- Mock imports must come AFTER `vi.mock()` calls
+- Clear mocks with `vi.clearAllMocks()` in `beforeEach`
