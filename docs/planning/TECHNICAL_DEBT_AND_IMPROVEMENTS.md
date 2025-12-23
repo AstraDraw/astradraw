@@ -429,7 +429,7 @@ excalidraw-app/tests/
 ### 12. 🟡 IN PROGRESS: CSS Modules Migration with Component Folder Reorganization
 
 > **Started:** 2025-12-23 - Full migration with component folder structure
-> **Status:** Batch 1 complete (8 components), 30 remaining
+> **Status:** Batch 1-2 complete (13 components migrated), 25 remaining
 
 **Goal:** Migrate all 38 global SCSS files to CSS Modules while reorganizing into component folders following modern React best practices.
 
@@ -479,21 +479,22 @@ ComponentName/
 └── ComponentName.module.scss   # CSS Module
 ```
 
-**Batch 2: Settings Pages** ⬜ (Not started)
+**Batch 2: Settings Pages** ✅ (Complete)
 
-- ⬜ `Settings/PreferencesPage/` (153 lines)
-- ⬜ `Settings/ProfilePage/` (531 lines)
-- ⬜ `Settings/MembersPage/` (603 lines)
-- ⬜ `Settings/WorkspaceSettingsPage/` (427 lines)
-- ⬜ `Settings/TeamsCollectionsPage/` (1073 lines - largest file!)
+- ✅ `Settings/PreferencesPage/` (153 lines)
+- ✅ `Settings/ProfilePage/` (531 lines)
+- ✅ `Settings/MembersPage/` (603 lines)
+- ✅ `Settings/WorkspaceSettingsPage/` (427 lines)
+- ✅ `Settings/TeamsCollectionsPage/` (1073 lines - largest file!)
 
 #### What Remains
 
-**Batch 2: Settings Pages** (4 files, ~2,600 lines)
-- `ProfilePage.scss` (531 lines)
-- `MembersPage.scss` (603 lines)
-- `WorkspaceSettingsPage.scss` (427 lines)
-- `TeamsCollectionsPage.scss` (1073 lines)
+**Batch 2: Settings Pages** ✅ (5 files migrated, ~2,787 lines)
+- ✅ `PreferencesPage.scss` (153 lines) → `PreferencesPage/PreferencesPage.module.scss`
+- ✅ `ProfilePage.scss` (531 lines) → `ProfilePage/ProfilePage.module.scss`
+- ✅ `MembersPage.scss` (603 lines) → `MembersPage/MembersPage.module.scss`
+- ✅ `WorkspaceSettingsPage.scss` (427 lines) → `WorkspaceSettingsPage/WorkspaceSettingsPage.module.scss`
+- ✅ `TeamsCollectionsPage.scss` (1073 lines) → `TeamsCollectionsPage/TeamsCollectionsPage.module.scss`
 
 **Batch 3: Workspace Views** (8 files, ~2,400 lines)
 - `DashboardView.scss` (180 lines)
