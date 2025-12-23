@@ -84,16 +84,22 @@ import { queryKeys } from "../lib/queryClient";
 
 // Fetching data - use hooks
 import { useScenesCache } from "../hooks/useScenesCache";
-const { scenes, isLoading, updateScenes } = useScenesCache({
+const { scenes, isLoading } = useScenesCache({
   workspaceId,
   collectionId,
   enabled: !!workspaceId,
 });
 
-// After mutations - invalidate queries
-const queryClient = useQueryClient();
+// Scene CRUD with optimistic updates - use useSceneActions
+import { useSceneActions } from "../hooks/useSceneActions";
+const { deleteScene, renameScene, duplicateScene, isDeleting } = useSceneActions({
+  workspaceId,
+  collectionId,
+});
+
+// Delete/rename update UI immediately, roll back on error
 await deleteScene(sceneId);
-queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+await renameScene(sceneId, "New Title");
 ```
 
 ## Existing Atoms Reference (Jotai - Client State)
@@ -163,8 +169,17 @@ These hooks use React Query for fetching + Jotai for selection state:
 | `useScenesCache` | React Query | Fetch scenes with caching |
 | `useWorkspaces` | React Query + Jotai | Load workspaces, manage selection |
 | `useCollections` | React Query + Jotai | Load collections, manage selection |
-| `useSceneActions` | React Query invalidation | Delete/rename/duplicate scenes |
+| `useSceneActions` | React Query `useMutation` | Scene CRUD with optimistic updates |
 | `useInvalidateScenesCache` | React Query | Invalidate scenes cache |
+
+**useSceneActions interface:**
+```typescript
+const { deleteScene, renameScene, duplicateScene, isDeleting, isRenaming, isDuplicating } = useSceneActions({
+  workspaceId: workspace?.id,
+  collectionId: activeCollectionId,
+  onSceneRenamed?: (sceneId, newTitle) => void, // optional callback
+});
+```
 
 **When to create a new hook:**
 - Logic is 50+ lines and has single responsibility

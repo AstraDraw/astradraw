@@ -268,43 +268,51 @@ if (isLoading) {
 
 ---
 
-### 8. No Optimistic Updates
+### 8. ✅ RESOLVED: Optimistic Updates
 
-**Problem:** After deleting a scene, user waits for API response before UI updates.
+> **Resolved:** 2025-12-23 - Implemented optimistic updates using React Query's `useMutation`
 
-**Current Flow:**
+**Was:** After deleting a scene, user waited for API response before UI updates.
 
-```
-User clicks delete → API call → Wait... → UI updates
-```
-
-**Recommended Flow:**
-
-```
-User clicks delete → UI updates immediately → API call in background
-                                            ↓
-                              If error: Rollback UI + show error
-```
-
-**Implementation:**
+**Fix:** Rewrote `useSceneActions` hook to use React Query's `useMutation` with optimistic updates:
 
 ```typescript
-const deleteScene = async (sceneId: string) => {
-  // Optimistic update
-  const previousScenes = scenes;
-  updateScenes((prev) => prev.filter((s) => s.id !== sceneId));
-
-  try {
-    await deleteSceneApi(sceneId);
-  } catch (err) {
+// Delete mutation with optimistic update
+const deleteMutation = useMutation({
+  mutationFn: deleteSceneApi,
+  onMutate: async (sceneId) => {
+    // Cancel outgoing refetches
+    await queryClient.cancelQueries({ queryKey });
+    // Snapshot previous value
+    const previousScenes = queryClient.getQueryData(queryKey);
+    // Optimistically remove scene
+    queryClient.setQueryData(queryKey, (old) => old.filter((s) => s.id !== sceneId));
+    return { previousScenes };
+  },
+  onError: (err, sceneId, context) => {
     // Rollback on error
-    updateScenes(previousScenes);
-    toast.error("Failed to delete scene");
-  }
-};
+    queryClient.setQueryData(queryKey, context.previousScenes);
+    showError("Failed to delete scene");
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+  },
+});
 ```
 
-**Effort:** Medium (2 days)
+**Changes made:**
+- Rewrote `useSceneActions` hook with 3 `useMutation` hooks (delete, rename, duplicate)
+- Delete and rename use optimistic updates with rollback
+- Duplicate shows success toast (no optimistic update - needs server response for new ID)
+- Updated interface: `workspaceId`/`collectionId` instead of `updateScenes` callback
+- Added `isDeleting`, `isRenaming`, `isDuplicating` loading states
+- Added mutation keys to `lib/queryClient.ts`
+
+**Benefits:**
+- UI updates immediately when user performs action
+- Automatic rollback on API error
+- Toast notifications for success/error
+- Cleaner interface - components don't need to pass `updateScenes`
 
 ---
 
@@ -484,7 +492,7 @@ import styles from './WorkspaceSidebar.module.scss';
 ### Phase 3: Advanced (1-2 months)
 
 1. ✅ Add React Query for data fetching (done 2025-12-23)
-2. Add optimistic updates
+2. ✅ Add optimistic updates (done 2025-12-23)
 3. Add unit tests
 
 ---
@@ -546,6 +554,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Added optimistic updates to scene actions   |
 | 2025-12-23 | Added React Query for data fetching         |
 | 2025-12-23 | Migrated workspace/collections to Jotai     |
 | 2025-12-23 | Split App.tsx into 5 focused hooks          |

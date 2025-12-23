@@ -28,7 +28,7 @@ frontend/
 │   │   ├── useWorkspaces.ts  # Workspace loading (React Query + Jotai)
 │   │   ├── useCollections.ts # Collection CRUD (React Query + Jotai)
 │   │   ├── useScenesCache.ts # Scene fetching (React Query)
-│   │   └── useSceneActions.ts # Scene delete/rename/duplicate
+│   │   └── useSceneActions.ts # Scene CRUD with optimistic updates
 │   ├── components/           # Custom components
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
 │   │   ├── Settings/         # ProfilePage, MembersPage, settingsState.ts
@@ -150,21 +150,24 @@ Server state (scenes, workspaces, collections) uses React Query:
 import { useScenesCache } from "../../hooks/useScenesCache";
 import { useWorkspaces } from "../../hooks/useWorkspaces";
 import { useCollections } from "../../hooks/useCollections";
+import { useSceneActions } from "../../hooks/useSceneActions";
 
 // Fetching data
-const { scenes, isLoading, updateScenes } = useScenesCache({
+const { scenes, isLoading } = useScenesCache({
   workspaceId,
   collectionId,
   enabled: !!workspaceId,
 });
 
-// After mutations - invalidate queries
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "../../lib/queryClient";
+// Scene CRUD with optimistic updates
+const { deleteScene, renameScene, duplicateScene, isDeleting } = useSceneActions({
+  workspaceId,
+  collectionId,
+});
 
-const queryClient = useQueryClient();
+// Delete/rename update UI immediately, roll back on error
 await deleteScene(sceneId);
-queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+await renameScene(sceneId, "New Title");
 ```
 
 **See:** `/docs/planning/SCENES_CACHE.md` for caching details.

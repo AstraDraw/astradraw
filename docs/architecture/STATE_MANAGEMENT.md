@@ -289,23 +289,31 @@ export const queryKeys = {
 | `useScenesCache` | `queryKeys.scenes.list(workspaceId, collectionId)` | `listWorkspaceScenes()` |
 | `useWorkspaces` | `queryKeys.workspaces.list()` | `listWorkspaces()` |
 | `useCollections` | `queryKeys.collections.list(workspaceId)` | `listCollections()` |
+| `useSceneActions` | Uses `useMutation` | Scene CRUD with optimistic updates |
 
 **Usage:**
 ```typescript
 // In components - use the hooks
-const { scenes, isLoading, updateScenes } = useScenesCache({
+const { scenes, isLoading } = useScenesCache({
   workspaceId: workspace?.id,
   collectionId: activeCollectionId,
   enabled: !!workspace?.id,
 });
 
-// After mutations - invalidate queries
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "../lib/queryClient";
+// Scene actions with optimistic updates (UI updates immediately, rolls back on error)
+const { deleteScene, renameScene, duplicateScene, isDeleting } = useSceneActions({
+  workspaceId: workspace?.id,
+  collectionId: activeCollectionId,
+});
 
-const queryClient = useQueryClient();
+// Delete - UI updates immediately, rolls back if API fails
 await deleteScene(sceneId);
-queryClient.invalidateQueries({ queryKey: queryKeys.scenes.all });
+
+// Rename - UI updates immediately, rolls back if API fails
+await renameScene(sceneId, "New Title");
+
+// Duplicate - waits for API (needs new scene ID)
+const newScene = await duplicateScene(sceneId);
 ```
 
 ### Outside React Components
@@ -527,14 +535,14 @@ export const someActionAtom = atom(null, (get, set) => {
 excalidraw-app/
 ├── app-jotai.ts              # Jotai provider setup, authUserAtom
 ├── lib/                      # Shared utilities
-│   ├── queryClient.ts        # React Query client + query keys
+│   ├── queryClient.ts        # React Query client + query keys + mutation keys
 │   └── index.ts              # Re-exports
 ├── hooks/                    # Extracted logic hooks
 │   ├── useAutoSave.ts        # Save state machine, debounce, retry
 │   ├── useSceneLoader.ts     # Scene loading from workspace URLs
 │   ├── useUrlRouting.ts      # Popstate, URL parsing
 │   ├── useKeyboardShortcuts.ts  # Global keyboard handlers
-│   ├── useSceneActions.ts    # Scene CRUD operations
+│   ├── useSceneActions.ts    # Scene CRUD with optimistic updates (useMutation)
 │   ├── useScenesCache.ts     # Scenes fetching (React Query)
 │   ├── useCollections.ts     # Collection operations (React Query)
 │   └── useWorkspaces.ts      # Workspace operations (React Query)
@@ -568,6 +576,7 @@ excalidraw-app/
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Added optimistic updates to `useSceneActions` using `useMutation` |
 | 2025-12-23 | Added React Query for server state (scenes, workspaces, collections) |
 | 2025-12-23 | Removed manual cache atoms (`scenesCacheAtom`, `scenesRefreshAtom`) |
 | 2025-12-23 | Added `lib/queryClient.ts` with QueryClient and query key factory |
