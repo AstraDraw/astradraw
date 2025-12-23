@@ -1982,6 +1982,10 @@ Notification links use deep link format:
 | Cannot drag markers | Holding mouse to reposition comment marker doesn't work | Open |
 | NewThreadPopup offset | Popup opens ~200px to the right of click point instead of near it | Open |
 | Sidebar click doesn't center | Clicking comment in sidebar doesn't pan canvas to center the marker | Open |
+| Hover tooltip rotated | When hovering over marker, the tooltip/label appears rotated instead of horizontal | Open |
+| Comment menu clipped | 3-dot menu in ThreadPopup renders inside/clipped instead of on top (z-index/overflow issue) | Open |
+| Resolved comment still visible | After clicking resolve button, comment thread stays on canvas instead of hiding with smooth fade-out | Open |
+| Emoji button not working | Clicking emoji button in CommentInput does nothing - should open emoji picker like in collections | Open |
 
 ---
 
