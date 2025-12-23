@@ -1911,17 +1911,17 @@ Notification links use deep link format:
 - [x] Create CommentCreationOverlay
 - [x] Integrate with App.tsx
 
-### Phase 4: Comment Popup
-- [ ] Create ThreadPopup component
-- [ ] Create ThreadPopupHeader
-- [ ] Create CommentItem component
-- [ ] Create CommentInput with @mentions
-- [ ] Create MentionInput component
-- [ ] Add thread navigation (< > buttons)
-- [ ] Add resolve/reopen functionality
-- [ ] Add copy link functionality
-- [ ] Update router.ts for deep links
-- [ ] Handle deep link navigation in App.tsx
+### Phase 4: Comment Popup ✅
+- [x] Create ThreadPopup component
+- [x] Create ThreadPopupHeader
+- [x] Create CommentItem component
+- [x] Create CommentInput with @mentions
+- [x] Create MentionInput component
+- [x] Add thread navigation (< > buttons)
+- [x] Add resolve/reopen functionality
+- [x] Add copy link functionality
+- [x] Update router.ts for deep links
+- [x] Handle deep link navigation in App.tsx
 
 ### Phase 5: Sidebar Panel
 - [ ] Create CommentsSidebar component
@@ -1977,6 +1977,7 @@ Notification links use deep link format:
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Phase 4: Comment Popup complete (ThreadPopup, CommentItem, MentionInput, deep links) |
 | 2025-12-23 | Phase 3: Canvas Integration complete (markers, tooltip, creation overlay, C hotkey) |
 | 2025-12-23 | Phase 2: Frontend State & API complete (API client, types, hooks, atoms) |
 | 2025-12-23 | Phase 1: All 13 API tests passed, documented testing pattern |

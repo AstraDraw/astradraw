@@ -87,6 +87,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | [IMPLEMENTATION_PLANS.md](planning/IMPLEMENTATION_PLANS.md) | Ready-to-implement improvement plans |
 | [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) | Technical debt analysis |
 | [COLLABORATION_IMPLEMENTATION_PLAN.md](planning/COLLABORATION_IMPLEMENTATION_PLAN.md) | Collaboration system implementation |
+| [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) | Comment system implementation (in progress) |
 | [SCENES_CACHE.md](planning/SCENES_CACHE.md) | Scenes caching system |
 
 ---
