@@ -1923,16 +1923,17 @@ Notification links use deep link format:
 - [x] Update router.ts for deep links
 - [x] Handle deep link navigation in App.tsx
 
-### Phase 5: Sidebar Panel
-- [ ] Create CommentsSidebar component
-- [ ] Create CommentsSidebarHeader (search/filter)
-- [ ] Create ThreadListItem component
-- [ ] Implement search with highlighting
-- [ ] Implement sort (date/unread)
-- [ ] Implement show resolved toggle
-- [ ] Replace AppSidebar placeholder
-- [ ] Add CommentsFooterButton
-- [ ] Add translations for all strings
+### Phase 5: Sidebar Panel ✅
+- [x] Create CommentsSidebar component
+- [x] Create CommentsSidebarHeader (search/filter)
+- [x] Create ThreadListItem component
+- [x] Implement search with highlighting
+- [x] Implement sort (date/unread)
+- [x] Implement show resolved toggle
+- [x] Replace AppSidebar placeholder
+- [x] Add NewThreadPopup for creating threads on canvas click
+- [ ] Add CommentsFooterButton (deferred)
+- [x] Add translations for all strings
 
 ### Phase 6: Real-time Sync (Optional)
 - [ ] Add WebSocket events to room-service
@@ -1973,10 +1974,23 @@ Notification links use deep link format:
 
 ---
 
+## Known Bugs
+
+| Bug | Description | Status |
+|-----|-------------|--------|
+| Markers don't follow pan/zoom | Comment markers stay in place when navigating canvas instead of moving with content | Open |
+| Cannot drag markers | Holding mouse to reposition comment marker doesn't work | Open |
+| NewThreadPopup offset | Popup opens ~200px to the right of click point instead of near it | Open |
+| Sidebar click doesn't center | Clicking comment in sidebar doesn't pan canvas to center the marker | Open |
+
+---
+
 ## Changelog
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Phase 5: Sidebar Panel complete (CommentsSidebar, filters, search, ThreadListItem) |
+| 2025-12-24 | Added NewThreadPopup for creating new comment threads on canvas click |
 | 2025-12-23 | Phase 4: Comment Popup complete (ThreadPopup, CommentItem, MentionInput, deep links) |
 | 2025-12-23 | Phase 3: Canvas Integration complete (markers, tooltip, creation overlay, C hotkey) |
 | 2025-12-23 | Phase 2: Frontend State & API complete (API client, types, hooks, atoms) |
