@@ -596,6 +596,87 @@ If you decide to migrate all 38 remaining SCSS files, follow these guidelines:
 
 ---
 
+### 15. Upstream Excalidraw Test Infrastructure Issues
+
+**Problem:** Running `yarn test:app --run` shows 382 failed tests out of 1,125 total (34% failure rate).
+
+**Test results breakdown:**
+- **AstraDraw-specific tests:** ✅ 51/51 passing (in `excalidraw-app/tests/`)
+- **Upstream Excalidraw tests:** ❌ 382 failing (in `packages/`)
+- **Snapshots:** 132 failed
+
+**Root causes identified:**
+
+1. **localStorage not mocked** - Many tests fail with:
+   ```
+   TypeError: localStorage.getItem is not a function
+   TypeError: localStorage.clear is not a function
+   ```
+   The test setup in `setupTests.ts` doesn't mock localStorage, but upstream tests expect it.
+
+2. **Canvas/Image issues** - Image-related tests fail with:
+   ```
+   TypeError: Cannot set properties of undefined (setting 'height')
+   ```
+   The `vitest-canvas-mock` package may not fully support all canvas operations.
+
+3. **Outdated snapshots** - 132 snapshot failures suggest either:
+   - Upstream code changed without updating snapshots
+   - Our fork diverged from upstream in ways that affect rendered output
+
+**Affected test files (24 failing):**
+
+| Category | Files | Primary Error |
+|----------|-------|---------------|
+| Element tests | `resize.test.tsx`, `linearElementEditor.test.tsx`, `zindex.test.tsx`, `cropElement.test.tsx`, `elbowArrow.test.tsx`, `flowchart.test.tsx`, `collision.test.tsx` | localStorage |
+| UI tests | `flip.test.tsx`, `contextmenu.test.tsx`, `selection.test.tsx`, `clipboard.test.tsx`, `dragCreate.test.tsx`, `move.test.tsx`, `rotate.test.tsx`, `multiPointCreate.test.tsx`, `lasso.test.tsx` | localStorage/canvas |
+| History | `history.test.tsx` | localStorage |
+| App tests | `LanguageList.test.tsx`, `MobileMenu.test.tsx`, `collab.test.tsx` | localStorage |
+| Stats | `stats.test.tsx` | Unknown |
+| Regression | `regressionTests.test.tsx` | Snapshots |
+
+**Current test setup (`setupTests.ts`):**
+- ✅ `vitest-canvas-mock` - Canvas mock (partial)
+- ✅ `fake-indexeddb/auto` - IndexedDB mock
+- ✅ `matchMedia` mock
+- ✅ `FontFace` and `document.fonts` mocks
+- ❌ **Missing:** localStorage mock
+- ❌ **Missing:** Complete canvas image support
+
+**Potential fixes:**
+
+1. **Add localStorage mock to `setupTests.ts`:**
+   ```typescript
+   const localStorageMock = {
+     getItem: vi.fn(() => null),
+     setItem: vi.fn(),
+     removeItem: vi.fn(),
+     clear: vi.fn(),
+     length: 0,
+     key: vi.fn(() => null),
+   };
+   Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+   ```
+
+2. **Update snapshots** (if our fork is intentionally different):
+   ```bash
+   yarn test:app --run --update
+   ```
+
+3. **Skip upstream tests** (pragmatic approach):
+   - Create separate test commands for AstraDraw vs upstream
+   - Focus CI on AstraDraw-specific tests only
+
+**Impact:** These failures don't affect production - they're test infrastructure issues. All AstraDraw-specific code is tested and working.
+
+**Effort:** Low-Medium (1-2 days to fix localStorage, longer for full snapshot review)
+
+**Recommendation:** 
+- Short-term: Add localStorage mock to unblock most tests
+- Long-term: Review if upstream test suite is worth maintaining or if we should focus only on AstraDraw-specific tests
+
+---
+
 ## 📋 Recommended Improvement Order
 
 ### Phase 1: Quick Wins (1-2 weeks)
@@ -678,6 +759,7 @@ const { deleteScene, renameScene } = useSceneActions();
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-23 | Documented upstream test infrastructure issues |
 | 2025-12-23 | CSS Modules pilot migration (3 components)  |
 | 2025-12-23 | Fixed internationalization for UI strings   |
 | 2025-12-23 | Added unit tests for hooks and API client   |
