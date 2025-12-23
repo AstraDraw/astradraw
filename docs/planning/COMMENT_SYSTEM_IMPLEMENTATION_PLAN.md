@@ -1117,15 +1117,44 @@ Add to `App.tsx` via Excalidraw's `children` prop:
 
 ### Acceptance Criteria
 
-- [ ] Markers render at correct canvas positions
-- [ ] Markers update position on pan/zoom (subscribe to appState changes)
-- [ ] Resolved markers are hidden from canvas
-- [ ] Hover shows tooltip with preview (author, text, count)
-- [ ] Click opens thread popup (sets selectedThreadIdAtom)
-- [ ] C hotkey activates comment mode
-- [ ] Comment mode shows cursor feedback
-- [ ] Click-to-create converts viewport to scene coords correctly
-- [ ] ESC exits comment mode
+- [x] Markers render at correct canvas positions
+- [x] Markers update position on pan/zoom (subscribe to appState changes)
+- [x] Resolved markers are hidden from canvas
+- [x] Hover shows tooltip with preview (author, text, count)
+- [x] Click opens thread popup (sets selectedThreadIdAtom)
+- [x] C hotkey activates comment mode
+- [x] Comment mode shows cursor feedback
+- [x] Click-to-create converts viewport to scene coords correctly
+- [x] ESC exits comment mode
+
+### Implementation Status ✅
+
+**Completed:** 2025-12-23
+
+**Files Created:**
+- `frontend/excalidraw-app/components/Comments/ThreadMarkersLayer/ThreadMarkersLayer.tsx` - Canvas overlay container
+- `frontend/excalidraw-app/components/Comments/ThreadMarkersLayer/ThreadMarkersLayer.module.scss` - Overlay styles
+- `frontend/excalidraw-app/components/Comments/ThreadMarker/ThreadMarker.tsx` - Single pin marker with avatar
+- `frontend/excalidraw-app/components/Comments/ThreadMarker/ThreadMarker.module.scss` - Pin shape, hover effects
+- `frontend/excalidraw-app/components/Comments/ThreadMarkerTooltip/ThreadMarkerTooltip.tsx` - Hover preview
+- `frontend/excalidraw-app/components/Comments/ThreadMarkerTooltip/ThreadMarkerTooltip.module.scss` - Tooltip styles
+- `frontend/excalidraw-app/components/Comments/CommentCreationOverlay/CommentCreationOverlay.tsx` - Click-to-create mode
+- `frontend/excalidraw-app/components/Comments/CommentCreationOverlay/CommentCreationOverlay.module.scss` - Custom cursor, hint
+
+**Files Modified:**
+- `frontend/excalidraw-app/hooks/useKeyboardShortcuts.ts` - Added C hotkey for comment mode toggle
+- `frontend/excalidraw-app/App.tsx` - Integrated ThreadMarkersLayer and CommentCreationOverlay
+- `frontend/excalidraw-app/components/Comments/index.ts` - Added exports for new components
+
+**Key Implementation Details:**
+- Uses `sceneCoordsToViewportCoords` from `@excalidraw/common` for marker positioning
+- Uses `viewportCoordsToSceneCoords` for click-to-create coordinate conversion
+- React Query fetches threads with `resolved: false` filter for canvas markers
+- Pin shape uses asymmetric border-radius (`66px 67px 67px 0`) rotated -45deg
+- Z-index layering: markers at z-3, hover bumps to z-20
+- Full dark mode support using `@include dark-mode` mixin
+- ESC key cancels comment mode via capture phase event listener
+- C hotkey only triggers when authenticated, on a scene, and not typing in inputs
 
 ---
 
@@ -1873,14 +1902,14 @@ Notification links use deep link format:
 - [x] Create Jotai atoms in `commentsState.ts`
 - [ ] Write hook tests (deferred - add as future task)
 
-### Phase 3: Canvas Integration
-- [ ] Create ThreadMarkersLayer component
-- [ ] Create ThreadMarker component
-- [ ] Create ThreadMarkerTooltip component
-- [ ] Implement position updates on pan/zoom
-- [ ] Add comment mode (C hotkey)
-- [ ] Create CommentCreationOverlay
-- [ ] Integrate with App.tsx
+### Phase 3: Canvas Integration ✅
+- [x] Create ThreadMarkersLayer component
+- [x] Create ThreadMarker component
+- [x] Create ThreadMarkerTooltip component
+- [x] Implement position updates on pan/zoom
+- [x] Add comment mode (C hotkey)
+- [x] Create CommentCreationOverlay
+- [x] Integrate with App.tsx
 
 ### Phase 4: Comment Popup
 - [ ] Create ThreadPopup component
@@ -1948,6 +1977,7 @@ Notification links use deep link format:
 
 | Date | Changes |
 |------|---------|
+| 2025-12-23 | Phase 3: Canvas Integration complete (markers, tooltip, creation overlay, C hotkey) |
 | 2025-12-23 | Phase 2: Frontend State & API complete (API client, types, hooks, atoms) |
 | 2025-12-23 | Phase 1: All 13 API tests passed, documented testing pattern |
 | 2025-12-23 | Phase 1: Fixed controller path duplication (`@Controller()` not `@Controller('api/v2')`) |
