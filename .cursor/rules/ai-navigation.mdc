@@ -60,7 +60,7 @@ just fresh-dev        # Fresh start with local builds
 |---------|------|
 | Frontend entry | `frontend/excalidraw-app/App.tsx` |
 | State atoms | `frontend/excalidraw-app/components/Settings/settingsState.ts` |
-| API client | `frontend/excalidraw-app/auth/workspaceApi.ts` |
+| API client | `frontend/excalidraw-app/auth/api/` (modular structure) |
 | URL router | `frontend/excalidraw-app/router.ts` |
 | Backend entry | `backend/src/main.ts` |
 | Prisma schema | `backend/prisma/schema.prisma` |

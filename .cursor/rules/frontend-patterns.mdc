@@ -14,7 +14,10 @@ globs: ["frontend/**/*.ts", "frontend/**/*.tsx", "frontend/**/*.scss", "frontend
 ```
 frontend/
 ├── excalidraw-app/           # AstraDraw-specific code
-│   ├── auth/                 # Authentication (AuthProvider, workspaceApi)
+│   ├── auth/                 # Authentication
+│   │   ├── api/              # Modular API client (scenes, workspaces, etc.)
+│   │   ├── AuthContext.tsx   # Auth provider
+│   │   └── workspaceApi.ts   # Re-exports from api/ (backward compat)
 │   ├── components/           # Custom components
 │   │   ├── Workspace/        # Sidebar, SceneCard, LoginDialog
 │   │   ├── Settings/         # ProfilePage, MembersPage
@@ -130,12 +133,22 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 ## API Calls
 
+The API client is organized into domain-specific modules in `auth/api/`:
+
 ```typescript
+// Import from workspaceApi (backward compatible)
 import { listScenes, createScene } from "../../auth/workspaceApi";
 
-// All API calls use credentials: "include" for JWT cookies
+// Or import from specific modules (preferred for new code)
+import { listScenes, createScene } from "../../auth/api/scenes";
+import { listWorkspaces } from "../../auth/api/workspaces";
+import { listCollections } from "../../auth/api/collections";
+
+// All API calls automatically include credentials for JWT cookies
 const scenes = await listScenes();
 ```
+
+**API Modules:** `scenes.ts`, `workspaces.ts`, `collections.ts`, `teams.ts`, `members.ts`, `invites.ts`, `users.ts`, `talktracks.ts`
 
 ## Environment Variables in Docker
 

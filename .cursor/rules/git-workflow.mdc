@@ -62,6 +62,13 @@ cd ../backend && git checkout main && git merge feature/<name>
 cd ../room-service && git checkout main && git merge feature/<name>  # if changed
 ```
 
+Then push all repos:
+```bash
+just push-all
+```
+
+Or push individually: `just push-frontend`, `just push-backend`, `just push-room`
+
 ## Step 2: Update Changelogs (Only at Release!)
 
 **Do NOT update changelog on every commit** - this triggers GitHub Actions builds.

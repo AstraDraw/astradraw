@@ -486,6 +486,37 @@ test-setup-collab url="https://draw.local":
     deploy/tests/setup-collab-test.sh {{url}}
 
 # =============================================================================
+# GIT PUSH COMMANDS
+# =============================================================================
+
+# Push all repositories (main, frontend, backend, room-service)
+push-all:
+    #!/usr/bin/env bash
+    echo "🚀 Pushing all repositories..."
+    echo ""
+    echo "=== Main Repo ===" && git push && echo ""
+    echo "=== Frontend ===" && cd frontend && git push && cd .. && echo ""
+    echo "=== Backend ===" && cd backend && git push && cd .. && echo ""
+    echo "=== Room Service ===" && cd room-service && git push && cd .. && echo ""
+    echo "✅ All repositories pushed!"
+
+# Push main repository only
+push-main:
+    git push
+
+# Push frontend repository only
+push-frontend:
+    cd frontend && git push
+
+# Push backend repository only
+push-backend:
+    cd backend && git push
+
+# Push room-service repository only
+push-room:
+    cd room-service && git push
+
+# =============================================================================
 # RELEASE (use with caution)
 # =============================================================================
 

@@ -70,10 +70,35 @@ After committing, show:
 | room-service | - | No changes |
 ```
 
+## Step 6: Push (Optional)
+
+Ask the user if they want to push the commits. If yes:
+
+### Push All Repos with Changes
+```bash
+echo "=== Pushing Main ===" && git -C /Volumes/storage/01_Projects/astradraw push
+echo "=== Pushing Frontend ===" && git -C /Volumes/storage/01_Projects/astradraw/frontend push
+echo "=== Pushing Backend ===" && git -C /Volumes/storage/01_Projects/astradraw/backend push
+echo "=== Pushing Room Service ===" && git -C /Volumes/storage/01_Projects/astradraw/room-service push
+```
+
+### Push Summary
+```
+## Push Results
+
+| Repo | Status |
+|------|--------|
+| main | ✅ Pushed |
+| frontend | ✅ Pushed |
+| backend | ⏭️ No changes to push |
+| room-service | ⏭️ No changes to push |
+```
+
 ## Notes
 
 - Each repo is a **separate git repository**
 - Commits should be atomic and focused
 - Use consistent commit message style across repos
 - Always run `just check` before committing
+- Only push repos that have new commits
 

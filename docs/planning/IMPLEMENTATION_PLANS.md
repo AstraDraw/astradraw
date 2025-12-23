@@ -272,117 +272,73 @@ class ErrorBoundary extends React.Component<Props, State> {
 
 ---
 
-## Plan 5: Split WorkspaceSidebar
+## Plan 5: Split WorkspaceSidebar ✅ COMPLETED
+
+> **Completed:** 2025-12-23 - Split 1,235-line file into modular components and hooks
 
 **Goal:** Break the 1,252-line WorkspaceSidebar into smaller, focused components.
 
-**Why:** The file is too large to maintain effectively.
-
-### Prompt for New Chat
-
-```
-
-I want to split WorkspaceSidebar.tsx (1,252 lines) into smaller components.
-
-**Current Problem:**
-WorkspaceSidebar.tsx handles too many things:
-
-- Workspace selection dropdown
-- Collection list with CRUD
-- Scene list with CRUD
-- Search functionality
-- Login dialog
-- Multiple context menus
-- User menu
-
-**Task:**
-Create this structure:
+**Result:** Created modular structure:
 
 ```
 components/Workspace/WorkspaceSidebar/
-├── index.tsx                    # Main component (~200 lines)
-├── WorkspaceSelector.tsx        # Workspace dropdown + create
-├── CollectionNav.tsx            # Collection list + context menu
-├── SceneList.tsx                # Scene cards + context menu
-├── SidebarHeader.tsx            # Logo, search, collapse button
-├── SidebarFooter.tsx            # User avatar, settings menu
-├── hooks/
-│   ├── useWorkspaceData.ts      # Fetch workspaces, collections
-│   └── useSidebarState.ts       # UI state (menus, dialogs)
-└── WorkspaceSidebar.scss        # Keep existing styles
+├── index.ts                    # Re-export for backward compatibility
+├── WorkspaceSidebar.tsx        # Slim orchestrator (~310 lines)
+├── SidebarHeader.tsx           # Workspace selector dropdown
+├── SidebarSearch.tsx           # Search input with keyboard shortcut
+├── SidebarFooter.tsx           # User avatar and notifications
+├── icons.tsx                   # Shared SVG icons
+└── dialogs/
+    ├── CreateCollectionDialog.tsx
+    ├── EditCollectionDialog.tsx
+    └── CreateWorkspaceDialog.tsx
+
+hooks/
+├── useWorkspaces.ts            # Workspace loading, switching, creating
+├── useCollections.ts           # Collection CRUD operations
+└── useSidebarScenes.ts         # Scene loading with caching
 ```
 
-**Approach:**
-
-1. Start by extracting the simplest component (SidebarHeader)
-2. Move related state and handlers together
-3. Use Jotai atoms for shared state between components
-4. Keep the same visual appearance - this is refactoring only
-
-**Files to review:**
-
-- @frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.tsx
-- @frontend/excalidraw-app/components/Workspace/WorkspaceSidebar.scss
-- @frontend/excalidraw-app/components/Workspace/BoardModeNav.tsx (already extracted)
-- @frontend/excalidraw-app/components/Workspace/FullModeNav.tsx (already extracted)
-
-**Important:** Don't change any functionality. Just reorganize code.
+**Benefits:**
+- Main orchestrator reduced from 1,235 to ~310 lines
+- Reusable hooks for workspace, collection, and scene management
+- Dialog components extracted for better testability
+- Backward compatible - same export from `components/Workspace/`
 
 ```
 
 ---
 
-## Plan 6: Split workspaceApi.ts
+## Plan 6: Split workspaceApi.ts ✅ COMPLETED
+
+> **Completed:** 2025-12-23 - Split into modular auth/api/ structure
 
 **Goal:** Organize the 1,634-line API file into logical modules.
 
-**Why:** Hard to find functions, no separation of concerns.
-
-### Prompt for New Chat
+**Result:** Created modular structure:
 
 ```
+auth/api/
+├── client.ts           # Base fetch wrapper with ApiError class
+├── types.ts            # All TypeScript interfaces (~120 lines)
+├── scenes.ts           # Scene CRUD, collaboration, thumbnails
+├── talktracks.ts       # Talktrack recording management
+├── users.ts            # User profile, avatar
+├── workspaces.ts       # Workspace CRUD, avatar
+├── members.ts          # Workspace member management
+├── invites.ts          # Invite link management
+├── teams.ts            # Team CRUD
+├── collections.ts      # Collection CRUD, team access
+└── index.ts            # Re-exports all functions and types
 
-I want to split workspaceApi.ts (1,634 lines) into smaller modules.
-
-**Current Problem:**
-All API functions are in one file, making it hard to navigate.
-
-**Task:**
-Create this structure:
-
-```
-auth/
-├── api/
-│   ├── client.ts           # Base fetch wrapper, getApiBaseUrl, error handling
-│   ├── workspaces.ts       # listWorkspaces, createWorkspace, updateWorkspace, etc.
-│   ├── collections.ts      # listCollections, createCollection, updateCollection, etc.
-│   ├── scenes.ts           # listScenes, createScene, updateScene, deleteScene, etc.
-│   ├── teams.ts            # listTeams, createTeam, updateTeam, etc.
-│   ├── members.ts          # listMembers, inviteMember, removeMember, etc.
-│   ├── invites.ts          # createInvite, getInvite, acceptInvite, etc.
-│   └── index.ts            # Re-exports everything
-├── types.ts                # All TypeScript interfaces (Workspace, Scene, etc.)
-└── workspaceApi.ts         # DEPRECATED - re-exports from api/ for backwards compat
+auth/workspaceApi.ts    # Backward compat: re-exports from api/
 ```
 
-**Approach:**
-
-1. First, extract all types to `types.ts`
-2. Create `client.ts` with the base fetch wrapper
-3. Extract each domain (workspaces, collections, etc.) one at a time
-4. Keep `workspaceApi.ts` as a re-export file for backwards compatibility
-5. Update imports gradually (or use the re-export)
-
-**Files to review:**
-
-- @frontend/excalidraw-app/auth/workspaceApi.ts
-
-**Important:**
-
-- Keep all existing function signatures identical
-- The re-export file ensures nothing breaks during migration
-
-```
+**Benefits:**
+- Each domain file is focused (50-165 lines)
+- Centralized error handling via `apiRequest()` helper
+- `ApiError` class with HTTP status code
+- Full backward compatibility via re-exports
 
 ---
 
@@ -667,11 +623,11 @@ export function useDeleteSceneMutation() {
 | 1. useSceneActions | ✅ Completed | 2025-12-23 | Removed ~180 lines of duplicate code |
 | 2. Toast Notifications | ✅ Completed | 2025-12-23 | Replaced 11 alert() calls, removed 5 duplicate showSuccess functions |
 | 3. Loading Skeletons | ✅ Completed | 2025-12-23 | Added SceneCardSkeleton, CollectionItemSkeleton with shimmer animation |
-| 4. Error Boundaries | ⬜ Not Started | | |
-| 5. Split WorkspaceSidebar | ⬜ Not Started | | |
-| 6. Split workspaceApi.ts | ⬜ Not Started | | |
-| 7. useCollections Hook | ⬜ Not Started | | |
-| 8. useWorkspaces Hook | ⬜ Not Started | | |
+| 4. Error Boundaries | ✅ Completed | 2025-12-23 | Added ErrorBoundary with context-specific fallbacks |
+| 5. Split WorkspaceSidebar | ✅ Completed | 2025-12-23 | Reduced from 1,235 to ~310 lines |
+| 6. Split workspaceApi.ts | ✅ Completed | 2025-12-23 | Split into auth/api/ modules (11 files) |
+| 7. useCollections Hook | ✅ Completed | 2025-12-23 | Part of WorkspaceSidebar split |
+| 8. useWorkspaces Hook | ✅ Completed | 2025-12-23 | Part of WorkspaceSidebar split |
 | 9. Optimistic Updates | ⬜ Not Started | | Toast notifications now available |
 | 10. React Query | ⬜ Not Started | | |
 

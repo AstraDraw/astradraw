@@ -119,7 +119,7 @@ just up               # Start with production images
 | Frontend entry | `frontend/excalidraw-app/App.tsx` |
 | Backend entry | `backend/src/main.ts` |
 | State atoms | `frontend/excalidraw-app/components/Settings/settingsState.ts` |
-| API client | `frontend/excalidraw-app/auth/workspaceApi.ts` |
+| API client | `frontend/excalidraw-app/auth/api/` (modular structure) |
 | URL router | `frontend/excalidraw-app/router.ts` |
 | Prisma schema | `backend/prisma/schema.prisma` |
 | Docker config | `deploy/docker-compose.yml` |

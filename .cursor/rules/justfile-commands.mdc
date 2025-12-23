@@ -56,6 +56,11 @@ This project uses [just](https://github.com/casey/just) for common commands. **A
 |---------|-------------|
 | `just status` | Git status for all repos |
 | `just pull-all` | Pull latest from all repos |
+| `just push-all` | Push all repos (main, frontend, backend, room) |
+| `just push-main` | Push main repository only |
+| `just push-frontend` | Push frontend repository only |
+| `just push-backend` | Push backend repository only |
+| `just push-room` | Push room-service repository only |
 
 ### Setup & Testing
 
