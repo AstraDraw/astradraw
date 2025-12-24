@@ -1771,80 +1771,34 @@ const createMutation = useMutation({
 
 **Dependencies:** Phase 4 (Comment Popup), Notification System
 
-### 7.1 Backend Integration
+> **Detailed Plan:** The full Notification System implementation is documented in a separate file:
+> **[NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md)**
+>
+> This phase covers only the integration points between comments and notifications.
 
-**In comments.service.ts:**
+### 7.1 Summary
 
-```typescript
-async addComment(threadId: string, dto: CreateCommentDto, userId: string) {
-  const thread = await this.prisma.commentThread.findUnique({
-    where: { id: threadId },
-    include: { scene: true },
-  });
+Phase 7 requires the Notification System to be built first. The notification system includes:
 
-  const comment = await this.prisma.comment.create({
-    data: {
-      threadId,
-      content: dto.content,
-      mentions: dto.mentions ?? [],
-      createdById: userId,
-    },
-    include: { createdBy: true },
-  });
+1. **Backend**: Prisma `Notification` model, `NotificationsService`, REST API endpoints
+2. **Frontend**: Bell icon with badge, popup view, full notifications page
+3. **Integration**: Trigger notifications from `CommentsService` on thread/comment creation
 
-  // Create MENTION notifications for @mentioned users
-  if (dto.mentions?.length) {
-    await this.notificationService.createBatch(
-      dto.mentions.map((mentionedUserId) => ({
-        type: 'MENTION',
-        userId: mentionedUserId,
-        actorId: userId,
-        threadId,
-        commentId: comment.id,
-        sceneId: thread.sceneId,
-      }))
-    );
-  }
+### 7.2 Integration Points
 
-  // Create COMMENT notifications for thread participants (except author)
-  const participants = await this.getThreadParticipants(threadId);
-  const notifyUsers = participants.filter((id) => id !== userId);
-  
-  if (notifyUsers.length) {
-    await this.notificationService.createBatch(
-      notifyUsers.map((participantId) => ({
-        type: 'COMMENT',
-        userId: participantId,
-        actorId: userId,
-        threadId,
-        commentId: comment.id,
-        sceneId: thread.sceneId,
-      }))
-    );
-  }
+The comment system triggers notifications in two places:
 
-  return comment;
-}
+1. **`createThread()`** - When a new thread is created with @mentions
+2. **`addComment()`** - When a reply is added with @mentions or to notify thread participants
 
-private async getThreadParticipants(threadId: string): Promise<string[]> {
-  const comments = await this.prisma.comment.findMany({
-    where: { threadId },
-    select: { createdById: true },
-  });
-  return [...new Set(comments.map((c) => c.createdById))];
-}
-```
-
-### 7.2 Notification Types
-
-Following [NOTIFICATION_SYSTEM_RESEARCH.md](NOTIFICATION_SYSTEM_RESEARCH.md):
+### 7.3 Notification Types
 
 | Type | Icon | Message | Trigger |
 |------|------|---------|---------|
 | COMMENT | 💬 | "{User} posted a comment in {Scene}" | New comment on thread |
 | MENTION | @ | "{User} mentioned you in {Scene}" | User @mentioned |
 
-### 7.3 Click-through
+### 7.4 Click-through
 
 Notification links use deep link format:
 
@@ -1858,6 +1812,12 @@ Notification links use deep link format:
 - [ ] New comments create COMMENT notifications for thread participants
 - [ ] Notifications exclude the comment author
 - [ ] Clicking notification opens scene with thread/comment focused
+
+> **Implementation Details:** See [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) for:
+> - Prisma schema changes
+> - Backend service implementation
+> - Frontend components and hooks
+> - Full acceptance criteria per phase
 
 ---
 
@@ -1994,7 +1954,8 @@ Notification links use deep link format:
 ## Related Documentation
 
 - [COMMENT_SYSTEM_RESEARCH.md](COMMENT_SYSTEM_RESEARCH.md) - UI/UX research from Excalidraw Plus
-- [NOTIFICATION_SYSTEM_RESEARCH.md](NOTIFICATION_SYSTEM_RESEARCH.md) - Notification system design
+- [NOTIFICATION_SYSTEM_RESEARCH.md](NOTIFICATION_SYSTEM_RESEARCH.md) - Notification system design (research)
+- [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) - Notification system implementation plan (detailed)
 - [STATE_MANAGEMENT.md](../architecture/STATE_MANAGEMENT.md) - Jotai + React Query patterns
 - [URL_ROUTING.md](../architecture/URL_ROUTING.md) - URL routing patterns
 - [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](TECHNICAL_DEBT_AND_IMPROVEMENTS.md) - Established patterns to follow
