@@ -25,6 +25,33 @@ This document describes the technical architecture of AstraDraw for developers a
 
 React/Vite application forked from Excalidraw with AstraDraw-specific features.
 
+#### Excalidraw Fork Structure
+
+**IMPORTANT:** `frontend/packages/excalidraw/` is AstraDraw's fully controlled fork. This is NOT an external npm dependency.
+
+```
+frontend/
+├── excalidraw-app/           # AstraDraw-specific features (auth, workspaces, etc.)
+├── packages/
+│   ├── excalidraw/           # ← CONTROLLED FORK - we own this code
+│   ├── common/               # Shared utilities
+│   ├── element/              # Element types and utilities
+│   ├── math/                 # Math utilities
+│   └── utils/                # General utilities
+└── node_modules/
+    └── @excalidraw/          # ← Symlinks to packages/* (Yarn Workspaces)
+```
+
+When you see imports like `import { MainMenu } from "@excalidraw/excalidraw"`:
+- This resolves to **local files** in `packages/excalidraw/`, NOT npm
+- Yarn Workspaces creates symlinks: `node_modules/@excalidraw/excalidraw` → `packages/excalidraw`
+- Vite aliases resolve these imports directly to source files
+- Build process bundles YOUR local code from `packages/excalidraw/`
+
+**Development Pattern:**
+- **Core Excalidraw changes** (UI, behavior, actions) → Modify `packages/excalidraw/` directly
+- **AstraDraw-specific features** (auth, workspaces, backend integration) → Implement in `excalidraw-app/`
+
 **Key Modifications:**
 
 | File | Purpose |

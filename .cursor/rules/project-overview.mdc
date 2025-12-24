@@ -21,6 +21,66 @@ AstraDraw is a self-hosted Excalidraw fork with enterprise features: user authen
 
 **Important:** `frontend/`, `backend/`, `room-service/` are separate git repositories.
 
+## Excalidraw Fork Ownership
+
+**CRITICAL:** `frontend/packages/excalidraw/` is AstraDraw's fully controlled fork. This is NOT an external dependency.
+
+- ✅ We OWN and CONTROL all code in `packages/excalidraw/`
+- ✅ We can modify ANY file in this directory
+- ✅ We will NEVER merge upstream Excalidraw changes
+- ✅ This is LOCAL code in our monorepo, not from npm
+
+### How It Works
+
+When you see imports like `import { MainMenu } from "@excalidraw/excalidraw/index"`:
+
+```
+@excalidraw/excalidraw → frontend/packages/excalidraw/ (LOCAL)
+           ↑
+    NOT from npm/node_modules
+```
+
+**Yarn Workspaces** creates symlinks in `node_modules/@excalidraw/*` → `packages/*`
+
+**Vite aliases** resolve imports directly to `packages/excalidraw/` source files
+
+**Build process** bundles YOUR local files from `packages/excalidraw/`
+
+### Decision Pattern
+
+When implementing features that touch Excalidraw functionality:
+
+**ASK:** Is this a core Excalidraw UI/behavior change?
+- ✅ **YES** → Modify `packages/excalidraw/` source code directly
+- ❌ **NO** → Implement in `excalidraw-app/` (AstraDraw-specific layer)
+
+### Examples
+
+| Component Type | Where to Modify |
+|---|---|
+| Main menu items | `packages/excalidraw/components/main-menu/` |
+| Default UI behavior | `packages/excalidraw/components/` |
+| Core actions | `packages/excalidraw/actions/` |
+| App state/types | `packages/excalidraw/types.ts` |
+
+| Feature Type | Where to Implement |
+|---|---|
+| Auth integration | `excalidraw-app/auth/` |
+| Workspace features | `excalidraw-app/components/` |
+| Backend API calls | `excalidraw-app/auth/api/` |
+
+### Anti-Patterns to Avoid
+
+🚩 Importing internal Excalidraw hooks in `excalidraw-app/` (e.g., `useExcalidrawActionManager`)
+
+🚩 Passing `excalidrawAPI` through many prop layers to bypass encapsulation
+
+🚩 Using `updateScene()` to work around missing features
+
+🚩 Thinking "I can't change this because it's from Excalidraw"
+
+**Mindset:** Stop thinking "How to work AROUND Excalidraw?" Start thinking "How to IMPROVE Excalidraw source?"
+
 ## Documentation
 
 **Start here:** `/docs/README.md` - Full documentation index.

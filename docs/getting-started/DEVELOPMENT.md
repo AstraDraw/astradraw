@@ -14,6 +14,26 @@ open https://draw.local
 
 That's it! The app is now running with full hot-reloading support.
 
+## Project Structure
+
+AstraDraw consists of three separate git repositories:
+
+```
+astradraw/                    # Main orchestration repo
+├── frontend/                 # React app (separate git repo)
+│   ├── excalidraw-app/       # AstraDraw features
+│   └── packages/
+│       ├── excalidraw/       # ← OUR CONTROLLED FORK
+│       ├── common/
+│       ├── element/
+│       └── utils/
+├── backend/                  # NestJS API (separate git repo)
+├── room-service/             # WebSocket server (separate git repo)
+└── deploy/                   # Docker configs, certs
+```
+
+**Important:** `frontend/packages/excalidraw/` is AstraDraw's fully controlled fork of Excalidraw. This is NOT an external npm dependency - you can modify any file in this directory. See [Architecture](../architecture/ARCHITECTURE.md#excalidraw-fork-structure) for details.
+
 ## Development Modes
 
 AstraDraw supports two development approaches:
