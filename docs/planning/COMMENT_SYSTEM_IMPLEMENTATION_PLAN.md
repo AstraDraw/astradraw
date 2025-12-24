@@ -1929,10 +1929,10 @@ Notification links use deep link format:
 - [x] Expose socket/roomId via CollabAPI
 - [x] Integrate with App.tsx
 
-### Phase 7: Notification Integration
-- [ ] Create notifications on @mention
-- [ ] Create notifications on new comment
-- [ ] Test notification click-through
+### Phase 7: Notification Integration ✅
+- [x] Create notifications on @mention
+- [x] Create notifications on new comment
+- [ ] Test notification click-through (requires frontend Phase 4)
 
 ---
 

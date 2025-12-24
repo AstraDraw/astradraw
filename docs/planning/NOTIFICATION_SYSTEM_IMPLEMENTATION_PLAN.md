@@ -503,11 +503,28 @@ export class CommentsModule {}
 
 ### Acceptance Criteria
 
-- [ ] Creating a thread with @mentions creates MENTION notifications
-- [ ] Adding a comment with @mentions creates MENTION notifications
-- [ ] Adding a comment creates COMMENT notifications for thread participants
-- [ ] Comment author is excluded from notifications
-- [ ] Self-mentions don't create notifications
+- [x] Creating a thread with @mentions creates MENTION notifications
+- [x] Adding a comment with @mentions creates MENTION notifications
+- [x] Adding a comment creates COMMENT notifications for thread participants
+- [x] Comment author is excluded from notifications
+- [x] Self-mentions don't create notifications
+
+### Implementation Status ✅
+
+**Completed:** 2025-12-24
+
+**Files Modified:**
+- `backend/src/comments/comments.module.ts` - Added NotificationsModule import
+- `backend/src/comments/comments.service.ts` - Injected NotificationsService, added notification triggers to createThread and addComment, added getThreadParticipants helper
+
+**API Testing Results:**
+
+| Test | Description | Result |
+|------|-------------|--------|
+| Create thread with @mention | Admin creates thread mentioning Ruben | ✅ MENTION notification created for Ruben |
+| Self-mention excluded | Admin creates thread mentioning self | ✅ No notification created (correctly excluded) |
+| Reply creates COMMENT notification | Ruben replies to Admin's thread | ✅ COMMENT notification created for Admin |
+| Author excluded from COMMENT | Admin replies to own thread (no other participants) | ✅ No notification (author excluded) |
 
 ---
 
@@ -1312,12 +1329,12 @@ if (route.type === "notifications") {
 - [x] Implement mark all as read endpoint
 - [x] Add proper indexes for performance
 
-### Phase 2: Backend - Comment Integration
-- [ ] Inject NotificationsService into CommentsService
-- [ ] Add notification triggers to createThread
-- [ ] Add notification triggers to addComment
-- [ ] Add getThreadParticipants helper method
-- [ ] Test notification creation
+### Phase 2: Backend - Comment Integration ✅
+- [x] Inject NotificationsService into CommentsService
+- [x] Add notification triggers to createThread
+- [x] Add notification triggers to addComment
+- [x] Add getThreadParticipants helper method
+- [x] Test notification creation
 
 ### Phase 3: Frontend - API & State
 - [ ] Create `auth/api/notifications.ts`
@@ -1392,6 +1409,7 @@ This order allows incremental testing - you can verify notifications are being c
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Phase 2: Backend Comment Integration complete (notification triggers in CommentsService) |
 | 2025-12-24 | Phase 1: Backend Database & Module complete (schema, migration, endpoints, service) |
 | 2025-12-24 | Added skeleton loading components following Tech Debt #7 pattern |
 | 2025-12-24 | Added mutation keys to queryClient.ts (Tech Debt #8 pattern) |

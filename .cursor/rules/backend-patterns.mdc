@@ -135,6 +135,41 @@ npm run prisma:generate   # Generate Prisma client
 npm run prisma:migrate:dev # Run migrations (development)
 ```
 
+## Comment System & Mentions
+
+### Mention Format
+
+Frontend stores mentions in comment text as `@[DisplayName](userId)` but sends an array of user IDs:
+
+```typescript
+// Frontend sends:
+{
+  "content": "Hey @[John](abc123def456), check this out!",
+  "mentions": ["abc123def456"]
+}
+```
+
+The `mentions` array contains **user IDs** (cuid format), not usernames or emails.
+
+### Notification Integration
+
+When creating threads or comments with mentions, notifications are triggered automatically:
+
+```typescript
+// In CommentsService
+if (dto.mentions?.length) {
+  await this.notificationsService.createMentionNotifications({
+    actorId: userId,
+    mentions: dto.mentions,  // Array of user IDs
+    threadId: thread.id,
+    commentId: comment.id,
+    sceneId,
+  });
+}
+```
+
+**Self-mentions are excluded** - if a user mentions themselves, no notification is created.
+
 ## Environment Variables & Docker Secrets
 
 All sensitive configuration supports Docker secrets via the `_FILE` suffix pattern.

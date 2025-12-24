@@ -106,11 +106,36 @@ Run `just dev-status` to check, or `just dev` to start it.
 - React changes hot-reload without refresh
 - No Docker rebuilds needed
 
+### When Backend Changes Don't Appear
+
+If backend code changes aren't being picked up (new logs don't appear, new endpoints 404):
+
+1. **First try:** `just dev-restart-backend`
+2. **If that fails:** `just dev-stop && just dev`
+
+This commonly happens after:
+- Changing module imports/exports
+- Adding new service injections
+- Modifying providers arrays
+
+### When Testing Backend Features
+
+After implementing backend changes, verify with curl:
+
+1. Check `just dev-status` - all services should be ✅
+2. Login and save cookies to a temp file
+3. Make authenticated API calls with `-b /tmp/cookies.txt`
+4. Use `docker exec deploy-postgres-1 psql` for quick database checks
+
+See `@common-issues-dev` for curl examples.
+
 ### When to use which command
 
 | Scenario | Command |
 |----------|---------|
 | Daily development | `just dev` |
+| Backend not picking up changes | `just dev-restart-backend` |
+| Full restart needed | `just dev-stop && just dev` |
 | Testing Dockerfile changes | `just up-local` |
 | Testing production images | `just fresh` |
 | Pre-release verification | `just fresh-local` then `just fresh` |
