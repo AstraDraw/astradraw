@@ -1248,14 +1248,35 @@ if (route.type === "notifications") {
 
 ### Acceptance Criteria
 
-- [ ] `/workspace/{slug}/notifications` route works
-- [ ] Page shows all notifications in timeline view
-- [ ] Vertical line connects timeline items
-- [ ] Infinite scroll loads more on scroll
-- [ ] Unread notifications show pulsing badge
-- [ ] Click notification navigates to scene with thread focused
-- [ ] "No more notifications" shown at bottom
-- [ ] Empty state when no notifications
+- [x] `/workspace/{slug}/notifications` route works
+- [x] Page shows all notifications in timeline view
+- [x] Vertical line connects timeline items
+- [x] Infinite scroll loads more on scroll
+- [x] Unread notifications show pulsing badge
+- [x] Click notification navigates to scene with thread focused
+- [x] "No more notifications" shown at bottom
+- [x] Empty state when no notifications
+
+### Implementation Status ✅
+
+**Completed:** 2025-12-24
+
+**Files Created:**
+- `frontend/excalidraw-app/components/Notifications/NotificationsPage/NotificationsPage.tsx` - Main page with infinite scroll
+- `frontend/excalidraw-app/components/Notifications/NotificationsPage/NotificationsPage.module.scss` - Timeline styles
+- `frontend/excalidraw-app/components/Notifications/NotificationsPage/NotificationTimelineItem.tsx` - Single timeline item
+- `frontend/excalidraw-app/components/Notifications/NotificationsPage/index.ts` - Module exports
+- `frontend/excalidraw-app/components/Notifications/UnreadBadge/UnreadBadge.tsx` - Pulsing unread badge
+- `frontend/excalidraw-app/components/Notifications/UnreadBadge/UnreadBadge.module.scss` - Badge styles with animation
+- `frontend/excalidraw-app/components/Notifications/UnreadBadge/index.ts` - Module exports
+
+**Files Modified:**
+- `frontend/excalidraw-app/router.ts` - Added notifications route type, pattern, URL builder, route helpers
+- `frontend/excalidraw-app/components/Settings/settingsState.ts` - Added "notifications" to DashboardView, navigateToNotificationsAtom
+- `frontend/excalidraw-app/hooks/useUrlRouting.ts` - Added notifications case to route handler
+- `frontend/excalidraw-app/components/Workspace/WorkspaceMainContent/WorkspaceMainContent.tsx` - Added notifications case
+- `frontend/excalidraw-app/components/Notifications/index.ts` - Added new component exports
+- `frontend/excalidraw-app/components/Notifications/NotificationPopup/NotificationPopup.tsx` - Use buildNotificationsUrl
 
 ---
 
@@ -1392,13 +1413,13 @@ if (route.type === "notifications") {
 - [x] Update SidebarFooter to use NotificationBell
 - [x] Add click-outside handling
 
-### Phase 5: Frontend - Notifications Page
-- [ ] Add notifications route to router.ts
-- [ ] Create NotificationsPage component
-- [ ] Create NotificationTimelineItem component
-- [ ] Create UnreadBadge component
-- [ ] Implement infinite scroll
-- [ ] Integrate with App.tsx
+### Phase 5: Frontend - Notifications Page ✅
+- [x] Add notifications route to router.ts
+- [x] Create NotificationsPage component
+- [x] Create NotificationTimelineItem component
+- [x] Create UnreadBadge component
+- [x] Implement infinite scroll
+- [x] Integrate with WorkspaceMainContent
 
 ### Phase 6: Translations ✅
 - [x] Add strings to en.json
@@ -1446,6 +1467,7 @@ This order allows incremental testing - you can verify notifications are being c
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Phase 5: Frontend Notifications Page complete (NotificationsPage, NotificationTimelineItem, UnreadBadge, routing) |
 | 2025-12-24 | Phase 6: Translations complete (en.json, ru-RU.json) |
 | 2025-12-24 | Phase 4: Frontend Bell & Popup complete (NotificationBell, NotificationBadge, NotificationPopup, skeletons) |
 | 2025-12-24 | Phase 3: Frontend API & State complete (API client, types, hooks, atoms) |
