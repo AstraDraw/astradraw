@@ -177,6 +177,31 @@ if (isLoading) {
 
 Available: `SceneCardSkeletonGrid`, `CollectionItemSkeletonList`
 
+## 12. Overlay Components Not Moving During Pan/Zoom
+
+**Problem:** Custom overlay components (comment markers, popups) don't update position during pan/zoom.
+
+**Root Cause:** `useApp().state` and `useUIAppState()` are NOT reactive for `scrollX`/`scrollY`/`zoom`.
+
+**Solution:** Subscribe to changes via `excalidrawAPI`:
+
+```typescript
+useEffect(() => {
+  const unsubscribe = excalidrawAPI.onScrollChange(() => {
+    setAppState(excalidrawAPI.getAppState());
+  });
+  return unsubscribe;
+}, [excalidrawAPI]);
+```
+
+**Coordinate conversion:** When positioning inside Excalidraw container, subtract offsets:
+```typescript
+const containerX = viewportX - appState.offsetLeft;
+const containerY = viewportY - appState.offsetTop;
+```
+
+**See:** `/docs/planning/FORK_ARCHITECTURE_REFACTORING_PLAN.md` - "Lessons Learned" section.
+
 ## Dark Mode Color Reference
 
 | Element | Light | Dark |
