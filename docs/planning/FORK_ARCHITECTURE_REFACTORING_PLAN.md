@@ -146,15 +146,50 @@ export function ThreadMarkersLayer({
 }
 ```
 
-After:
+After (INCORRECT - doesn't work for scroll/zoom tracking):
 ```typescript
+// ❌ This approach DOES NOT WORK for components tracking pan/zoom!
 // ThreadMarkersLayer.tsx
 import { useUIAppState } from "@excalidraw/excalidraw";
 
 export function ThreadMarkersLayer({ sceneId }: ThreadMarkersLayerProps) {
-  // useUIAppState automatically updates on state changes
+  // useUIAppState does NOT update on scrollX/scrollY/zoom changes!
   const appState = useUIAppState();
-  // No need for useEffect subscription - hook handles reactivity
+  // Markers will NOT move during pan/zoom
+}
+```
+
+After (CORRECT - for components that need scroll/zoom reactivity):
+```typescript
+// ✅ Components tracking pan/zoom MUST use subscriptions
+// ThreadMarkersLayer.tsx
+export function ThreadMarkersLayer({ sceneId, excalidrawAPI }: ThreadMarkersLayerProps) {
+  const [appState, setAppState] = useState<AppState | null>(null);
+
+  // Subscribe to scroll/zoom changes
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    setAppState(excalidrawAPI.getAppState());
+    const unsubscribe = excalidrawAPI.onScrollChange(() => {
+      setAppState(excalidrawAPI.getAppState());
+    });
+    return unsubscribe;
+  }, [excalidrawAPI]);
+
+  // Also subscribe to offset changes (sidebar open/close)
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    let lastOffsetLeft = excalidrawAPI.getAppState().offsetLeft;
+    
+    const unsubscribe = excalidrawAPI.onChange(() => {
+      const current = excalidrawAPI.getAppState();
+      if (current.offsetLeft !== lastOffsetLeft) {
+        lastOffsetLeft = current.offsetLeft;
+        setAppState(current);
+      }
+    });
+    return unsubscribe;
+  }, [excalidrawAPI]);
   // ...
 }
 ```
@@ -172,6 +207,16 @@ export function ThreadMarkersLayer({ sceneId }: ThreadMarkersLayerProps) {
 - `useApp` and `useUIAppState` only work inside Excalidraw's component tree
 - Components rendered outside (e.g., portals to document.body) still need the API prop
 - Migration should be gradual to avoid breaking changes
+
+> ⚠️ **CRITICAL LIMITATION DISCOVERED:**
+> 
+> **`useApp().state` is NOT reactive!** Components that access `app.state` directly will NOT re-render when state changes. This makes `useApp()` unsuitable for components that need to track `scrollX`, `scrollY`, `zoom`, or `offsetLeft`/`offsetTop`.
+> 
+> For reactive state access, components must still use:
+> - `excalidrawAPI.onScrollChange()` for scroll/zoom changes
+> - `excalidrawAPI.onChange()` for general state changes (including `offsetLeft`/`offsetTop`)
+> 
+> See **"Lessons Learned & Caveats"** section at the end of this document for details.
 
 ---
 
@@ -484,6 +529,15 @@ export const usePresentationMode = () => {
 - Need to handle state restoration carefully on exit
 - Some AstraDraw-specific features (Talktrack integration) remain in app layer
 
+> ✅ **Safe to implement:** This phase is NOT affected by the reactivity issues discovered in Phase 1.
+> 
+> **Why it's safe:**
+> - `useUIAppState()` is used to read `presentationMode.currentSlide` which only changes on discrete user actions (button clicks, keyboard shortcuts), not on continuous scroll/zoom
+> - The action system is reactive by design - when actions update `appState.presentationMode`, components using `useUIAppState()` will re-render
+> - No need to track `scrollX`/`scrollY`/`zoom` changes in real-time
+> 
+> **One exception:** If you add animated slide transitions that need to track scroll position during animation, use `excalidrawAPI.onScrollChange()` for that specific case.
+
 ---
 
 ## 3. Native Comment Markers
@@ -784,27 +838,56 @@ private handleCommentMarkerClick(x: number, y: number): string | null {
 - Tooltip/hover states may still need DOM elements
 - Consider hybrid approach: canvas for markers, DOM for popups
 
+> ⚠️ **Implementation notes based on Phase 1 learnings:**
+> 
+> **What's safe:**
+> - The canvas rendering (`renderCommentMarkers()`) is called on every render frame by Excalidraw's render pipeline, so it will always have correct `scrollX`/`scrollY`/`zoom` values
+> - The simplified `ThreadMarkersLayer` only **writes** data to appState via `updateScene()`, it doesn't need to **read** scroll/zoom state
+> - Click detection code runs inside `App.tsx` where `this.state` is always current
+> 
+> **What to watch out for:**
+> - The simplified `ThreadMarkersLayer` uses `useApp()` - this is fine for calling `app.updateScene()`, but do NOT use `app.state` to read scroll/zoom values
+> - If you need to filter markers by visibility (e.g., skip markers outside viewport), do this calculation in the canvas render function, NOT in React component
+> - The coordinate conversion in `renderCommentMarkers` must subtract `offsetLeft`/`offsetTop` (already shown in the code example)
+> 
+> **Coordinate system reminder:**
+> ```typescript
+> // In canvas render function - correct:
+> const viewportX = marker.x * appState.zoom.value + appState.scrollX - appState.offsetLeft;
+> const viewportY = marker.y * appState.zoom.value + appState.scrollY - appState.offsetTop;
+> ```
+
 ---
 
 ## Recommended Implementation Order
 
-### Phase 1: Foundation (1 day)
-1. **Export hooks** from `packages/excalidraw/index.tsx`
-2. **Migrate 2-3 simple components** to validate approach
-3. **Document pattern** for future migrations
+### Phase 1: Foundation (1 day) - ⚠️ PARTIALLY COMPLETED
 
-### Phase 2: Presentation Actions (1-2 days)
+**Completed:**
+- ✅ Exported `useApp`, `useAppProps`, `useUIAppState` from `packages/excalidraw/index.tsx`
+
+**Not completed (blocked by reactivity limitations):**
+- ❌ Component migrations - `useApp().state` is not reactive for scroll/zoom tracking
+- ❌ Cannot remove `excalidrawAPI` prop from components that track pan/zoom
+
+**Outcome:** Hooks are exported and available, but components tracking scroll/zoom must continue using `excalidrawAPI.onScrollChange()` subscriptions. See "Lessons Learned & Caveats" section.
+
+### Phase 2: Presentation Actions (1-2 days) - ✅ READY TO IMPLEMENT
 1. **Add presentation state** to AppState
 2. **Create actionPresentation.ts** with all actions
 3. **Simplify usePresentationMode** to use actions
 4. **Test keyboard shortcuts** work correctly
 
-### Phase 3: Comment Markers (2-3 days)
+*This phase is not affected by Phase 1 limitations - see notes in Phase 2 Caveats section.*
+
+### Phase 3: Comment Markers (2-3 days) - ✅ READY TO IMPLEMENT (with notes)
 1. **Add render function** to clients.ts
 2. **Integrate into render pipeline**
 3. **Simplify ThreadMarkersLayer** to data provider
 4. **Add click detection** for marker selection
 5. **Test pan/zoom performance**
+
+*Review implementation notes in Phase 3 Caveats section before starting.*
 
 ### Phase 4: Cleanup (ongoing)
 1. **Continue migrating** components from excalidrawAPI prop
@@ -914,9 +997,144 @@ export const renderMyFeature = ({
 
 ---
 
+## Lessons Learned & Caveats
+
+This section documents important discoveries made during implementation that should inform future refactoring work.
+
+### 1. `useApp().state` is NOT Reactive
+
+**Discovery:** When we attempted to migrate `ThreadMarkersLayer`, `NewThreadPopup`, and `CommentsSidebar` to use `useApp().state` instead of `excalidrawAPI.getAppState()`, the comment markers stopped moving during pan/zoom.
+
+**Root Cause:** `app.state` (from `useApp()`) is a direct reference to the App component's state object. Accessing it does NOT trigger React re-renders when the state changes. It's essentially a snapshot that becomes stale.
+
+**Correct Approach:** For components that need to react to state changes (especially `scrollX`, `scrollY`, `zoom`):
+- Use `excalidrawAPI.onScrollChange()` to subscribe to scroll/zoom updates
+- Use `excalidrawAPI.onChange()` to subscribe to general state changes
+- Call `excalidrawAPI.getAppState()` inside the callback to get fresh state
+
+```typescript
+// ❌ WRONG - state is not reactive
+const app = useApp();
+const zoom = app.state.zoom; // Won't update on zoom changes
+
+// ✅ CORRECT - subscribe to changes
+useEffect(() => {
+  const unsubscribe = excalidrawAPI.onScrollChange(() => {
+    setAppState(excalidrawAPI.getAppState()); // Get fresh state
+  });
+  return unsubscribe;
+}, [excalidrawAPI]);
+```
+
+**When `useUIAppState()` IS useful:**
+- Components that only need to read state once (not track changes)
+- Components that re-render for other reasons and just need current values
+- Static UI that doesn't need to animate with pan/zoom
+
+### 2. `onScrollChange` Does NOT Fire on `offsetLeft`/`offsetTop` Changes
+
+**Discovery:** When the left workspace sidebar opens/closes, the canvas container shifts (changing `offsetLeft`), but `onScrollChange` is not triggered because only `scrollX`, `scrollY`, and `zoom` changes fire it.
+
+**Impact:** Comment markers appeared to shift when sidebar state changed because their positions weren't recalculated.
+
+**Solution:** Subscribe to both `onScrollChange` AND `onChange`, checking for offset changes:
+
+```typescript
+// Subscribe to scroll/zoom
+useEffect(() => {
+  const unsubscribe = excalidrawAPI.onScrollChange(() => {
+    setAppState(excalidrawAPI.getAppState());
+  });
+  return unsubscribe;
+}, [excalidrawAPI]);
+
+// Also subscribe to offset changes (sidebar open/close)
+useEffect(() => {
+  let lastOffsetLeft = excalidrawAPI.getAppState().offsetLeft;
+  let lastOffsetTop = excalidrawAPI.getAppState().offsetTop;
+
+  const unsubscribe = excalidrawAPI.onChange(() => {
+    const currentState = excalidrawAPI.getAppState();
+    if (
+      currentState.offsetLeft !== lastOffsetLeft ||
+      currentState.offsetTop !== lastOffsetTop
+    ) {
+      lastOffsetLeft = currentState.offsetLeft;
+      lastOffsetTop = currentState.offsetTop;
+      setAppState(currentState);
+    }
+  });
+  return unsubscribe;
+}, [excalidrawAPI]);
+```
+
+### 3. Viewport vs Container Coordinates
+
+**Discovery:** `sceneCoordsToViewportCoords()` returns coordinates relative to the **browser window** (viewport), but components rendered inside the Excalidraw container need coordinates relative to **that container**.
+
+**Impact:** When sidebar is open, the Excalidraw container is shifted right by `offsetLeft` pixels. If markers use viewport coordinates directly, they appear shifted by double the offset.
+
+**Solution:** Subtract `offsetLeft`/`offsetTop` when positioning elements inside the Excalidraw container:
+
+```typescript
+// sceneCoordsToViewportCoords returns viewport (window) coordinates
+const viewportCoords = sceneCoordsToViewportCoords(
+  { sceneX: thread.x, sceneY: thread.y },
+  appState,
+);
+
+// Convert to container-relative coordinates
+const containerCoords = {
+  x: viewportCoords.x - appState.offsetLeft,
+  y: viewportCoords.y - appState.offsetTop,
+};
+```
+
+### 4. Browser Zoom vs Canvas Zoom on Trackpad
+
+**Discovery:** Pinch-to-zoom gestures on trackpad only zoom the canvas when the cursor is over the canvas element. When cursor is over toolbar or other UI elements, the browser's native zoom kicks in, zooming the entire page.
+
+**Root Cause:** Excalidraw's `handleWheel` only processes events where `event.target` is a canvas, textarea, or iframe. For other targets, it only calls `preventDefault()` if `ctrlKey` is pressed, but then returns early without zooming the canvas.
+
+**Solution:** Add a global wheel event handler at the app level that:
+1. Intercepts pinch-zoom gestures (`ctrlKey` or `metaKey` pressed)
+2. Prevents browser zoom when cursor is over Excalidraw UI (but not canvas)
+3. Forwards the zoom to the canvas via `excalidrawAPI.updateScene()`
+
+```typescript
+useEffect(() => {
+  const preventBrowserZoom = (event: WheelEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      const target = event.target as HTMLElement;
+      const isOnCanvas = target instanceof HTMLCanvasElement;
+      const isInsideExcalidraw = target.closest(".excalidraw");
+
+      if (isInsideExcalidraw && !isOnCanvas) {
+        event.preventDefault();
+        // Forward zoom to canvas via excalidrawAPI.updateScene()
+      }
+    }
+  };
+
+  document.addEventListener("wheel", preventBrowserZoom, {
+    passive: false,
+    capture: true,
+  });
+  return () => document.removeEventListener("wheel", preventBrowserZoom, { capture: true });
+}, [excalidrawAPI]);
+```
+
+---
+
 ## Changelog
 
 | Date | Changes |
 |------|---------|
 | 2025-12-24 | Initial document with three refactoring plans |
+| 2025-12-24 | Phase 1 attempted: Exported `useApp`, `useAppProps`, `useUIAppState` from `packages/excalidraw/index.tsx` |
+| 2025-12-24 | Phase 1 reverted: Component migrations reverted due to `useApp().state` not being reactive for scroll/zoom tracking. Hook exports retained for future use. |
+| 2025-12-24 | Bug fix: Added `onChange` subscription to `ThreadMarkersLayer` and `NewThreadPopup` to handle `offsetLeft`/`offsetTop` changes (sidebar open/close) |
+| 2025-12-24 | Bug fix: Fixed marker position calculation to subtract `offsetLeft`/`offsetTop` for container-relative positioning |
+| 2025-12-24 | Bug fix: Added global wheel handler to prevent browser zoom when pinch-zooming over UI elements |
+| 2025-12-24 | Added "Lessons Learned & Caveats" section documenting reactivity issues, coordinate systems, and zoom handling |
 
