@@ -883,14 +883,15 @@ private handleCommentMarkerClick(x: number, y: number): string | null {
 
 *Removed `actionTogglePresentationLaser` - laser is now implicit (like original Excalidraw)*
 
-### Phase 3: Comment Markers (2-3 days) - ✅ READY TO IMPLEMENT (with notes)
-1. **Add render function** to clients.ts
-2. **Integrate into render pipeline**
-3. **Simplify ThreadMarkersLayer** to data provider
-4. **Add click detection** for marker selection
-5. **Test pan/zoom performance**
+### Phase 3: Comment Markers (2-3 days) - ✅ COMPLETED
+1. ✅ **Added `CommentMarker` interface** to `packages/excalidraw/types.ts`
+2. ✅ **Added `commentMarkers` to `AppState`** and `InteractiveCanvasAppState`
+3. ✅ **Created `renderCommentMarkers()`** in `clients.ts` following `renderRemoteCursors` pattern
+4. ✅ **Integrated into render pipeline** in `interactiveScene.ts` after remote cursors
+5. ✅ **Simplified `ThreadMarkersLayer`** to data provider with invisible hit targets for click/drag
+6. ✅ **Added default state** `commentMarkers: []` in `appState.ts`
 
-*Review implementation notes in Phase 3 Caveats section before starting.*
+*Canvas rendering eliminates position lag during pan/zoom. Hit targets preserved for interaction.*
 
 ### Phase 4: Cleanup (ongoing)
 1. **Continue migrating** components from excalidrawAPI prop
@@ -1142,4 +1143,5 @@ useEffect(() => {
 | 2025-12-24 | Added "Lessons Learned & Caveats" section documenting reactivity issues, coordinate systems, and zoom handling |
 | 2025-12-24 | **Phase 2 completed**: Created `actionPresentation.ts` with 6 presentation actions (start, next, prev, exit, toggle theme, go to slide). Added `PresentationModeState` to AppState. Refactored `usePresentationMode.ts` to use action system for keyboard handling. |
 | 2025-12-24 | **Phase 2 enhanced**: Implemented implicit laser (any pointer draws laser trail like original Excalidraw), blocked pan/zoom in presentation mode, removed laser toggle button/action, hid workspace sidebar/trigger/comment markers during presentation. |
+| 2025-12-24 | **Phase 3 completed**: Implemented native comment markers rendering on canvas via `renderCommentMarkers()` in `clients.ts`. Added `CommentMarker` interface and `commentMarkers` to `AppState`. `ThreadMarkersLayer` now acts as data provider with invisible hit targets for click/drag interaction. Canvas rendering eliminates position lag during pan/zoom. |
 
