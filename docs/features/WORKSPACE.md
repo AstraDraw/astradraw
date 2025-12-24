@@ -65,25 +65,45 @@ All views share the full navigation sidebar (FullModeNav) with:
 When a user creates a new scene from a collection's context menu:
 
 1. **Scene Creation**: Backend creates the scene in the specified collection
+   - For **shared workspace non-private collections**: Backend auto-generates `roomId` and `roomKey` for collaboration
 2. **Canvas Preparation**: Canvas is reset for the new scene
 3. **State Updates**:
    - `currentSceneId` and `currentSceneTitle` are set
    - `activeCollectionId` is set to the collection where scene was created
-4. **Sidebar Behavior**: Sidebar stays open and switches to "board" mode
-5. **Mode Switch**: App switches from dashboard to canvas mode
-6. **Result**: User sees the canvas with sidebar showing the collection's scenes, new scene highlighted
+4. **Collaboration Initialization** (for shared workspaces):
+   - If workspace type is `SHARED` and scene has `roomId`:
+     - Call `startCollaboration(sceneId)` API to get `roomKey`
+     - Call `collabAPI.startCollaboration({ roomId, roomKey, isAutoCollab: true })`
+     - Set `isAutoCollabScene` to `true`
+   - This ensures the scene is immediately ready for real-time collaboration
+5. **Sidebar Behavior**: Sidebar stays open and switches to "board" mode
+6. **Mode Switch**: App switches from dashboard to canvas mode
+7. **Result**: User sees the canvas with sidebar showing the collection's scenes, new scene highlighted
 
 This ensures continuity - the user can immediately start drawing while seeing their new scene in the collection's scene list.
+
+> **See also:** [Auto-Collaboration](AUTO_COLLABORATION.md) for full details on automatic collaboration for shared collections.
 
 ### Opening an Existing Scene
 
 When a user clicks on a scene card:
 
-1. **Data Loading**: Scene data is fetched from backend
+1. **Data Loading**: Scene data is fetched from backend via `loadWorkspaceScene()`
+   - Response includes `access`, `roomId`, and `roomKey` (if user has `canCollaborate` permission)
 2. **Canvas Update**: Canvas is populated with scene elements and app state
 3. **State Updates**: `currentSceneId` and `currentSceneTitle` are set
-4. **Mode Switch**: App switches to canvas mode
-5. **Sidebar**: Switches to "board" mode showing scenes from the active collection
+4. **Collaboration Auto-Join** (for shared workspaces):
+   - If `access.canCollaborate && roomId && roomKey`:
+     - Call `collabAPI.startCollaboration({ roomId, roomKey, isAutoCollab: true })`
+     - Data is loaded from **room storage** (source of truth for collaboration)
+     - Set `isAutoCollabScene` to `true`
+   - If not eligible for collaboration:
+     - Data is loaded from **workspace storage** (backend API)
+     - Set `isAutoCollabScene` to `false`
+5. **Mode Switch**: App switches to canvas mode
+6. **Sidebar**: Switches to "board" mode showing scenes from the active collection
+
+> **Important:** For collaboration scenes, room storage (`/rooms/{roomId}`) is the source of truth, not workspace storage (`/scenes/{storageKey}`). See [Auto-Collaboration](AUTO_COLLABORATION.md) for storage architecture details.
 
 ## Architecture
 

@@ -414,5 +414,84 @@ These features are NOT part of this implementation:
 | 2025-12-22 | Fixed AES-128-GCM key generation (22-char base64url) |
 | 2025-12-22 | Added `isAutoCollab` flag to preserve scene data on first load |
 | 2025-12-22 | Hide SaveStatusIndicator and "End Session" button for auto-collab |
-| 2025-12-22 | ✅ Feature complete and tested
+| 2025-12-22 | ✅ Feature complete and tested |
+| 2025-12-24 | 🐛 **Critical Bug Fixes (COLLAB-001, COLLAB-002)** - see section below |
+
+---
+
+## Bug Fixes - December 24, 2025
+
+### COLLAB-001: Scene Data Loss on Scene Switching
+
+**Problem:** When switching between scenes in a shared workspace, drawing data was lost. Users would see their drawings briefly, then the canvas would reset to empty (Excalidraw welcome screen).
+
+**Root Causes Identified:**
+
+1. **Wrong roomId during save** - `saveCollabRoomToStorage` was saving to the old room instead of the new room because collaboration session wasn't properly switched
+2. **Elements captured too late** - `stopCollaboration` was getting elements AFTER async operations started, when canvas was already empty
+3. **Socket destroyed before save** - `saveCollabRoomToStorage` (async) wasn't awaited, so `destroySocketClient()` ran before save completed
+4. **Loading from wrong storage** - For auto-collab scenes, data was loaded from backend API (stale) instead of room storage (real-time)
+5. **Workspace slug mismatch** - `CollectionView` and `WorkspaceSidebar` used stale `currentWorkspaceSlugAtom` instead of `currentWorkspace?.slug`
+6. **Empty canvas saved** - `stopCollaboration` saved empty canvas before `roomDataLoaded` flag was set
+7. **Loaded data not applied** - `startCollaboration` returned scene data but it wasn't applied to canvas via `updateScene()`
+
+**Fixes Applied:**
+
+```typescript
+// Fix 1: Capture elements BEFORE async operations
+const elementsToSave = excalidrawAPI.getSceneElementsIncludingDeleted();
+collabAPI.stopCollaboration(false, elementsToSave); // Pass elements as parameter
+
+// Fix 2: Await save before destroying socket
+async stopCollaboration(keepRemoteState: boolean, elementsToSave?: readonly OrderedExcalidrawElement[]) {
+  if (this.roomDataLoaded && elements.length > 0) {
+    await this.saveCollabRoomToStorage(getSyncableElements(elements)); // AWAIT!
+  }
+  this.destroySocketClient(); // Now safe to destroy
+}
+
+// Fix 3: Load from room storage, not backend API
+const sceneData = await collabAPI.startCollaboration({ roomId, roomKey, isAutoCollab: true });
+if (sceneData?.elements) {
+  excalidrawAPI.updateScene({ elements: sceneData.elements }); // Apply to canvas!
+}
+
+// Fix 4: Use workspace directly, not stale atom
+const workspaceSlug = currentWorkspace?.slug; // NOT currentWorkspaceSlugAtom
+```
+
+### COLLAB-002: New Scenes Don't Initialize Collaboration
+
+**Problem:** When creating a new scene in a shared workspace, collaboration wasn't initialized. The scene was created but saving went to the wrong room (from previous session).
+
+**Root Cause:** `handleNewScene` in `App.tsx` called `collabAPI.startCollaboration()` but:
+1. Previous collaboration session was still active (`portal.socket` existed)
+2. `startCollaboration()` returns early if socket exists: `if (this.portal.socket) return null;`
+3. New scene was created but collaboration stayed connected to old room
+
+**Fix Applied:**
+
+```typescript
+// In handleNewScene - stop old session before starting new
+if (collabAPI.isCollaborating()) {
+  await collabAPI.stopCollaboration(false, []); // Stop old session first
+}
+
+// Now startCollaboration will work
+const { roomId, roomKey } = await startCollaboration(scene.id);
+await collabAPI.startCollaboration({ roomId, roomKey, isAutoCollab: true });
+```
+
+### Key Architectural Lessons
+
+1. **Room storage is source of truth** for collaboration scenes, not backend API
+2. **Capture state synchronously** before any async operations
+3. **Await saves** before destroying resources (sockets, portals)
+4. **Check collaboration state** before starting new sessions
+5. **Use single source of truth** for workspace data (`currentWorkspaceAtom`, not separate slug atoms)
+
+### Related Documentation
+
+- [MVP Release Bugs](/docs/development/MVP_RELEASE_BUGS.md) - Full postmortem with code examples
+- [Collaboration System](/docs/features/COLLABORATION.md) - Architecture overview
 
