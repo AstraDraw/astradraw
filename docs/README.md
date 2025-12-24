@@ -34,6 +34,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 |----------|-------------|
 | [DEVELOPMENT.md](getting-started/DEVELOPMENT.md) | Development environment setup with hot-reload |
 | [TEST_USERS.md](development/TEST_USERS.md) | Test users, seed data, and permission scenarios |
+| [MVP_RELEASE_BUGS.md](development/MVP_RELEASE_BUGS.md) | Bug tracking for MVP release with detailed postmortems |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Contribution guidelines and workflow |
 
 **Note:** `frontend/packages/excalidraw/` is AstraDraw's controlled fork. You can modify any file in this directory - it's not an external dependency. See [Architecture](architecture/ARCHITECTURE.md#excalidraw-fork-structure) for details.

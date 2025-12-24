@@ -16,10 +16,10 @@
 | Backend | 0 | 0 | 0 | 0 | 0 | 0 |
 | Collaboration | 3 | 3 | 0 | 0 | 0 | 3 |
 | Navigation | 2 | 2 | 0 | 0 | 0 | 2 |
-| Authentication | 1 | 0 | 1 | 0 | 0 | 1 |
+| Authentication | 2 | 1 | 1 | 0 | 0 | 2 |
 | Infrastructure | 0 | 0 | 0 | 0 | 0 | 0 |
 | UI/UX | 1 | 0 | 0 | 1 | 0 | 1 |
-| **TOTAL** | **8** | **5** | **2** | **1** | **0** | **7** |
+| **TOTAL** | **9** | **6** | **2** | **1** | **0** | **8** |
 
 ---
 
@@ -707,6 +707,98 @@ useEffect(() => {
 #### Key Lesson
 
 **Adapt UI to context.** Personal workspaces have different capabilities than shared workspaces - the UI should reflect this.
+
+---
+
+### ✅ AUTH-002: Scene Data Lost After Logout Due to Autosave Race Condition
+- **Fixed Date:** 2025-12-25
+- **Fixed In:** `isLoggingOutAtom` flag to prevent autosave during logout
+- **Original Priority:** 🔴 Critical
+- **Original Description:**
+  - When a user logged out while viewing a private scene, the logout effect cleared the canvas for privacy (AUTH-001 fix). However, the autosave mechanism would then save the empty canvas to the backend, corrupting the scene data. When the user logged back in and opened the same scene, it was empty.
+
+#### Root Cause
+
+Race condition between logout canvas clearing and autosave:
+
+| Step | What Happened | Problem |
+|------|---------------|---------|
+| 1 | `clearWorkspaceDataAtom` sets `currentSceneIdAtom = null` | Jotai atom updated |
+| 2 | `logoutSignal` fires, App.tsx clears canvas | `updateScene({ elements: [] })` |
+| 3 | `onChange` handler fires with empty elements | Normal Excalidraw behavior |
+| 4 | `useAutoSave` still has old `currentSceneId` | Hook state not synced with atom |
+| 5 | `markUnsaved()` called, triggers autosave | Empty canvas saved to backend! |
+
+The issue was that `useAutoSave` received `currentSceneId` from `useSceneLoader`'s internal state, NOT from the Jotai atom. When `clearWorkspaceDataAtom` set `currentSceneIdAtom` to `null`, the hook's internal state wasn't updated.
+
+#### Fix Applied
+
+**Add `isLoggingOutAtom` flag with defense in depth:**
+
+```typescript
+// settingsState.ts - NEW
+export const isLoggingOutAtom = atom(false);
+
+export const clearWorkspaceDataAtom = atom(null, (get, set) => {
+  // Set logout flag FIRST to prevent autosave
+  set(isLoggingOutAtom, true);
+  // ... rest of clearing logic
+  set(logoutSignalAtom, (prev) => prev + 1);
+});
+
+// App.tsx - Clear flag after canvas is cleared
+useEffect(() => {
+  if (logoutSignal > 0 && logoutSignal !== logoutSignalRef.current) {
+    // ... clear canvas ...
+    
+    // Clear logout flag after canvas is cleared
+    setTimeout(() => {
+      appJotaiStore.set(isLoggingOutAtom, false);
+    }, 0);
+  }
+}, [logoutSignal, excalidrawAPI, collabAPI]);
+
+// App.tsx - Guard onChange handler
+const isLoggingOut = appJotaiStore.get(isLoggingOutAtom);
+if (currentSceneId && !collabAPI?.isCollaborating() && !isLoggingOut) {
+  markUnsaved(currentData);
+}
+
+// useAutoSave.ts - Defense in depth
+const performSave = useCallback(async (): Promise<boolean> => {
+  if (!currentSceneId || !excalidrawAPI || isLoggingOut) {
+    return false;
+  }
+  // ...
+}, [currentSceneId, excalidrawAPI, isLoggingOut]);
+```
+
+**Also fixed:** "Leave site?" warning appearing during logout or in dashboard mode:
+```typescript
+// App.tsx beforeunload handler
+const unloadHandler = (event: BeforeUnloadEvent) => {
+  const currentIsLoggingOut = appJotaiStore.get(isLoggingOutAtom);
+  if (currentIsLoggingOut || appMode === "dashboard") {
+    return; // Don't show warning
+  }
+  // ... rest of handler
+};
+```
+
+#### Key Lessons
+
+1. **Use explicit flags for multi-step operations** - When an operation spans multiple effects/hooks, use a flag to coordinate them
+2. **Defense in depth** - Guard at multiple levels (onChange + useAutoSave) to prevent race conditions
+3. **Check operation context in event handlers** - `beforeunload` should consider app state (logout, dashboard mode)
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `frontend/excalidraw-app/components/Settings/settingsState.ts` | Added `isLoggingOutAtom`, set flag in `clearWorkspaceDataAtom` |
+| `frontend/excalidraw-app/components/Settings/index.ts` | Export `isLoggingOutAtom` |
+| `frontend/excalidraw-app/App.tsx` | Check flag in onChange, clear flag after logout, guard beforeunload |
+| `frontend/excalidraw-app/hooks/useAutoSave.ts` | Added `isLoggingOut` option to skip saves during logout |
 
 ---
 
