@@ -21,10 +21,13 @@ This rule contains implementation patterns and checklists.
 ### Frontend Changes
 
 - [ ] Create component(s) in `frontend/excalidraw-app/components/<Feature>/`
-- [ ] Add SCSS styles with dark mode support
+- [ ] Add CSS Module styles with dark mode support (`@include dark-mode`)
 - [ ] Add translation keys to `en.json` and `ru-RU.json`
-- [ ] Add API functions to `auth/workspaceApi.ts`
+- [ ] Add API functions to `auth/api/<domain>.ts` (modular API structure)
+- [ ] Add React Query hooks in `hooks/use<Feature>.ts`
 - [ ] Add loading skeletons if component fetches data
+
+**See:** `/docs/planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md` for established patterns.
 
 ## API Endpoint Patterns
 

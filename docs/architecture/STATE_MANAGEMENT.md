@@ -192,6 +192,17 @@ close();
 
 **File:** `excalidraw-app/components/Presentation/usePresentationMode.ts`
 
+### Comment System Atoms
+
+| Atom | Type | Purpose |
+|------|------|---------|
+| `selectedThreadIdAtom` | `string \| null` | Currently selected thread for popup |
+| `isCommentModeAtom` | `boolean` | Comment creation mode active |
+| `commentFiltersAtom` | `ThreadFilters` | Sidebar filter/sort settings |
+| `isCommentsSidebarOpenAtom` | `boolean` (derived) | Whether comments tab is open |
+
+**File:** `excalidraw-app/components/Comments/commentsState.ts`
+
 ### Other Atoms
 
 | Atom | Type | File | Purpose |
@@ -290,6 +301,8 @@ export const queryKeys = {
 | `useWorkspaces` | `queryKeys.workspaces.list()` | `listWorkspaces()` |
 | `useCollections` | `queryKeys.collections.list(workspaceId)` | `listCollections()` |
 | `useSceneActions` | Uses `useMutation` | Scene CRUD with optimistic updates |
+| `useCommentThreads` | `queryKeys.commentThreads.list(sceneId)` | `listThreads()` |
+| `useCommentMutations` | Uses `useMutation` | Thread/comment CRUD with optimistic updates |
 
 **Usage:**
 ```typescript
@@ -545,11 +558,22 @@ excalidraw-app/
 │   ├── useSceneActions.ts    # Scene CRUD with optimistic updates (useMutation)
 │   ├── useScenesCache.ts     # Scenes fetching (React Query)
 │   ├── useCollections.ts     # Collection operations (React Query)
-│   └── useWorkspaces.ts      # Workspace operations (React Query)
+│   ├── useWorkspaces.ts      # Workspace operations (React Query)
+│   ├── useCommentThreads.ts  # Comment thread fetching + mutations (React Query)
+│   └── useCommentSync.ts     # WebSocket sync for comments
+├── auth/api/                 # Modular API client
+│   ├── client.ts             # Base fetch wrapper
+│   ├── types.ts              # TypeScript interfaces
+│   ├── scenes.ts             # Scene CRUD
+│   ├── comments.ts           # Comment thread/reply CRUD
+│   └── ...                   # Other domain modules
 ├── components/
 │   ├── Settings/
 │   │   ├── settingsState.ts  # Navigation/UI state atoms (Jotai)
 │   │   └── index.ts          # Re-exports atoms
+│   ├── Comments/
+│   │   ├── commentsState.ts  # Comment UI state atoms (Jotai)
+│   │   └── ...               # Comment components
 │   └── Presentation/
 │       └── usePresentationMode.ts  # Presentation atoms
 ├── collab/
@@ -568,7 +592,7 @@ excalidraw-app/
 - [URL_ROUTING.md](URL_ROUTING.md) - How navigation atoms interact with URLs
 - [CRITICAL_CSS_HIDE_SHOW_FIX.md](../troubleshooting/CRITICAL_CSS_HIDE_SHOW_FIX.md) - Why appMode uses CSS hide/show
 - [QUICK_SEARCH.md](../features/QUICK_SEARCH.md) - Quick Search atoms usage
-- [SCENES_CACHE.md](../planning/SCENES_CACHE.md) - Centralized scenes caching system
+- [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](../planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) - React Query migration and established patterns
 
 ---
 
@@ -576,6 +600,9 @@ excalidraw-app/
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Added Comment System atoms and hooks documentation |
+| 2025-12-24 | Updated file organization with auth/api/ and Comments/ folders |
+| 2025-12-24 | Fixed broken reference to archived SCENES_CACHE.md |
 | 2025-12-23 | Added optimistic updates to `useSceneActions` using `useMutation` |
 | 2025-12-23 | Added React Query for server state (scenes, workspaces, collections) |
 | 2025-12-23 | Removed manual cache atoms (`scenesCacheAtom`, `scenesRefreshAtom`) |

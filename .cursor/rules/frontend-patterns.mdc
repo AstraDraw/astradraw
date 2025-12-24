@@ -201,7 +201,7 @@ await deleteScene(sceneId);
 await renameScene(sceneId, "New Title");
 ```
 
-**See:** `/docs/planning/SCENES_CACHE.md` for caching details.
+**See:** `/docs/architecture/STATE_MANAGEMENT.md` for React Query patterns and caching details.
 
 ## Client State (Jotai)
 

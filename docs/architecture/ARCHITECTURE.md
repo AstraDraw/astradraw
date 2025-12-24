@@ -304,6 +304,10 @@ backend/src/
 ├── collections/          # Collection management
 │   ├── collections.controller.ts
 │   └── collections.service.ts
+├── comments/             # Comment threads & replies
+│   ├── comments.controller.ts
+│   ├── comments.service.ts
+│   └── dto/              # CreateThread, CreateComment DTOs
 ├── workspace/            # Scene CRUD (legacy name)
 │   └── workspace-scenes.controller.ts
 ├── talktrack/            # Video recordings
@@ -419,8 +423,9 @@ All sensitive configuration supports Docker secrets via the `_FILE` suffix. See 
 - [Docker Secrets](../deployment/DOCKER_SECRETS.md) - Secure credential management
 - [SSO / OIDC Setup](../deployment/SSO_OIDC_SETUP.md) - Single Sign-On configuration
 - [Workspace & Auth](../features/WORKSPACE.md) - Authentication and scene management
+- [Collaboration](../features/COLLABORATION.md) - Real-time collaboration system
 - [Talktrack](../features/TALKTRACK.md) - Video recording feature
 - [Presentation Mode](../features/PRESENTATION_MODE.md) - Slideshow functionality
 - [User Profile](../guides/USER_PROFILE.md) - Profile management
-- [Future Work](../planning/ROADMAP.md) - Planned features and specs
+- [Technical Debt](../planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) - Established patterns and improvements
 

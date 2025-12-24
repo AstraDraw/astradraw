@@ -584,7 +584,7 @@ export interface NotificationsResponse {
 }
 ```
 
-### 3.3 Query Keys
+### 3.3 Query Keys and Mutation Keys
 
 **File:** `frontend/excalidraw-app/lib/queryClient.ts`
 
@@ -599,6 +599,13 @@ export const queryKeys = {
     all: ["notifications"] as const,
     list: (cursor?: string) => ["notifications", "list", cursor] as const,
     unreadCount: ["notifications", "unreadCount"] as const,
+  },
+
+  // Mutations (add to existing mutations object)
+  mutations: {
+    // ... existing mutation keys ...
+    markNotificationRead: ["markNotificationRead"] as const,
+    markAllNotificationsRead: ["markAllNotificationsRead"] as const,
   },
 } as const;
 ```
@@ -729,12 +736,17 @@ Notifications/
 │   └── NotificationBell.module.scss
 ├── NotificationBadge/
 │   ├── index.ts
-│   └── NotificationBadge.tsx
+│   ├── NotificationBadge.tsx
+│   └── NotificationBadge.module.scss
 ├── NotificationPopup/
 │   ├── index.ts
 │   ├── NotificationPopup.tsx
 │   ├── NotificationPopup.module.scss
 │   └── NotificationPopupItem.tsx
+├── Skeletons/                      # Loading skeletons (Tech Debt #7 pattern)
+│   ├── index.ts
+│   ├── NotificationItemSkeleton.tsx
+│   └── NotificationItemSkeleton.module.scss
 ```
 
 ### 4.2 NotificationBell Component
@@ -809,7 +821,94 @@ export const NotificationBadge: React.FC<Props> = ({ count }) => {
 };
 ```
 
-### 4.4 NotificationPopup Component
+### 4.4 NotificationItemSkeleton Component (Loading State)
+
+**File:** `frontend/excalidraw-app/components/Notifications/Skeletons/NotificationItemSkeleton.tsx`
+
+Following the established skeleton pattern from Tech Debt #7:
+
+```typescript
+import React from "react";
+import styles from "./NotificationItemSkeleton.module.scss";
+
+export const NotificationItemSkeleton: React.FC = () => (
+  <div className={styles.skeleton}>
+    <div className={styles.avatar} />
+    <div className={styles.content}>
+      <div className={styles.line} />
+      <div className={styles.lineShort} />
+    </div>
+  </div>
+);
+
+interface NotificationSkeletonListProps {
+  count?: number;
+}
+
+export const NotificationSkeletonList: React.FC<NotificationSkeletonListProps> = ({ 
+  count = 3 
+}) => (
+  <>
+    {Array.from({ length: count }).map((_, i) => (
+      <NotificationItemSkeleton key={i} />
+    ))}
+  </>
+);
+```
+
+**File:** `frontend/excalidraw-app/components/Notifications/Skeletons/NotificationItemSkeleton.module.scss`
+
+```scss
+@use "../../../styles/mixins" as *;
+@use "../../../styles/animations" as *;
+
+.skeleton {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.line {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.lineShort {
+  @extend .line;
+  width: 60%;
+}
+
+@include dark-mode {
+  .avatar,
+  .line,
+  .lineShort {
+    background: linear-gradient(90deg, #3a3a3a 25%, #4a4a4a 50%, #3a3a3a 75%);
+    background-size: 200% 100%;
+  }
+}
+```
+
+### 4.5 NotificationPopup Component
 
 **File:** `frontend/excalidraw-app/components/Notifications/NotificationPopup/NotificationPopup.tsx`
 
@@ -818,6 +917,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useNotifications, useNotificationMutations } from "../../../hooks/useNotifications";
 import { NotificationPopupItem } from "./NotificationPopupItem";
+import { NotificationSkeletonList } from "../Skeletons";
 import { buildNotificationsUrl } from "../../../router";
 import styles from "./NotificationPopup.module.scss";
 
@@ -857,7 +957,7 @@ export const NotificationPopup: React.FC<Props> = ({ onClose }) => {
       
       <div className={styles.list}>
         {isLoading ? (
-          <div className={styles.loading}>Loading...</div>
+          <NotificationSkeletonList count={3} />
         ) : notifications.length === 0 ? (
           <div className={styles.empty}>{t("notifications.empty")}</div>
         ) : (
@@ -881,7 +981,7 @@ export const NotificationPopup: React.FC<Props> = ({ onClose }) => {
 };
 ```
 
-### 4.5 Update SidebarFooter
+### 4.6 Update SidebarFooter
 
 **File:** `frontend/excalidraw-app/components/Workspace/WorkspaceSidebar/SidebarFooter.tsx`
 
@@ -972,6 +1072,7 @@ import { useInView } from "react-intersection-observer";
 import { useTranslation } from "react-i18next";
 import { useNotifications } from "../../../hooks/useNotifications";
 import { NotificationTimelineItem } from "./NotificationTimelineItem";
+import { NotificationSkeletonList } from "../Skeletons";
 import styles from "./NotificationsPage.module.scss";
 
 export const NotificationsPage: React.FC = () => {
@@ -1000,7 +1101,7 @@ export const NotificationsPage: React.FC = () => {
       
       <div className={styles.timeline}>
         {isLoading ? (
-          <div className={styles.loading}>Loading...</div>
+          <NotificationSkeletonList count={5} />
         ) : notifications.length === 0 ? (
           <div className={styles.empty}>{t("notifications.empty")}</div>
         ) : (
@@ -1016,9 +1117,9 @@ export const NotificationsPage: React.FC = () => {
             {/* Infinite scroll trigger */}
             <div ref={ref} className={styles.loadMore}>
               {isFetchingNextPage ? (
-                <span>Loading more...</span>
+                <NotificationSkeletonList count={2} />
               ) : hasNextPage ? (
-                <span>Scroll for more</span>
+                <span>{t("notifications.scrollForMore")}</span>
               ) : (
                 <span>{t("notifications.noMore")}</span>
               )}
@@ -1093,10 +1194,12 @@ if (route.type === "notifications") {
     "markAllRead": "Mark all as read",
     "viewAll": "View all notifications",
     "noMore": "No more notifications",
+    "scrollForMore": "Scroll for more",
     "empty": "No notifications yet",
     "postedComment": "posted a comment in",
     "mentionedYou": "mentioned you in",
-    "unread": "Unread"
+    "unread": "Unread",
+    "loading": "Loading notifications..."
   }
 }
 ```
@@ -1112,10 +1215,12 @@ if (route.type === "notifications") {
     "markAllRead": "Отметить все как прочитанные",
     "viewAll": "Показать все уведомления",
     "noMore": "Больше уведомлений нет",
+    "scrollForMore": "Прокрутите для загрузки",
     "empty": "Уведомлений пока нет",
     "postedComment": "оставил(а) комментарий в",
     "mentionedYou": "упомянул(а) вас в",
-    "unread": "Не прочитано"
+    "unread": "Не прочитано",
+    "loading": "Загрузка уведомлений..."
   }
 }
 ```
@@ -1159,6 +1264,7 @@ if (route.type === "notifications") {
 | `components/Notifications/NotificationPopup/*` | Create | Popup component |
 | `components/Notifications/NotificationsPage/*` | Create | Full page view |
 | `components/Notifications/UnreadBadge/*` | Create | Pulsing badge |
+| `components/Notifications/Skeletons/*` | Create | Loading skeleton components |
 | `components/Workspace/WorkspaceSidebar/SidebarFooter.tsx` | Modify | Use NotificationBell |
 | `router.ts` | Modify | Add notifications route |
 | `App.tsx` | Modify | Render notifications page |
@@ -1189,6 +1295,7 @@ if (route.type === "notifications") {
 - [ ] Create `auth/api/notifications.ts`
 - [ ] Add TypeScript interfaces to `types.ts`
 - [ ] Add query keys to `queryClient.ts`
+- [ ] Add mutation keys to `queryClient.ts`
 - [ ] Create `useNotifications` hook
 - [ ] Create `useUnreadCount` hook
 - [ ] Create `useNotificationMutations` hook
@@ -1199,6 +1306,7 @@ if (route.type === "notifications") {
 - [ ] Create NotificationBadge component
 - [ ] Create NotificationPopup component
 - [ ] Create NotificationPopupItem component
+- [ ] Create NotificationItemSkeleton component (loading state)
 - [ ] Update SidebarFooter to use NotificationBell
 - [ ] Add click-outside handling
 
@@ -1246,6 +1354,7 @@ This order allows incremental testing - you can verify notifications are being c
 
 - [NOTIFICATION_SYSTEM_RESEARCH.md](NOTIFICATION_SYSTEM_RESEARCH.md) - UI/UX research from Excalidraw Plus
 - [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) - Comment system that triggers notifications
+- [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](TECHNICAL_DEBT_AND_IMPROVEMENTS.md) - Established patterns to follow (React Query, skeletons, etc.)
 - [STATE_MANAGEMENT.md](../architecture/STATE_MANAGEMENT.md) - Jotai + React Query patterns
 - [URL_ROUTING.md](../architecture/URL_ROUTING.md) - URL routing patterns
 
@@ -1255,5 +1364,8 @@ This order allows incremental testing - you can verify notifications are being c
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Added skeleton loading components following Tech Debt #7 pattern |
+| 2025-12-24 | Added mutation keys to queryClient.ts (Tech Debt #8 pattern) |
+| 2025-12-24 | Added additional translation keys (scrollForMore, loading) |
 | 2025-12-24 | Initial implementation plan created |
 

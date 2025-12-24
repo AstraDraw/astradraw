@@ -82,6 +82,8 @@ backend/node_modules/.prisma/
 # =============================================================================
 
 # Cursor plans (auto-generated, not useful for context)
-
 .cursor/archive/
+
+# Archived documentation (completed/outdated plans)
+docs/archive/
 

@@ -1,8 +1,11 @@
-# Comment System Research & Implementation Plan
+# Comment System Research
 
 ## Overview
 
-This document outlines the research phase for implementing a comment system in AstraDraw. The goal is to allow registered users to leave comments on specific locations on the canvas, similar to how Excalidraw Plus implements this feature.
+This document contains UI/UX research for the comment system in AstraDraw, based on analysis of Excalidraw Plus. The goal is to allow registered users to leave comments on specific locations on the canvas.
+
+> **Implementation:** See [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) for the detailed implementation plan.
+> **Related:** See [NOTIFICATION_SYSTEM_RESEARCH.md](NOTIFICATION_SYSTEM_RESEARCH.md) for notification integration research.
 
 ## Current State in AstraDraw
 

@@ -19,8 +19,10 @@ AstraDraw is a self-hosted Excalidraw fork with enterprise features: workspaces,
 | Dev/Docker issues | `@common-issues-dev` | - |
 | Docker/deployment | `@docker-deployment` | [Deployment](/docs/deployment/) |
 | Git workflow/release | `@git-workflow` | - |
-| New feature planning | `@feature-implementation` | [Implementation Plans](/docs/planning/IMPLEMENTATION_PLANS.md) |
+| New feature planning | `@feature-implementation` | [Technical Debt](/docs/planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) |
 | Collaboration | `@collaboration-system` | [Collaboration](/docs/features/COLLABORATION.md) |
+| Comment system | `@collaboration-system` | [Comment Plan](/docs/planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) |
+| Notifications | - | [Notification Plan](/docs/planning/NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) |
 
 **Full documentation index:** `/docs/README.md`
 
@@ -60,7 +62,9 @@ just fresh-dev        # Fresh start with local builds
 |---------|------|
 | Frontend entry | `frontend/excalidraw-app/App.tsx` |
 | State atoms | `frontend/excalidraw-app/components/Settings/settingsState.ts` |
+| Comment atoms | `frontend/excalidraw-app/components/Comments/commentsState.ts` |
 | API client | `frontend/excalidraw-app/auth/api/` (modular structure) |
+| React Query | `frontend/excalidraw-app/lib/queryClient.ts` |
 | URL router | `frontend/excalidraw-app/router.ts` |
 | Backend entry | `backend/src/main.ts` |
 | Prisma schema | `backend/prisma/schema.prisma` |

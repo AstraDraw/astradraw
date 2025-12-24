@@ -1,10 +1,11 @@
-# Notification System Research & Implementation Plan
+# Notification System Research
 
 ## Overview
 
-This document outlines the notification system for AstraDraw, based on research from Excalidraw Plus. The notification system is primarily used for comment-related notifications but can be extended for other events.
+This document contains UI/UX research for the notification system in AstraDraw, based on analysis of Excalidraw Plus. The notification system is primarily used for comment-related notifications but can be extended for other events.
 
-> **Related:** See [Comment System Research](COMMENT_SYSTEM_RESEARCH.md) for the comment/thread implementation.
+> **Implementation:** See [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) for the detailed implementation plan.
+> **Related:** See [COMMENT_SYSTEM_RESEARCH.md](COMMENT_SYSTEM_RESEARCH.md) for the comment/thread research.
 
 ---
 

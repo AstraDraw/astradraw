@@ -1137,8 +1137,14 @@ const { deleteScene, renameScene } = useSceneActions();
 ## Related Documentation
 
 - [STATE_MANAGEMENT.md](../architecture/STATE_MANAGEMENT.md) - When to use Jotai vs useState
-- [SCENES_CACHE.md](SCENES_CACHE.md) - How the scenes cache works
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - Overall system architecture
+
+### Patterns in Action
+
+These implementation plans follow the patterns established in this document:
+
+- [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) - Uses React Query, CSS Modules, modular API
+- [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) - Uses React Query, skeletons, mutation keys
 
 ---
 

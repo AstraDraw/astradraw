@@ -14,7 +14,9 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | Work on backend API | [Architecture](architecture/ARCHITECTURE.md), [Roles & Teams](guides/ROLES_TEAMS_COLLECTIONS.md) |
 | Fix navigation/routing bugs | [URL Routing](architecture/URL_ROUTING.md), [Scene Navigation](architecture/SCENE_NAVIGATION.md) |
 | Fix scene loading issues | [CSS Hide/Show Fix](troubleshooting/CRITICAL_CSS_HIDE_SHOW_FIX.md) |
-| Implement a new feature | [Implementation Plans](planning/IMPLEMENTATION_PLANS.md), [Technical Debt](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) |
+| Implement a new feature | [Technical Debt](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) (patterns), feature-specific plan |
+| Work on comments | [Comment System Plan](planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) |
+| Work on notifications | [Notification System Plan](planning/NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) |
 | Work on collaboration | [Collaboration](features/COLLABORATION.md), [Auto-Collaboration](features/AUTO_COLLABORATION.md) |
 | Deploy or configure Docker | [Docker Secrets](deployment/DOCKER_SECRETS.md), [SSO Setup](deployment/SSO_OIDC_SETUP.md) |
 | Debug issues | See [Troubleshooting](#troubleshooting) section |
@@ -83,12 +85,19 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 
 | Document | Description |
 |----------|-------------|
-| [ROADMAP.md](planning/ROADMAP.md) | Planned features and specifications |
-| [IMPLEMENTATION_PLANS.md](planning/IMPLEMENTATION_PLANS.md) | Ready-to-implement improvement plans |
-| [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) | Technical debt analysis |
-| [COLLABORATION_IMPLEMENTATION_PLAN.md](planning/COLLABORATION_IMPLEMENTATION_PLAN.md) | Collaboration system implementation |
-| [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) | Comment system implementation (in progress) |
-| [SCENES_CACHE.md](planning/SCENES_CACHE.md) | Scenes caching system |
+| [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) | Technical debt analysis and established patterns |
+| [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) | Comment system implementation (Phases 1-6 ✅, Phase 7 pending) |
+| [COMMENT_SYSTEM_RESEARCH.md](planning/COMMENT_SYSTEM_RESEARCH.md) | Comment UI/UX research from Excalidraw Plus |
+| [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](planning/NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) | Notification system implementation (not started) |
+| [NOTIFICATION_SYSTEM_RESEARCH.md](planning/NOTIFICATION_SYSTEM_RESEARCH.md) | Notification UI/UX research from Excalidraw Plus |
+
+### Archive (Completed Plans)
+
+Completed implementation plans are moved to `docs/archive/` and excluded from AI indexing:
+- `COLLABORATION_IMPLEMENTATION_PLAN.md` - ✅ Complete (Dec 2025)
+- `IMPLEMENTATION_PLANS.md` - ✅ All 10 plans complete
+- `SCENES_CACHE.md` - ✅ React Query migration done
+- `ROADMAP.md` - Superseded by feature-specific plans
 
 ---
 
