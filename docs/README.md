@@ -90,7 +90,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) | Technical debt analysis and established patterns |
 | [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) | Comment system implementation (Phases 1-6 ✅, Phase 7 pending) |
 | [COMMENT_SYSTEM_RESEARCH.md](planning/COMMENT_SYSTEM_RESEARCH.md) | Comment UI/UX research from Excalidraw Plus |
-| [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](planning/NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) | Notification system implementation (not started) |
+| [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](planning/NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) | Notification system implementation (Phases 1-4, 6 complete) |
 | [NOTIFICATION_SYSTEM_RESEARCH.md](planning/NOTIFICATION_SYSTEM_RESEARCH.md) | Notification UI/UX research from Excalidraw Plus |
 
 ### Archive (Completed Plans)
