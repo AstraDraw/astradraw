@@ -874,11 +874,14 @@ private handleCommentMarkerClick(x: number, y: number): string | null {
 
 ### Phase 2: Presentation Actions (1-2 days) - ✅ COMPLETED
 1. ✅ **Added presentation state** to AppState (`PresentationModeState` interface)
-2. ✅ **Created actionPresentation.ts** with 7 actions: `actionStartPresentation`, `actionNextSlide`, `actionPrevSlide`, `actionExitPresentation`, `actionTogglePresentationLaser`, `actionTogglePresentationTheme`, `actionGoToSlide`
+2. ✅ **Created actionPresentation.ts** with 6 actions: `actionStartPresentation`, `actionNextSlide`, `actionPrevSlide`, `actionExitPresentation`, `actionTogglePresentationTheme`, `actionGoToSlide`
 3. ✅ **Simplified usePresentationMode** to use action system for keyboard handling
-4. ⏳ **Test keyboard shortcuts** - requires manual testing
+4. ✅ **Implicit laser pointer** - any pointer click draws laser trail in presentation mode (no tool switch needed)
+5. ✅ **Blocked pan/zoom** - wheel, touch pinch, and gesture zoom disabled in presentation mode
+6. ✅ **UI hiding** - workspace sidebar, sidebar trigger, and comment markers hidden in presentation mode
+7. ✅ **Tested keyboard shortcuts** - Arrow keys, Space, Escape, T work correctly
 
-*Keyboard shortcuts now handled by action system: Arrow keys, Space, Escape, L, T, Alt+Shift+P*
+*Removed `actionTogglePresentationLaser` - laser is now implicit (like original Excalidraw)*
 
 ### Phase 3: Comment Markers (2-3 days) - ✅ READY TO IMPLEMENT (with notes)
 1. **Add render function** to clients.ts
@@ -1137,5 +1140,6 @@ useEffect(() => {
 | 2025-12-24 | Bug fix: Fixed marker position calculation to subtract `offsetLeft`/`offsetTop` for container-relative positioning |
 | 2025-12-24 | Bug fix: Added global wheel handler to prevent browser zoom when pinch-zooming over UI elements |
 | 2025-12-24 | Added "Lessons Learned & Caveats" section documenting reactivity issues, coordinate systems, and zoom handling |
-| 2025-12-24 | **Phase 2 completed**: Created `actionPresentation.ts` with 7 presentation actions (start, next, prev, exit, toggle laser, toggle theme, go to slide). Added `PresentationModeState` to AppState. Refactored `usePresentationMode.ts` to use action system for keyboard handling. |
+| 2025-12-24 | **Phase 2 completed**: Created `actionPresentation.ts` with 6 presentation actions (start, next, prev, exit, toggle theme, go to slide). Added `PresentationModeState` to AppState. Refactored `usePresentationMode.ts` to use action system for keyboard handling. |
+| 2025-12-24 | **Phase 2 enhanced**: Implemented implicit laser (any pointer draws laser trail like original Excalidraw), blocked pan/zoom in presentation mode, removed laser toggle button/action, hid workspace sidebar/trigger/comment markers during presentation. |
 
