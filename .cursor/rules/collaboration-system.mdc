@@ -137,8 +137,28 @@ if (roomMatch) { /* Load legacy anonymous room */ }
 5. Don't auto-join collaboration without checking `access.canCollaborate`
 6. Don't show copy/move for personal workspaces
 
+## Comment Real-time Sync
+
+Comments sync via `comment:event` WebSocket events during collaboration:
+
+```typescript
+// Emit after mutation (useCommentMutations)
+emitEvent({ type: "thread-created", thread });
+
+// Listen in useCommentSync
+socket.on("comment:event", (event) => {
+  // Update React Query cache
+});
+```
+
+**Key files:**
+- `frontend/excalidraw-app/hooks/useCommentSync.ts`
+- `frontend/excalidraw-app/components/Comments/CommentSyncContext.tsx`
+- `room-service/src/index.ts` (handler)
+
 ## Related Documentation
 
-- `/docs/features/COLLABORATION.md` - Full system documentation
+- `/docs/features/COLLABORATION.md` - Full system documentation (includes Part 8: Comment Sync)
 - `/docs/planning/COLLABORATION_IMPLEMENTATION_PLAN.md` - Implementation details
+- `/docs/planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md` - Comment system phases
 - `/docs/guides/ROLES_TEAMS_COLLECTIONS.md` - Permission model details

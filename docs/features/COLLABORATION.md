@@ -374,6 +374,58 @@ Top-right corner shows connected collaborators:
 
 ---
 
+## Part 8: Comment Real-time Sync
+
+Comments are synchronized in real-time during collaboration sessions using a dedicated WebSocket event channel.
+
+### Architecture
+
+```
+User A creates comment
+    ↓
+useCommentMutations calls API (creates in database)
+    ↓
+onSuccess: emitEvent({ type: "thread-created", thread })
+    ↓
+socket.emit("comment:event", roomId, event)
+    ↓
+room-service: socket.broadcast.to(roomId).emit("comment:event", event)
+    ↓
+User B's useCommentSync receives event
+    ↓
+React Query cache updated → UI updates instantly
+```
+
+### Event Types
+
+| Event Type | Payload | Description |
+|------------|---------|-------------|
+| `thread-created` | `{ thread: CommentThread }` | New thread created |
+| `thread-resolved` | `{ threadId, resolved }` | Thread resolved/reopened |
+| `thread-deleted` | `{ threadId }` | Thread deleted |
+| `thread-moved` | `{ threadId, x, y }` | Thread position changed |
+| `comment-added` | `{ threadId, comment }` | Reply added to thread |
+| `comment-updated` | `{ commentId, content }` | Comment edited |
+| `comment-deleted` | `{ threadId, commentId }` | Comment deleted |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `frontend/excalidraw-app/hooks/useCommentSync.ts` | Listens for events, updates cache |
+| `frontend/excalidraw-app/components/Comments/CommentSyncContext.tsx` | Provides `emitEvent` to components |
+| `frontend/excalidraw-app/hooks/useCommentThreads.ts` | Emits events after mutations |
+| `room-service/src/index.ts` | Relays `comment:event` to room |
+
+### Design Decisions
+
+1. **Plain JSON (not encrypted)**: Unlike drawing data, comments are stored server-side in PostgreSQL, so encryption is not needed for WebSocket relay
+2. **Optimistic + Server**: UI updates optimistically, then syncs via WebSocket; duplicates are filtered by ID
+3. **Context-based injection**: `CommentSyncProvider` provides `emitEvent` to all comment components without prop drilling
+4. **Graceful degradation**: If not collaborating, `emitEvent` is a no-op; comments still work via API
+
+---
+
 ## Known Limitations
 
 1. **Avatar Size**: Base64 avatars transmitted with every position update
@@ -386,6 +438,7 @@ Top-right corner shows connected collaborators:
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Added Part 8: Comment Real-time Sync documentation |
 | 2025-12-21 | Initial collaboration profile integration |
 | 2025-12-21 | Documented permission model and workspace types |
 | 2025-12-21 | Created implementation plan for permission-based collaboration |

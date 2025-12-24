@@ -17,6 +17,7 @@ This document provides a detailed implementation plan for the Comment System fea
 4. **Thread Resolution** - Mark threads as resolved (hides from canvas)
 5. **Deep Links** - Share URLs that open specific comments
 6. **Real-time Sync** - Comments sync across collaborators via WebSocket
+
 7. **Notifications** - Alert users when mentioned or when new comments appear
 
 ### Architecture Overview
@@ -1729,11 +1730,36 @@ const createMutation = useMutation({
 
 ### Acceptance Criteria
 
-- [ ] New threads appear for all collaborators
-- [ ] Resolved status syncs across clients
-- [ ] Deleted threads disappear for all
-- [ ] New comments appear in real-time
-- [ ] No duplicate updates (optimistic + WebSocket)
+- [x] New threads appear for all collaborators
+- [x] Resolved status syncs across clients
+- [x] Deleted threads disappear for all
+- [x] New comments appear in real-time
+- [x] No duplicate updates (optimistic + WebSocket)
+
+### Implementation Status ✅
+
+**Completed:** 2025-12-24
+
+**Files Created:**
+- `frontend/excalidraw-app/hooks/useCommentSync.ts` - WebSocket event listener hook + emitCommentEvent helper
+- `frontend/excalidraw-app/components/Comments/CommentSyncContext.tsx` - React context provider for comment sync
+
+**Files Modified:**
+- `room-service/src/index.ts` - Added `comment:event` WebSocket relay handler
+- `frontend/excalidraw-app/auth/api/types.ts` - Added `CommentEvent` union type
+- `frontend/excalidraw-app/app_constants.ts` - Added `COMMENT_EVENT` constant
+- `frontend/excalidraw-app/hooks/useCommentThreads.ts` - Integrated emitEvent from context into all mutations
+- `frontend/excalidraw-app/collab/Collab.tsx` - Added `getSocket()` and `getRoomId()` to CollabAPI
+- `frontend/excalidraw-app/App.tsx` - Added useCommentSync hook and CommentSyncProvider wrapper
+- `frontend/excalidraw-app/components/Comments/index.ts` - Exported CommentSyncProvider
+
+**Key Implementation Details:**
+- Room-service relays `comment:event` messages to all clients in the room except sender
+- useCommentSync listens for events and updates React Query cache directly
+- CommentSyncContext provides emitEvent callback to all comment components
+- useCommentMutations automatically broadcasts changes when wrapped in provider
+- CollabAPI exposes socket/roomId for comment sync integration
+- Events are plain JSON (not encrypted) since comments are stored server-side
 
 ---
 
@@ -1935,12 +1961,13 @@ Notification links use deep link format:
 - [ ] Add CommentsFooterButton (deferred)
 - [x] Add translations for all strings
 
-### Phase 6: Real-time Sync (Optional)
-- [ ] Add WebSocket events to room-service
-- [ ] Create useCommentSync hook
-- [ ] Subscribe to events in Collab
-- [ ] Emit events on mutations
-- [ ] Test multi-user sync
+### Phase 6: Real-time Sync ✅
+- [x] Add WebSocket events to room-service
+- [x] Create useCommentSync hook
+- [x] Create CommentSyncContext for provider pattern
+- [x] Emit events on mutations via useCommentMutations
+- [x] Expose socket/roomId via CollabAPI
+- [x] Integrate with App.tsx
 
 ### Phase 7: Notification Integration
 - [ ] Create notifications on @mention
@@ -1993,6 +2020,7 @@ Notification links use deep link format:
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Phase 6: Real-time Sync complete (WebSocket events, useCommentSync hook, CommentSyncContext) |
 | 2025-12-24 | Phase 5: Sidebar Panel complete (CommentsSidebar, filters, search, ThreadListItem) |
 | 2025-12-24 | Added NewThreadPopup for creating new comment threads on canvas click |
 | 2025-12-23 | Phase 4: Comment Popup complete (ThreadPopup, CommentItem, MentionInput, deep links) |
