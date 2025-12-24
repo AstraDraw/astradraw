@@ -14,6 +14,7 @@ AstraDraw is a self-hosted Excalidraw fork with enterprise features: workspaces,
 | Frontend UI/components | `@frontend-patterns` | [UI Styling](/docs/guides/WORKSPACE_UI_STYLING.md) |
 | Frontend state (Jotai) | `@frontend-state` | [State Management](/docs/architecture/STATE_MANAGEMENT.md) |
 | Backend API | `@backend-patterns` | [Architecture](/docs/architecture/ARCHITECTURE.md) |
+| Excalidraw core changes | `@project-overview` | [Fork Architecture](/docs/architecture/FORK_ARCHITECTURE.md) |
 | Frontend issues | `@common-issues-frontend` | [Troubleshooting](/docs/troubleshooting/) |
 | Backend issues | `@common-issues-backend` | - |
 | Dev/Docker issues | `@common-issues-dev` | - |

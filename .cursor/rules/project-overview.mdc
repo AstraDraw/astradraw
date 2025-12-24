@@ -69,6 +69,18 @@ When implementing features that touch Excalidraw functionality:
 | Workspace features | `excalidraw-app/components/` |
 | Backend API calls | `excalidraw-app/auth/api/` |
 
+### Case Studies (Real Examples)
+
+**Good: Sidebar tabs** - `AppSidebar.tsx` uses `DefaultSidebar.TabTriggers` tunnel API to inject Comments, Stickers, Talktrack tabs. Correct approach - uses Excalidraw's composition API.
+
+**Good: Custom pens** - Added `customPens` to `AppState` in `packages/excalidraw/types.ts`, UI in `excalidraw-app/pens/`. Correct - extended core types, app-specific UI.
+
+**Improvable: Comment markers** - `ThreadMarkersLayer` renders DOM overlay, manually tracks pan/zoom. Could render on canvas like collaborator cursors in `clients.ts`.
+
+**Improvable: excalidrawAPI prop drilling** - 155 uses across 20 files. Components receive API just to call `getAppState()`. Could export hooks from `packages/excalidraw/`.
+
+**Full documentation:** [/docs/architecture/FORK_ARCHITECTURE.md](/docs/architecture/FORK_ARCHITECTURE.md)
+
 ### Anti-Patterns to Avoid
 
 🚩 Importing internal Excalidraw hooks in `excalidraw-app/` (e.g., `useExcalidrawActionManager`)

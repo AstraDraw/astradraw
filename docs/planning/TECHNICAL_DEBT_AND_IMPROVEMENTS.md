@@ -1064,6 +1064,122 @@ export async function renderExcalidrawApp() {
 
 ---
 
+## 🔵 Fork Architecture Opportunities
+
+> **Reference:** [FORK_ARCHITECTURE.md](../architecture/FORK_ARCHITECTURE.md) for full documentation
+
+These improvements leverage the fact that `packages/excalidraw/` is a controlled fork, not an external dependency.
+
+### 17. 🔵 FUTURE: Native Comment Markers (High Impact)
+
+> **Status:** Not started - Consider when improving comment UX
+
+**Current state:** `ThreadMarkersLayer` renders comment markers as a DOM overlay, manually subscribing to `onScrollChange` and calculating viewport positions.
+
+**Issue:** Position updates lag behind canvas rendering, z-ordering with elements is difficult, and the approach duplicates what Excalidraw already does for collaborator cursors.
+
+**Proposed improvement:** Render comment markers in Excalidraw's canvas renderer, similar to how `renderRemoteCursors()` works in `packages/excalidraw/clients.ts`.
+
+**Implementation approach:**
+1. Add `commentMarkers` to `InteractiveCanvasRenderConfig` in `packages/excalidraw/scene/types.ts`
+2. Create `renderCommentMarkers()` function in `packages/excalidraw/clients.ts`
+3. Call from `packages/excalidraw/renderer/interactiveScene.ts` render pipeline
+4. Update `ThreadMarkersLayer` to pass data via appState instead of rendering DOM
+
+**Benefits:**
+- Eliminates position calculation lag
+- Proper z-ordering with canvas elements
+- Enables element-attached comments in the future
+- Consistent with collaborator cursor rendering
+
+**Estimated effort:** 2-3 days
+
+**Files involved:**
+- `packages/excalidraw/scene/types.ts` - Add marker config type
+- `packages/excalidraw/clients.ts` - Add render function
+- `packages/excalidraw/renderer/interactiveScene.ts` - Call render function
+- `excalidraw-app/components/Comments/ThreadMarkersLayer/` - Simplify to data provider
+
+---
+
+### 18. 🔵 FUTURE: Presentation Mode Actions (Medium Impact)
+
+> **Status:** Not started - Consider when enhancing presentation features
+
+**Current state:** Presentation mode is implemented entirely in `excalidraw-app/components/Presentation/`, using `usePresentationMode` hook that manually handles keyboard shortcuts and frame navigation.
+
+**Issue:** Keyboard shortcuts don't go through Excalidraw's action system, making them harder to customize and potentially conflicting with core shortcuts.
+
+**Proposed improvement:** Add presentation actions to `packages/excalidraw/actions/`.
+
+**Implementation approach:**
+1. Add `actionStartPresentation`, `actionNextSlide`, `actionPrevSlide`, `actionExitPresentation` to `packages/excalidraw/actions/`
+2. Add presentation state (`isPresentationMode`, `currentSlideIndex`) to `AppState` in `packages/excalidraw/types.ts`
+3. Register keyboard shortcuts via action system
+4. Move `usePresentationMode` core logic to `packages/excalidraw/`
+
+**Benefits:**
+- Keyboard shortcuts work via action system (consistent with other features)
+- Presentation state in `AppState` (accessible everywhere)
+- Potentially reusable by other Excalidraw users
+- Consistent with frame actions in `actionFrame.ts`
+
+**Estimated effort:** 1-2 days
+
+**Files involved:**
+- `packages/excalidraw/actions/actionPresentation.ts` - New file
+- `packages/excalidraw/types.ts` - Add presentation state
+- `packages/excalidraw/actions/index.ts` - Export new actions
+- `excalidraw-app/components/Presentation/` - Simplify to use core actions
+
+---
+
+### 19. 🔵 FUTURE: Reduce excalidrawAPI Prop Drilling (Medium Impact)
+
+> **Status:** Not started - Can implement incrementally
+
+**Current state:** 155 uses of `excalidrawAPI.` across 20 files. Components receive the imperative API as a prop just to call methods like `getAppState()`, `updateScene()`, `scrollToContent()`.
+
+**Issue:** Prop drilling creates tight coupling and makes component interfaces complex.
+
+**Proposed improvement:** Export hooks from `packages/excalidraw/` for common operations.
+
+**Example hooks to add:**
+
+```typescript
+// packages/excalidraw/hooks/useAppState.ts
+export function useAppState() {
+  return useUIAppState(); // Already exists internally
+}
+
+// packages/excalidraw/hooks/useScrollToContent.ts
+export function useScrollToContent() {
+  const app = useApp();
+  return useCallback((target, opts) => app.scrollToContent(target, opts), [app]);
+}
+
+// packages/excalidraw/hooks/useUpdateScene.ts
+export function useUpdateScene() {
+  const app = useApp();
+  return useCallback((scene) => app.updateScene(scene), [app]);
+}
+```
+
+**Benefits:**
+- Cleaner component interfaces (no `excalidrawAPI` prop)
+- Better encapsulation
+- Hooks can include proper memoization
+- Reduced prop drilling through component trees
+
+**Estimated effort:** 1 day (can be done incrementally)
+
+**Files involved:**
+- `packages/excalidraw/hooks/` - Add new hook files
+- `packages/excalidraw/index.tsx` - Export new hooks
+- `excalidraw-app/components/` - Gradually migrate to use hooks
+
+---
+
 ## 📋 Recommended Improvement Order
 
 ### Phase 1: Quick Wins (1-2 weeks)
@@ -1152,6 +1268,8 @@ These implementation plans follow the patterns established in this document:
 
 | Date       | Changes                                     |
 | ---------- | ------------------------------------------- |
+| 2025-12-24 | Added Fork Architecture opportunities (items 17-19): native comment markers, presentation actions, reduce prop drilling |
+| 2025-12-24 | Created FORK_ARCHITECTURE.md documentation |
 | 2025-12-23 | CSS Modules migration: COMPLETE - All 38 components migrated |
 | 2025-12-23 | CSS Modules migration: Batch 5 complete (6 components + WorkspaceSidebar) |
 | 2025-12-23 | Comment System: Phase 1 Backend complete (schema, module, endpoints) |

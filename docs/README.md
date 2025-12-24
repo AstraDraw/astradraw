@@ -11,6 +11,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | Understand the project | [Architecture](architecture/ARCHITECTURE.md) |
 | Set up development environment | [Development Guide](getting-started/DEVELOPMENT.md) |
 | Test with sample data | [Test Users](development/TEST_USERS.md) |
+| Modify Excalidraw core (packages/) | [Fork Architecture](architecture/FORK_ARCHITECTURE.md) |
 | Work on frontend UI/components | [Workspace UI Styling](guides/WORKSPACE_UI_STYLING.md), [State Management](architecture/STATE_MANAGEMENT.md) |
 | Work on backend API | [Architecture](architecture/ARCHITECTURE.md), [Roles & Teams](guides/ROLES_TEAMS_COLLECTIONS.md) |
 | Fix navigation/routing bugs | [URL Routing](architecture/URL_ROUTING.md), [Scene Navigation](architecture/SCENE_NAVIGATION.md) |
@@ -41,6 +42,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | System architecture, components, database schema |
+| [FORK_ARCHITECTURE.md](architecture/FORK_ARCHITECTURE.md) | Excalidraw fork ownership, when to modify core vs app layer |
 | [STATE_MANAGEMENT.md](architecture/STATE_MANAGEMENT.md) | Jotai atoms, when to use useState vs atoms |
 | [URL_ROUTING.md](architecture/URL_ROUTING.md) | URL patterns, navigation atoms, router utilities |
 | [SCENE_NAVIGATION.md](architecture/SCENE_NAVIGATION.md) | Scene loading flow, CSS hide/show pattern |
