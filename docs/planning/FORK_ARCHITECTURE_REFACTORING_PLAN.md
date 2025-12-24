@@ -872,13 +872,13 @@ private handleCommentMarkerClick(x: number, y: number): string | null {
 
 **Outcome:** Hooks are exported and available, but components tracking scroll/zoom must continue using `excalidrawAPI.onScrollChange()` subscriptions. See "Lessons Learned & Caveats" section.
 
-### Phase 2: Presentation Actions (1-2 days) - ✅ READY TO IMPLEMENT
-1. **Add presentation state** to AppState
-2. **Create actionPresentation.ts** with all actions
-3. **Simplify usePresentationMode** to use actions
-4. **Test keyboard shortcuts** work correctly
+### Phase 2: Presentation Actions (1-2 days) - ✅ COMPLETED
+1. ✅ **Added presentation state** to AppState (`PresentationModeState` interface)
+2. ✅ **Created actionPresentation.ts** with 7 actions: `actionStartPresentation`, `actionNextSlide`, `actionPrevSlide`, `actionExitPresentation`, `actionTogglePresentationLaser`, `actionTogglePresentationTheme`, `actionGoToSlide`
+3. ✅ **Simplified usePresentationMode** to use action system for keyboard handling
+4. ⏳ **Test keyboard shortcuts** - requires manual testing
 
-*This phase is not affected by Phase 1 limitations - see notes in Phase 2 Caveats section.*
+*Keyboard shortcuts now handled by action system: Arrow keys, Space, Escape, L, T, Alt+Shift+P*
 
 ### Phase 3: Comment Markers (2-3 days) - ✅ READY TO IMPLEMENT (with notes)
 1. **Add render function** to clients.ts
@@ -1137,4 +1137,5 @@ useEffect(() => {
 | 2025-12-24 | Bug fix: Fixed marker position calculation to subtract `offsetLeft`/`offsetTop` for container-relative positioning |
 | 2025-12-24 | Bug fix: Added global wheel handler to prevent browser zoom when pinch-zooming over UI elements |
 | 2025-12-24 | Added "Lessons Learned & Caveats" section documenting reactivity issues, coordinate systems, and zoom handling |
+| 2025-12-24 | **Phase 2 completed**: Created `actionPresentation.ts` with 7 presentation actions (start, next, prev, exit, toggle laser, toggle theme, go to slide). Added `PresentationModeState` to AppState. Refactored `usePresentationMode.ts` to use action system for keyboard handling. |
 
