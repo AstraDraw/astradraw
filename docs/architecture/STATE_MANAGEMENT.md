@@ -51,6 +51,7 @@ Jotai was chosen over other state management solutions because:
 | `privateCollectionAtom` | `CollectionData \| null` | Derived: private collection from list |
 | `activeCollectionAtom` | `CollectionData \| null` | Derived: currently selected collection |
 | `clearWorkspaceDataAtom` | action | Clear all workspace data (e.g., on logout) |
+| `logoutSignalAtom` | `number` | Incremented on logout - subscribe to reset canvas |
 
 **Usage:**
 ```typescript
@@ -65,6 +66,14 @@ setWorkspace(newWorkspace);
 // Use derived atoms for computed values
 const privateCollection = useAtomValue(privateCollectionAtom);
 const activeCollection = useAtomValue(activeCollectionAtom);
+
+// Subscribe to logout signal (for components that need to clean up)
+const logoutSignal = useAtomValue(logoutSignalAtom);
+useEffect(() => {
+  if (logoutSignal > 0) {
+    // Reset canvas, stop collaboration, etc.
+  }
+}, [logoutSignal]);
 ```
 
 **Note:** The `useWorkspaces` and `useCollections` hooks manage these atoms internally. Components should prefer using these hooks for CRUD operations, and read directly from atoms for display.

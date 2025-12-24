@@ -416,6 +416,7 @@ These features are NOT part of this implementation:
 | 2025-12-22 | Hide SaveStatusIndicator and "End Session" button for auto-collab |
 | 2025-12-22 | ✅ Feature complete and tested |
 | 2025-12-24 | 🐛 **Critical Bug Fixes (COLLAB-001, COLLAB-002)** - see section below |
+| 2025-12-25 | 🐛 **Scene Switching Fixes (COLLAB-003, COLLAB-004)** - see section below |
 
 ---
 
@@ -494,4 +495,63 @@ await collabAPI.startCollaboration({ roomId, roomKey, isAutoCollab: true });
 
 - [MVP Release Bugs](/docs/development/MVP_RELEASE_BUGS.md) - Full postmortem with code examples
 - [Collaboration System](/docs/features/COLLABORATION.md) - Architecture overview
+
+---
+
+## Bug Fixes - December 25, 2025
+
+### COLLAB-003: Data Contamination When Switching Scenes
+
+**Problem:** When quickly switching between scenes in a shared collection, drawings from Scene A would appear on Scene B.
+
+**Root Causes:**
+1. Throttled `queueSaveToStorage` (20-second interval) could fire after room switch, saving old data to new room
+2. `syncElements` was called during room transitions when portal was inconsistent
+3. Canvas wasn't cleared for auto-collab scenes when joining existing rooms
+
+**Fixes Applied:**
+1. **Cancel (not flush) pending operations** when switching rooms
+2. **Guard `syncElements`** with `portal.isOpen()` check
+3. **Clear canvas for ALL existing room joins**, including auto-collab
+
+```typescript
+// Cancel pending operations when switching
+this.queueBroadcastAllElements.cancel();
+this.queueSaveToStorage.cancel();
+
+// Guard syncElements
+if (!this.portal.isOpen()) return;
+
+// Clear canvas for all room joins
+if (existingRoomLinkData) {
+  this.excalidrawAPI.resetScene();
+}
+```
+
+### COLLAB-004: Stale Content During Scene Loading
+
+**Problem:** When switching scenes, old content was visible for 2-3 seconds. Users could accidentally draw on empty canvas.
+
+**Fix:** Use Excalidraw's `isLoading` state to disable drawing during transitions:
+
+```typescript
+// Start loading - disable drawing
+excalidrawAPI.updateScene({
+  elements: [],
+  appState: { isLoading: true },
+});
+
+// After load - re-enable drawing
+excalidrawAPI.updateScene({
+  elements: sceneData.elements,
+  appState: { isLoading: false },
+});
+```
+
+### Key Lessons
+
+1. **Cancel, don't flush** throttled operations when context changes
+2. **Use framework loading states** to prevent user interaction during transitions
+3. **Guard all sync operations** with portal state checks
+4. **Clear canvas for ALL room joins** to prevent element reconciliation issues
 
