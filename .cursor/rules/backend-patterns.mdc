@@ -24,13 +24,19 @@ backend/
 │   │   ├── jwt.guard.ts      # NOT jwt-auth.guard.ts!
 │   │   └── jwt.strategy.ts
 │   ├── users/                # User management
-│   ├── workspace/            # Scene management
+│   ├── workspaces/           # Workspace CRUD, members, invites
+│   ├── workspace/            # Scene management (CRUD, data storage)
+│   ├── teams/                # Team management
+│   ├── collections/          # Collection management
+│   ├── comments/             # Comment threads on scenes
+│   ├── notifications/        # Notification system
 │   ├── talktrack/            # Video recordings
 │   ├── storage/              # S3/MinIO storage
 │   ├── prisma/               # Database service
 │   └── app.module.ts         # Main module
 ├── prisma/
 │   ├── schema.prisma         # Database schema
+│   ├── seed.ts               # Development seed data
 │   └── migrations/           # Database migrations
 ```
 
@@ -70,9 +76,22 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
-  avatarUrl    String?
   oidcId       String?  @unique  // For SSO users
   passwordHash String?           // For local auth users
+}
+
+model Workspace {
+  id    String        @id @default(cuid())
+  name  String
+  slug  String        @unique
+  type  WorkspaceType // PERSONAL or SHARED
+}
+
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        WorkspaceRole  // ADMIN, MEMBER, VIEWER
+  @@unique([workspaceId, userId])
 }
 
 model Scene {
@@ -80,8 +99,11 @@ model Scene {
   title        String
   storageKey   String   @unique  // S3 key
   userId       String
+  collectionId String?
 }
 ```
+
+For full schema, see `backend/prisma/schema.prisma`.
 
 ### Using Prisma
 
@@ -133,7 +155,33 @@ npm run format            # Prettier formatting
 npm run lint              # ESLint code quality
 npm run prisma:generate   # Generate Prisma client
 npm run prisma:migrate:dev # Run migrations (development)
+
+# Or use Justfile from root:
+just check-backend        # Build + format + lint
+just db-seed              # Seed database with test data
+just dev-fresh            # Reset DB + seed + start dev
 ```
+
+## Development Seed Data
+
+The seed script (`prisma/seed.ts`) creates test data for development:
+
+```bash
+just db-seed              # Run seed script
+just dev-fresh            # Full reset + seed + start dev
+```
+
+### Test Users (password: `Test123!`)
+
+| User | Email | Role in Acme Corp |
+|------|-------|-------------------|
+| Alice | `alice@test.local` | ADMIN |
+| Bob | `bob@test.local` | MEMBER (EDIT Engineering) |
+| Carol | `carol@test.local` | MEMBER (EDIT Design) |
+| Dave | `dave@test.local` | VIEWER |
+| Eve | `eve@test.local` | (not a member) |
+
+See `/docs/development/TEST_USERS.md` for full scenarios.
 
 ## Comment System & Mentions
 
