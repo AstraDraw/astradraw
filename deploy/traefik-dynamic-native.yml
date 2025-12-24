@@ -108,7 +108,7 @@ http:
     api:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8080"
+          - url: "http://host.docker.internal:8081"
 
     # Room service - Socket.io on host
     room:

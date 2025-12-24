@@ -92,7 +92,7 @@ dev:
     echo "│  Service      │  Port   │  URL                             │"
     echo "├─────────────────────────────────────────────────────────────┤"
     echo "│  Frontend     │  3000   │  http://localhost:3000           │"
-    echo "│  Backend      │  8080   │  http://localhost:8080           │"
+    echo "│  Backend      │  8081   │  http://localhost:8081           │"
     echo "│  Room         │  3002   │  http://localhost:3002           │"
     echo "│  Traefik      │  443    │  https://draw.local              │"
     echo "└─────────────────────────────────────────────────────────────┘"
@@ -175,8 +175,8 @@ dev-status:
     fi
     
     if pgrep -f "nest start" > /dev/null 2>&1; then
-        if curl -s http://localhost:8080/api/v2/auth/status > /dev/null 2>&1; then
-            echo "   ✅ Backend: running on http://localhost:8080"
+        if curl -s http://localhost:8081/api/v2/auth/status > /dev/null 2>&1; then
+            echo "   ✅ Backend: running on http://localhost:8081"
         else
             echo "   🟡 Backend: process running, port not responding"
         fi
