@@ -345,12 +345,40 @@ export class NotificationsService {
 
 ### Acceptance Criteria
 
-- [ ] Migration creates Notification table with proper indexes
-- [ ] All CRUD endpoints work with proper authentication
-- [ ] Cursor pagination works correctly
-- [ ] Unread count returns accurate number
-- [ ] Mark as read updates both `read` and `readAt` fields
-- [ ] Cascade delete works (deleting scene/thread/comment removes notifications)
+- [x] Migration creates Notification table with proper indexes
+- [x] All CRUD endpoints work with proper authentication
+- [x] Cursor pagination works correctly
+- [x] Unread count returns accurate number
+- [x] Mark as read updates both `read` and `readAt` fields
+- [x] Cascade delete works (deleting scene/thread/comment removes notifications)
+
+### Implementation Status ✅
+
+**Completed:** 2025-12-24
+
+**Files Created:**
+- `backend/prisma/migrations/20251224095717_add_notifications/migration.sql` - Database migration
+- `backend/src/notifications/notifications.module.ts` - NestJS module definition
+- `backend/src/notifications/notifications.controller.ts` - REST endpoints (4 endpoints)
+- `backend/src/notifications/notifications.service.ts` - Business logic + notification creation methods
+
+**Files Modified:**
+- `backend/prisma/schema.prisma` - Added NotificationType enum, Notification model, relations to User/Scene/CommentThread/Comment
+- `backend/src/app.module.ts` - Imported NotificationsModule
+
+**API Testing Results:**
+
+| Test | Endpoint | Method | Result |
+|------|----------|--------|--------|
+| List notifications (empty) | `/api/v2/notifications` | GET | ✅ Returns `{ notifications: [], hasMore: false }` |
+| List notifications (with data) | `/api/v2/notifications` | GET | ✅ Returns notification with actor, scene info |
+| Get unread count | `/api/v2/notifications/unread-count` | GET | ✅ Returns `{ count: N }` |
+| Mark single as read | `/api/v2/notifications/:id/read` | POST | ✅ Returns `{ success: true }` |
+| Mark all as read | `/api/v2/notifications/read-all` | POST | ✅ Returns `{ success: true }` |
+
+**Service Methods Ready for Phase 2:**
+- `createMentionNotifications(params)` - Create MENTION notifications for @mentioned users
+- `createCommentNotifications(params)` - Create COMMENT notifications for thread participants
 
 ---
 
@@ -1275,14 +1303,14 @@ if (route.type === "notifications") {
 
 ## Progress Checklist
 
-### Phase 1: Backend - Database & Module
-- [ ] Create Prisma schema migration
-- [ ] Create notifications module structure
-- [ ] Implement list notifications endpoint
-- [ ] Implement unread count endpoint
-- [ ] Implement mark as read endpoint
-- [ ] Implement mark all as read endpoint
-- [ ] Add proper indexes for performance
+### Phase 1: Backend - Database & Module ✅
+- [x] Create Prisma schema migration
+- [x] Create notifications module structure
+- [x] Implement list notifications endpoint
+- [x] Implement unread count endpoint
+- [x] Implement mark as read endpoint
+- [x] Implement mark all as read endpoint
+- [x] Add proper indexes for performance
 
 ### Phase 2: Backend - Comment Integration
 - [ ] Inject NotificationsService into CommentsService
@@ -1364,6 +1392,7 @@ This order allows incremental testing - you can verify notifications are being c
 
 | Date | Changes |
 |------|---------|
+| 2025-12-24 | Phase 1: Backend Database & Module complete (schema, migration, endpoints, service) |
 | 2025-12-24 | Added skeleton loading components following Tech Debt #7 pattern |
 | 2025-12-24 | Added mutation keys to queryClient.ts (Tech Debt #8 pattern) |
 | 2025-12-24 | Added additional translation keys (scrollForMore, loading) |

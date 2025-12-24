@@ -148,6 +148,60 @@ dev-stop:
     echo ""
     echo "✅ All services stopped."
 
+# Restart backend service only (useful after schema/module changes)
+dev-restart-backend:
+    #!/usr/bin/env bash
+    echo "🔄 Restarting backend service..."
+    if pgrep -f "nest start" > /dev/null 2>&1; then
+        pkill -f "nest start"
+        echo "   ✅ Backend stopped"
+    fi
+    sleep 1
+    echo "   🚀 Starting backend..."
+    cd backend && npm run start:dev 2>&1 | sed 's/^/[backend] /' &
+    sleep 3
+    if curl -s http://localhost:8080/api/v2/auth/status > /dev/null 2>&1; then
+        echo "   ✅ Backend restarted successfully"
+    else
+        echo "   🟡 Backend starting... (may take a few seconds)"
+    fi
+
+# Restart frontend service only
+dev-restart-frontend:
+    #!/usr/bin/env bash
+    echo "🔄 Restarting frontend service..."
+    if pgrep -f "vite" > /dev/null 2>&1; then
+        pkill -f "vite"
+        echo "   ✅ Frontend stopped"
+    fi
+    sleep 1
+    echo "   🚀 Starting frontend..."
+    cd frontend && yarn start 2>&1 | sed 's/^/[frontend] /' &
+    sleep 3
+    if curl -s http://localhost:3000 > /dev/null 2>&1; then
+        echo "   ✅ Frontend restarted successfully"
+    else
+        echo "   🟡 Frontend starting... (may take a few seconds)"
+    fi
+
+# Restart room service only
+dev-restart-room:
+    #!/usr/bin/env bash
+    echo "🔄 Restarting room service..."
+    if pgrep -f "ts-node-dev" > /dev/null 2>&1; then
+        pkill -f "ts-node-dev"
+        echo "   ✅ Room service stopped"
+    fi
+    sleep 1
+    echo "   🚀 Starting room service..."
+    cd room-service && yarn start:dev 2>&1 | sed 's/^/[room] /' &
+    sleep 3
+    if curl -s http://localhost:3002 > /dev/null 2>&1; then
+        echo "   ✅ Room service restarted successfully"
+    else
+        echo "   🟡 Room service starting... (may take a few seconds)"
+    fi
+
 # Check status of all services
 dev-status:
     #!/usr/bin/env bash

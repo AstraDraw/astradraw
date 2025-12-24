@@ -16,6 +16,9 @@ This project uses [just](https://github.com/casey/just) for common commands. **A
 | `just dev` | **Start everything with hot-reload** |
 | `just dev-stop` | Stop all services |
 | `just dev-status` | Check status of all services |
+| `just dev-restart-backend` | Restart backend only (after schema/module changes) |
+| `just dev-restart-frontend` | Restart frontend only |
+| `just dev-restart-room` | Restart room service only |
 
 ### Code Quality (before commits)
 
