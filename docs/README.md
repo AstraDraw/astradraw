@@ -12,6 +12,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | Set up development environment | [Development Guide](getting-started/DEVELOPMENT.md) |
 | Test with sample data | [Test Users](development/TEST_USERS.md) |
 | Modify Excalidraw core (packages/) | [Fork Architecture](architecture/FORK_ARCHITECTURE.md) |
+| Refactor app-layer to use core | [Fork Refactoring Plan](planning/FORK_ARCHITECTURE_REFACTORING_PLAN.md) |
 | Work on frontend UI/components | [Workspace UI Styling](guides/WORKSPACE_UI_STYLING.md), [State Management](architecture/STATE_MANAGEMENT.md) |
 | Work on backend API | [Architecture](architecture/ARCHITECTURE.md), [Roles & Teams](guides/ROLES_TEAMS_COLLECTIONS.md) |
 | Fix navigation/routing bugs | [URL Routing](architecture/URL_ROUTING.md), [Scene Navigation](architecture/SCENE_NAVIGATION.md) |
@@ -92,6 +93,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | Document | Description |
 |----------|-------------|
 | [TECHNICAL_DEBT_AND_IMPROVEMENTS.md](planning/TECHNICAL_DEBT_AND_IMPROVEMENTS.md) | Technical debt analysis and established patterns |
+| [FORK_ARCHITECTURE_REFACTORING_PLAN.md](planning/FORK_ARCHITECTURE_REFACTORING_PLAN.md) | Refactoring plan for leveraging Excalidraw fork (prop drilling, presentation actions, comment markers) |
 | [COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md](planning/COMMENT_SYSTEM_IMPLEMENTATION_PLAN.md) | Comment system implementation (Phases 1-6 ✅, Phase 7 pending) |
 | [COMMENT_SYSTEM_RESEARCH.md](planning/COMMENT_SYSTEM_RESEARCH.md) | Comment UI/UX research from Excalidraw Plus |
 | [NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md](planning/NOTIFICATION_SYSTEM_IMPLEMENTATION_PLAN.md) | Notification system implementation (Phases 1-4, 6 complete) |
