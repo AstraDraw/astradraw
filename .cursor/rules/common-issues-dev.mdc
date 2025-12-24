@@ -119,6 +119,21 @@ just build-no-cache     # Rebuild all without cache
 
 **Solution:** Accept the certificate in browser, or use Let's Encrypt for production.
 
+## Test Users (Development)
+
+After running `just db-seed` or `just dev-fresh`:
+
+| User | Email | Password | Role in Acme Corp |
+|------|-------|----------|-------------------|
+| Super Admin | `admin@localhost` | `admin` | (system admin) |
+| Alice | `alice@test.local` | `Test123!` | ADMIN |
+| Bob | `bob@test.local` | `Test123!` | MEMBER (EDIT Engineering) |
+| Carol | `carol@test.local` | `Test123!` | MEMBER (EDIT Design) |
+| Dave | `dave@test.local` | `Test123!` | VIEWER |
+| Eve | `eve@test.local` | `Test123!` | (not a member) |
+
+See `/docs/development/TEST_USERS.md` for full scenarios.
+
 ## Testing Backend API with curl
 
 When testing backend changes, use curl with proper authentication:

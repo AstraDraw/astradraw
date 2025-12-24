@@ -407,6 +407,59 @@ db-studio:
 db-reset:
     cd backend && npx prisma migrate reset
 
+# Seed database with test data (users, workspaces, teams, collections, scenes)
+db-seed:
+    cd backend && npx prisma db seed
+
+# Fresh development start with seed data (reset + seed + dev)
+dev-fresh:
+    #!/usr/bin/env bash
+    set -e
+    echo "╔════════════════════════════════════════════════════════════╗"
+    echo "║           AstraDraw Fresh Development Start                ║"
+    echo "╚════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    # Stop any running services
+    echo "🛑 Stopping existing services..."
+    just dev-stop 2>/dev/null || true
+    
+    # Start infrastructure (needed for database)
+    echo ""
+    echo "🐳 Starting infrastructure..."
+    just _up-infra-oidc
+    
+    # Wait for database
+    echo ""
+    echo "⏳ Waiting for database..."
+    for i in {1..30}; do
+        if docker exec deploy-postgres-1 pg_isready -U excalidraw > /dev/null 2>&1; then
+            echo "   ✅ Database is ready"
+            break
+        fi
+        if [ $i -eq 30 ]; then
+            echo "   ❌ Timeout waiting for database"
+            exit 1
+        fi
+        sleep 1
+    done
+    
+    # Reset and seed database
+    echo ""
+    echo "🗄️  Resetting database..."
+    cd backend && npx prisma migrate reset --force --skip-seed
+    
+    echo ""
+    echo "🌱 Seeding database with test data..."
+    cd backend && npx prisma db seed
+    
+    echo ""
+    echo "✅ Fresh database ready! Starting dev environment..."
+    echo ""
+    
+    # Continue with normal dev startup
+    cd .. && just dev
+
 # =============================================================================
 # GIT
 # =============================================================================

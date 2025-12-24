@@ -10,6 +10,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 |-------------------|-----------------|
 | Understand the project | [Architecture](architecture/ARCHITECTURE.md) |
 | Set up development environment | [Development Guide](getting-started/DEVELOPMENT.md) |
+| Test with sample data | [Test Users](development/TEST_USERS.md) |
 | Work on frontend UI/components | [Workspace UI Styling](guides/WORKSPACE_UI_STYLING.md), [State Management](architecture/STATE_MANAGEMENT.md) |
 | Work on backend API | [Architecture](architecture/ARCHITECTURE.md), [Roles & Teams](guides/ROLES_TEAMS_COLLECTIONS.md) |
 | Fix navigation/routing bugs | [URL Routing](architecture/URL_ROUTING.md), [Scene Navigation](architecture/SCENE_NAVIGATION.md) |
@@ -30,6 +31,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | Document | Description |
 |----------|-------------|
 | [DEVELOPMENT.md](getting-started/DEVELOPMENT.md) | Development environment setup with hot-reload |
+| [TEST_USERS.md](development/TEST_USERS.md) | Test users, seed data, and permission scenarios |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Contribution guidelines and workflow |
 
 ### Architecture
@@ -109,14 +111,18 @@ just dev              # Start everything
 just dev-status       # Check status
 just dev-stop         # Stop everything
 
+# Test Data
+just db-seed          # Seed database with test users/data
+just dev-fresh        # Fresh start (reset + seed + dev)
+
 # Checks
-just check-all        # Run all checks (frontend + backend + room)
+just check            # Run all checks (frontend + backend + room)
 just check-frontend   # TypeScript + Prettier + ESLint
 just check-backend    # Build + Prettier + ESLint
 
 # Docker
-just up-dev           # Start with local builds
-just fresh-dev        # Fresh start with local builds
+just up-local         # Start with local builds
+just fresh-local      # Fresh start with local builds
 just up               # Start with production images
 ```
 
@@ -132,6 +138,7 @@ just up               # Start with production images
 | API client | `frontend/excalidraw-app/auth/api/` (modular structure) |
 | URL router | `frontend/excalidraw-app/router.ts` |
 | Prisma schema | `backend/prisma/schema.prisma` |
+| Seed script | `backend/prisma/seed.ts` |
 | Docker config | `deploy/docker-compose.yml` |
 | Cursor rules | `.cursor/rules/` (folder format with RULE.md files) |
 
