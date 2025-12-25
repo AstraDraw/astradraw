@@ -129,7 +129,9 @@ services:
     # For development: override in docker-compose.override.yml
     restart: unless-stopped
     environment:
-      # Storage backend selection: 's3' (MinIO/S3) or 'ke For example, right here we even have an example of, uh, of wow. Try to, if you want to understand what the problem is, andyv' (PostgreSQL/MongoDB)
+      # Node environment - set to 'production' for secure cookies over HTTPS
+      - NODE_ENV=${NODE_ENV:-production}
+      # Storage backend selection: 's3' (MinIO/S3) or 'keyv' (PostgreSQL/MongoDB)
       - STORAGE_BACKEND=${STORAGE_BACKEND:-s3}
       
       # === S3/MinIO Configuration (when STORAGE_BACKEND=s3) ===
