@@ -14,6 +14,21 @@ backend/
 room-service/
 
 # =============================================================================
+# INTERNAL DEVELOPMENT FILES (not for public release)
+# =============================================================================
+
+# Cursor IDE (AI assistant patterns and commands)
+.cursor/
+
+# Internal planning and tracking documents
+docs/planning/
+docs/archive/
+docs/development/MVP_RELEASE_BUGS.md
+
+# Internal changelogs and READMEs (pre-release development history)
+*.internal.md
+
+# =============================================================================
 # GENERAL
 # =============================================================================
 # Logs
@@ -24,10 +39,6 @@ room-service/
 temp_for_prod_reference/
 temp/
 *.tmp
-
-# Cursor plans and archive (auto-generated)
-.cursor/plans/
-.cursor/archive/
 
 # macOS
 .DS_Store

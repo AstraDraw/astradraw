@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/AstraDraw/astradraw/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Documentation
+    url: https://github.com/AstraDraw/astradraw/tree/main/docs
+    about: Check the documentation before opening an issue
+  - name: Excalidraw Issues
+    url: https://github.com/excalidraw/excalidraw/issues
+    about: For issues with core Excalidraw features (not AstraDraw-specific), report upstream
+

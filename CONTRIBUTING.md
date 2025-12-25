@@ -17,17 +17,17 @@ AstraDraw consists of multiple repositories:
 
 | Repository | Description | Local Folder |
 |------------|-------------|--------------|
-| [astradraw](https://github.com/astrateam-net/astradraw) | Main orchestration (this repo) | `/` |
-| [astradraw-app](https://github.com/astrateam-net/astradraw-app) | React frontend (Excalidraw fork) | `frontend/` |
-| [astradraw-api](https://github.com/astrateam-net/astradraw-api) | NestJS backend API | `backend/` |
-| [astradraw-room](https://github.com/astrateam-net/astradraw-room) | WebSocket server | `room-service/` |
+| [astradraw](https://github.com/AstraDraw/astradraw) | Main orchestration (this repo) | `/` |
+| [astradraw-app](https://github.com/AstraDraw/astradraw-app) | React frontend (Excalidraw fork) | `frontend/` |
+| [astradraw-api](https://github.com/AstraDraw/astradraw-api) | NestJS backend API | `backend/` |
+| [astradraw-room](https://github.com/AstraDraw/astradraw-room) | WebSocket server | `room-service/` |
 
 ## Getting Started
 
 ### 1. Clone the Main Repository
 
 ```bash
-git clone https://github.com/astrateam-net/astradraw.git
+git clone https://github.com/AstraDraw/astradraw.git
 cd astradraw
 ```
 
@@ -35,13 +35,13 @@ cd astradraw
 
 ```bash
 # Frontend (Excalidraw fork)
-git clone https://github.com/astrateam-net/astradraw-app.git frontend
+git clone https://github.com/AstraDraw/astradraw-app.git frontend
 
 # Backend (NestJS API)
-git clone https://github.com/astrateam-net/astradraw-api.git backend
+git clone https://github.com/AstraDraw/astradraw-api.git backend
 
 # Room service (WebSocket)
-git clone https://github.com/astrateam-net/astradraw-room.git room-service
+git clone https://github.com/AstraDraw/astradraw-room.git room-service
 ```
 
 ### 3. Set Up the Deploy Environment
@@ -227,7 +227,7 @@ git checkout -b feature/my-feature
 
 Follow the patterns documented in:
 - [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) - Technical architecture
-- `.cursor/rules/` - Development patterns (if using Cursor IDE)
+- [docs/features/](docs/features/) - Feature documentation
 
 ### 3. Test Locally
 

@@ -1,20 +1,43 @@
-# AstraDraw - Self-hosted Excalidraw with Collaboration & Workspaces
+# AstraDraw
 
-A fully self-hosted, feature-rich fork of [Excalidraw](https://excalidraw.com) with real-time collaboration, user workspaces, video recordings, presentation mode, custom pens, and more.
+A fully self-hosted, feature-rich fork of [Excalidraw](https://excalidraw.com) with real-time collaboration, user workspaces, video recordings, presentation mode, and more.
 
-## About This Project
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+> [!WARNING]
+> ## 🚧 Alpha Release
+>
+> **This is a hobby project in active development.** I created AstraDraw because I wanted to share some of my [Obsidian](https://obsidian.md) whiteboards with my team — while keeping the files local in my vault. Inspired by the excellent [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin) by [@zsviczian](https://github.com/zsviczian).
+>
+> A few things to keep in mind:
+> - 🤖 **Most code is AI-assisted** (written with [Cursor](https://cursor.com))
+> - 👤 **Solo developer** — no team behind this, just me working in spare time
+> - ⚠️ **Expect bugs and breaking changes** as the project evolves
+>
+> That said, it works for my use case and I'm actively improving it. If you find this useful, contributions are very welcome! 🙌
+>
+> ---
+>
+> ### 🔮 Planned: Obsidian Vault Sync
+>
+> The end goal is to selectively sync `.excalidraw` files from your Obsidian vault to a self-hosted AstraDraw instance (via [Syncthing](https://syncthing.net/), mounted volumes, or similar). The synced boards appear in your private workspace, where you can share specific boards with different teams using AstraDraw's role-based access control. All changes sync back to your Obsidian vault — **your vault remains the source of truth, AstraDraw becomes the collaboration layer.**
+>
+> *Not yet implemented — focusing on core features first.*
+
+## About
 
 AstraDraw extends the open-source Excalidraw whiteboard with enterprise-ready features while remaining fully self-hostable. It's designed for teams and organizations that need:
 
 - **User authentication** via OIDC (Authentik, Keycloak, Dex) or local accounts
-- **Personal workspaces** to save, organize, and sync drawings across devices
-- **Video walkthroughs** (Talktrack) with camera PIP and Kinescope integration
+- **Workspaces** with teams, collections, and role-based access (Admin/Member/Viewer)
+- **Real-time collaboration** with presence indicators and cursor tracking
+- **Threaded comments** with @mentions and real-time sync
+- **In-app notifications** for mentions and comment replies
+- **Video walkthroughs** (Talktrack) with camera picture-in-picture
 - **Presentation mode** using frames as slides with laser pointer
 - **Custom pen presets** (highlighter, fountain, marker, etc.)
+- **Quick search** (Cmd+K) to find scenes across workspaces
 - **GIF/Sticker search** via GIPHY integration
-- **Pre-bundled libraries** for team-wide shape collections
-
-All features are documented in the `/docs` folder for AI assistants and developers.
 
 ## Features
 
@@ -29,15 +52,15 @@ All features are documented in the `/docs` folder for AI assistants and develope
 
 | Feature | Description | Documentation |
 |---------|-------------|---------------|
-| **Workspace** | Save/organize scenes with user accounts | [docs/features/WORKSPACE.md](docs/features/WORKSPACE.md) |
-| **Roles, Teams & Collections** | Multi-workspace support with ADMIN/MEMBER/VIEWER roles | [docs/guides/ROLES_TEAMS_COLLECTIONS.md](docs/guides/ROLES_TEAMS_COLLECTIONS.md) |
-| **User Profile** | Avatar upload, name editing, profile management | [docs/guides/USER_PROFILE.md](docs/guides/USER_PROFILE.md) |
-| **Collaboration** | Real-time collaboration with profile integration | [docs/features/COLLABORATION.md](docs/features/COLLABORATION.md) |
+| **Workspaces** | Personal & shared workspaces with scene organization | [docs/features/WORKSPACE.md](docs/features/WORKSPACE.md) |
+| **Roles & Teams** | Role-based access (Admin/Member/Viewer), team management | [docs/guides/ROLES_TEAMS_COLLECTIONS.md](docs/guides/ROLES_TEAMS_COLLECTIONS.md) |
+| **Collaboration** | Real-time collaboration with presence & cursor tracking | [docs/features/COLLABORATION.md](docs/features/COLLABORATION.md) |
+| **Comments** | Threaded canvas comments with @mentions | [docs/features/COMMENTS.md](docs/features/COMMENTS.md) |
+| **Notifications** | In-app notifications for mentions and replies | [docs/features/NOTIFICATIONS.md](docs/features/NOTIFICATIONS.md) |
 | **Talktrack** | Record canvas walkthroughs with camera PIP | [docs/features/TALKTRACK.md](docs/features/TALKTRACK.md) |
-| **Presentation Mode** | Use frames as slides with laser pointer | [docs/features/PRESENTATION_MODE.md](docs/features/PRESENTATION_MODE.md) |
+| **Presentation** | Use frames as slides with laser pointer | [docs/features/PRESENTATION_MODE.md](docs/features/PRESENTATION_MODE.md) |
 | **Custom Pens** | Highlighter, fountain, marker presets | [docs/features/PENS_IMPLEMENTATION.md](docs/features/PENS_IMPLEMENTATION.md) |
-| **Stickers & GIFs** | GIPHY integration for inserting media | [docs/features/GIPHY_SUPPORT.md](docs/features/GIPHY_SUPPORT.md) |
-| **Libraries** | Pre-bundled shape libraries via Docker | [docs/features/LIBRARIES_SYSTEM.md](docs/features/LIBRARIES_SYSTEM.md) |
+| **Quick Search** | Cmd+K to search scenes across workspaces | [docs/features/QUICK_SEARCH.md](docs/features/QUICK_SEARCH.md) |
 
 ## Architecture
 
@@ -55,7 +78,6 @@ All features are documented in the `/docs` folder for AI assistants and develope
 │ React + Vite    │ │ Socket.io       │ │ NestJS + Prisma             │
 │ Excalidraw Fork │ │ Collaboration   │ │ - Auth (OIDC/Local)         │
 │                 │ │                 │ │ - Workspace API             │
-│                 │ │                 │ │ - Talktrack API             │
 │                 │ │                 │ │ - Storage (S3/MinIO)        │
 └─────────────────┘ └─────────────────┘ └─────────────────────────────┘
                                                    │
@@ -70,46 +92,36 @@ All features are documented in the `/docs` folder for AI assistants and develope
 
 ## Repository Structure
 
+AstraDraw consists of multiple repositories:
+
+| Repository | Description |
+|------------|-------------|
+| [astradraw](https://github.com/AstraDraw/astradraw) | Main orchestration (this repo) - deployment, docs |
+| [astradraw-app](https://github.com/AstraDraw/astradraw-app) | React frontend (Excalidraw fork) |
+| [astradraw-api](https://github.com/AstraDraw/astradraw-api) | NestJS backend API |
+| [astradraw-room](https://github.com/AstraDraw/astradraw-room) | WebSocket collaboration server |
+
 ```
 astradraw/
-├── frontend/           # React app (Excalidraw fork) - separate git repo
-├── backend/            # NestJS API - separate git repo
-├── room-service/       # WebSocket server - separate git repo
-├── docs/               # Feature documentation (organized by category)
-│   ├── architecture/   # Technical architecture docs
-│   ├── features/       # Feature documentation
-│   ├── guides/         # How-to guides
-│   ├── deployment/     # Deployment & configuration
-│   ├── planning/       # Roadmap & implementation plans
-│   └── troubleshooting/# Common issues & fixes
-├── deploy/             # Docker Compose, configs, secrets
-│   ├── docker-compose.yml
-│   ├── .env, env.example
-│   ├── certs/          # SSL certificates
-│   ├── secrets/        # Docker secrets
-│   └── libraries/      # Excalidraw shape libraries
-└── .cursor/rules/      # AI assistant rules
+├── frontend/           # React app (clone astradraw-app here)
+├── backend/            # NestJS API (clone astradraw-api here)
+├── room-service/       # WebSocket server (clone astradraw-room here)
+├── docs/               # Documentation
+├── deploy/             # Docker Compose, configs
+└── Justfile            # Development commands
 ```
-
-| Folder | Description |
-|--------|-------------|
-| `frontend/` | Modified Excalidraw frontend with all AstraDraw features |
-| `backend/` | NestJS API for auth, workspace, storage, and Talktrack |
-| `room-service/` | WebSocket server for real-time collaboration (upstream) |
-| `docs/` | Detailed documentation for each feature |
-| `deploy/` | All deployment files (Docker, configs, secrets, certs) |
 
 ## Quick Start
 
-### Development (Recommended)
+### Development
 
 ```bash
 # 1. Clone all repositories
-git clone https://github.com/astrateam-net/astradraw.git
+git clone https://github.com/AstraDraw/astradraw.git
 cd astradraw
-git clone https://github.com/astrateam-net/astradraw-app.git frontend
-git clone https://github.com/astrateam-net/astradraw-api.git backend
-git clone https://github.com/astrateam-net/astradraw-room.git room-service
+git clone https://github.com/AstraDraw/astradraw-app.git frontend
+git clone https://github.com/AstraDraw/astradraw-api.git backend
+git clone https://github.com/AstraDraw/astradraw-room.git room-service
 
 # 2. Setup (first time only)
 just setup
@@ -124,14 +136,16 @@ just dev
 
 ```bash
 # 1. Clone this repository
-git clone https://github.com/astrateam-net/astradraw.git
+git clone https://github.com/AstraDraw/astradraw.git
 cd astradraw/deploy
 
 # 2. Copy environment template
 cp env.example .env
 
-# 3. Create secrets directory
+# 3. Create secrets
 mkdir -p secrets
+openssl rand -base64 32 > secrets/jwt_secret
+openssl rand -base64 32 > secrets/postgres_password
 echo "minioadmin" > secrets/minio_access_key
 openssl rand -base64 32 > secrets/minio_secret_key
 
@@ -151,7 +165,7 @@ docker compose up -d
 
 ### Environment Variables
 
-In `deploy/`, copy `env.example` to `.env` and configure:
+Copy `deploy/env.example` to `deploy/.env` and configure:
 
 | Variable | Description |
 |----------|-------------|
@@ -160,7 +174,6 @@ In `deploy/`, copy `env.example` to `.env` and configure:
 | `POSTGRES_*` | PostgreSQL credentials |
 | `OIDC_*` | OIDC provider settings (optional) |
 | `GIPHY_API_KEY` | For Stickers & GIFs sidebar |
-| `KINESCOPE_*` | For Talktrack video hosting |
 
 ### Authentication Options
 
@@ -170,117 +183,53 @@ In `deploy/`, copy `env.example` to `.env` and configure:
 
 See [docs/deployment/SSO_OIDC_SETUP.md](docs/deployment/SSO_OIDC_SETUP.md) for detailed auth setup.
 
-### Docker Secrets Support
+### Docker Secrets
 
-All sensitive variables support the `_FILE` suffix pattern:
+All sensitive variables support the `_FILE` suffix pattern for Docker secrets:
 
 ```yaml
 environment:
-  - S3_ACCESS_KEY_FILE=/run/secrets/minio_access_key
-volumes:
-  - ./secrets:/run/secrets:ro
+  - JWT_SECRET_FILE=/run/secrets/jwt_secret
 ```
 
 See [docs/deployment/DOCKER_SECRETS.md](docs/deployment/DOCKER_SECRETS.md) for details.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup instructions.
-
-## API Endpoints
-
-### Authentication
-- `GET /api/v2/auth/status` - Check auth configuration
-- `GET /api/v2/auth/login` - Start OIDC login flow
-- `POST /api/v2/auth/login` - Local login
-- `POST /api/v2/auth/register` - Local registration
-- `GET /api/v2/auth/me` - Get current user
-
-### Workspace & Scenes
-- `GET /api/v2/workspace/scenes` - List user's scenes
-- `POST /api/v2/workspace/scenes` - Create scene
-- `GET /api/v2/workspace/scenes/:id/data` - Get scene data
-- `PUT /api/v2/workspace/scenes/:id` - Update scene
-
-### Workspaces, Teams & Collections
-- `GET /api/v2/workspaces` - List user's workspaces
-- `GET /api/v2/workspaces/:id/members` - List workspace members
-- `POST /api/v2/workspaces/:id/members/invite` - Invite member (admin)
-- `GET /api/v2/workspaces/:id/teams` - List teams
-- `GET /api/v2/workspaces/:id/collections` - List collections
-- `POST /api/v2/workspaces/join` - Join via invite link
-
-### User Profile
-- `GET /api/v2/users/me` - Get profile
-- `PUT /api/v2/users/me` - Update profile
-- `POST /api/v2/users/me/avatar` - Upload avatar
-
-### Talktrack
-- `GET /api/v2/workspace/scenes/:id/talktracks` - List recordings
-- `POST /api/v2/workspace/scenes/:id/talktracks` - Create recording
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [CONTRIBUTING.md](CONTRIBUTING.md) | **How to set up for development** |
-| [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | Technical architecture and design decisions |
-| [docs/planning/ROADMAP.md](docs/planning/ROADMAP.md) | Planned features and specifications |
-
-### Feature Documentation
-
-| Feature | Documentation |
-|---------|---------------|
-| Workspace & Auth | [docs/features/WORKSPACE.md](docs/features/WORKSPACE.md) |
-| Roles, Teams & Collections | [docs/guides/ROLES_TEAMS_COLLECTIONS.md](docs/guides/ROLES_TEAMS_COLLECTIONS.md) |
-| User Profile | [docs/guides/USER_PROFILE.md](docs/guides/USER_PROFILE.md) |
-| Collaboration | [docs/features/COLLABORATION.md](docs/features/COLLABORATION.md) |
-| Talktrack | [docs/features/TALKTRACK.md](docs/features/TALKTRACK.md) |
-| Presentation Mode | [docs/features/PRESENTATION_MODE.md](docs/features/PRESENTATION_MODE.md) |
-| Custom Pens | [docs/features/PENS_IMPLEMENTATION.md](docs/features/PENS_IMPLEMENTATION.md) |
-| Stickers & GIFs | [docs/features/GIPHY_SUPPORT.md](docs/features/GIPHY_SUPPORT.md) |
-| Libraries | [docs/features/LIBRARIES_SYSTEM.md](docs/features/LIBRARIES_SYSTEM.md) |
+| [docs/README.md](docs/README.md) | Full documentation index |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup guide |
+| [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) | Technical architecture |
+| [docs/deployment/](docs/deployment/) | Deployment guides |
 
 ## Tech Stack
 
-### Frontend
-- React 18 + TypeScript
-- Vite build system
-- Jotai state management
-- SCSS modules
+**Frontend:** React 18, TypeScript, Vite, Jotai, SCSS
 
-### Backend
-- NestJS framework
-- Prisma ORM
-- PostgreSQL database
-- MinIO/S3 object storage
-- JWT authentication
+**Backend:** NestJS, Prisma, PostgreSQL, MinIO/S3, JWT
 
-### Infrastructure
-- Docker Compose orchestration
-- Traefik reverse proxy
-- Let's Encrypt SSL (optional)
+**Infrastructure:** Docker Compose, Traefik, Let's Encrypt
 
-## AI-Assisted Development
+## Contributing
 
-This project is optimized for development with Cursor IDE. Open `astradraw/` as your workspace to get AI assistance across all repositories.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
 
-### Cursor Rules
-
-The `.cursor/rules/` folder contains AI instructions for:
-- Project structure and patterns
-- Common issues and solutions
-- Multi-repo workflow
-- Context management
+**Note:** All issues should be filed in this repository, not in the sub-repos.
 
 ## Credits
 
-- [Excalidraw](https://github.com/excalidraw/excalidraw) - The amazing whiteboard app
-- [excalidraw-room](https://github.com/excalidraw/excalidraw-room) - Official collaboration server (upstream)
+AstraDraw is built on the shoulders of giants:
+
+- [Excalidraw](https://github.com/excalidraw/excalidraw) - The amazing open-source whiteboard (MIT License)
+- [excalidraw-room](https://github.com/excalidraw/excalidraw-room) - Official collaboration server (MIT License)
+- [excalidraw-storage-backend](https://github.com/alswl/excalidraw-storage-backend) - Storage backend foundation (MIT License)
 - [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin) - Inspiration for pens and presentation mode
-- [alswl/excalidraw-storage-backend](https://github.com/alswl/excalidraw-storage-backend) - Storage backend foundation
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
 
+This project includes code from:
+- Excalidraw © 2020 Excalidraw (MIT License)
+- excalidraw-storage-backend © 2022 Kilian Decaderincourt (MIT License)
