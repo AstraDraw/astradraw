@@ -20,10 +20,14 @@ room-service/
 # Cursor IDE (AI assistant patterns and commands)
 .cursor/
 
+# Internal-only Justfile commands
+Justfile.local
+
 # Internal planning and tracking documents
 docs/planning/
 docs/archive/
 docs/development/MVP_RELEASE_BUGS.md
+docs/guides/INTERNAL_DEV_WORKFLOW.md
 
 # Internal changelogs and READMEs (pre-release development history)
 *.internal.md
