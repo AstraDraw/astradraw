@@ -507,9 +507,9 @@ setup:
     
     # Step 2: Clone repos
     echo "📋 Step 2: Cloning repositories..."
-    test -d frontend || (echo "   Cloning frontend..." && git clone git@github.com:astrateam-net/astradraw-app.git frontend)
-    test -d backend || (echo "   Cloning backend..." && git clone git@github.com:astrateam-net/astradraw-api.git backend)
-    test -d room-service || (echo "   Cloning room service..." && git clone git@github.com:astrateam-net/astradraw-room.git room-service)
+    test -d frontend || (echo "   Cloning frontend..." && git clone https://github.com/AstraDraw/astradraw-app.git frontend)
+    test -d backend || (echo "   Cloning backend..." && git clone https://github.com/AstraDraw/astradraw-api.git backend)
+    test -d room-service || (echo "   Cloning room service..." && git clone https://github.com/AstraDraw/astradraw-room.git room-service)
     echo "   ✅ Repositories ready"
     echo ""
     
