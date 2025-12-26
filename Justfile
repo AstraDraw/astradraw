@@ -649,7 +649,7 @@ _dev-frontend:
 
 # Start backend dev server
 _dev-backend:
-    cd backend && npm run start:dev 2>&1 | sed 's/^/[backend] /'
+    cd backend && rm -f tsconfig.build.tsbuildinfo && npm run start:dev 2>&1 | sed 's/^/[backend] /'
 
 # Start room service dev server
 _dev-room:
