@@ -338,7 +338,7 @@ useHandleLibrary({
   validateLibraryUrl: (url) => {
     const allowed = [
       "libraries.astradraw.com",
-      "raw.githubusercontent.com/astrateam-net",
+      "raw.githubusercontent.com/your-org/your-libraries",
     ];
     return allowed.some(domain => url.includes(domain));
   },
@@ -450,7 +450,7 @@ useHandleLibrary({
   adapter: LibraryIndexedDBAdapter,
   validateLibraryUrl: (url) => {
     return url.includes("libraries.astradraw.com") ||
-           url.includes("raw.githubusercontent.com/astrateam-net");
+           url.includes("raw.githubusercontent.com/your-org");
   },
 });
 ```
