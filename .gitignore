@@ -22,6 +22,7 @@ room-service/
 
 # Internal-only Justfile commands
 Justfile.local
+INTERNAL_QUICKSTART.md
 
 # Internal planning and tracking documents
 docs/planning/
