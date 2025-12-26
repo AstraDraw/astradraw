@@ -103,7 +103,8 @@ The hotkey works in both **canvas mode** and **dashboard mode** thanks to the CS
 
 ### Scope
 
-- Searches only within the **current workspace**
+- Searches across **all workspaces** the user has access to
+- Results include workspace name for context
 - Respects user access permissions:
   - Only shows collections the user can access
   - Only shows scenes from accessible collections
@@ -159,15 +160,18 @@ export const searchQueryAtom = atom<string>("");
 
 ### API Integration
 
-Quick Search uses existing workspace APIs:
+Quick Search uses a dedicated global search endpoint:
 
 ```typescript
-// Fetch collections (already filtered by access)
-const collections = await listCollections(workspaceId);
-
-// Fetch all scenes in workspace (already filtered by access)
-const scenes = await listWorkspaceScenes(workspaceId);
+// Fetch collections and scenes across all accessible workspaces
+const { collections, scenes } = await globalSearch();
 ```
+
+**Backend Endpoint:** `GET /api/v2/search/global`
+
+Response includes workspace context for each result:
+- `workspaceId`, `workspaceName`, `workspaceSlug` for navigation
+- `collectionName` and `isPrivate` flags for display
 
 ### Navigation Actions
 
