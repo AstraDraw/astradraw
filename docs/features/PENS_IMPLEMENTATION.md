@@ -1,6 +1,6 @@
 # Custom Pens Implementation
 
-This document describes the implementation of custom pen presets in Astradraw, inspired by the [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin).
+This document describes the implementation of custom pen presets in AstraDraw, based on the [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin) and its [zsviczian/excalidraw fork](https://github.com/zsviczian/excalidraw).
 
 ## Overview
 
@@ -11,37 +11,49 @@ Custom pens allow users to draw with different stroke characteristics (e.g., hig
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
 │   PenToolbar    │────▶│    AppState      │────▶│ FreeDrawElement     │
-│   (UI Component)│     │ currentStroke-   │     │ customStrokeOptions │
-│                 │     │ Options          │     │                     │
-└─────────────────┘     └──────────────────┘     └──────────┬──────────┘
+│   (UI Component)│     │ currentStroke-   │     │ customData: {       │
+│                 │     │ Options          │     │   strokeOptions     │
+└─────────────────┘     └──────────────────┘     │ }                   │
+                                                 └──────────┬──────────┘
                                                             │
                                                             ▼
                                                ┌─────────────────────────┐
                                                │ getFreedrawOutlinePoints│
                                                │ (renderElement.ts)      │
                                                │                         │
-                                               │ Uses customStrokeOptions│
-                                               │ to configure            │
-                                               │ perfect-freehand        │
+                                               │ Reads customData.       │
+                                               │ strokeOptions.options   │
+                                               │ for perfect-freehand    │
                                                └─────────────────────────┘
 ```
 
-## Files Modified/Created
+## Key Files
 
-### 1. Type Definitions
+| File | Purpose |
+|------|---------|
+| `packages/excalidraw/types.ts` | Type definitions for pens |
+| `packages/excalidraw/appState.ts` | Default state and storage config |
+| `packages/element/src/easingFunctions.ts` | Easing functions for stroke tapering |
+| `packages/element/src/renderElement.ts` | Rendering with custom pen options |
+| `packages/excalidraw/components/App.tsx` | Stores strokeOptions in element customData |
+| `excalidraw-app/pens/pens.ts` | Pen preset definitions |
+| `excalidraw-app/pens/PenToolbar/PenToolbar.tsx` | UI component |
+| `excalidraw-app/pens/PenSettingsModal/PenSettingsModal.tsx` | Pen customization modal |
 
-**`packages/excalidraw/types.ts`** - Added pen-related types to AppState:
+## Type Definitions
+
+**`packages/excalidraw/types.ts`**:
 
 ```typescript
-// Custom Pen Types
+// Perfect Freehand stroke options
 export interface PenStrokeOptions {
-  thinning: number; // -1 to 1, affects stroke thinning based on pressure
-  smoothing: number; // 0 to 1, smooths the stroke path
-  streamline: number; // 0 to 1, reduces jitter in strokes
-  easing: string; // easing function name (e.g., "easeOutSine", "linear")
-  simulatePressure?: boolean;
+  thinning: number;        // -1 to 1, affects stroke thinning based on pressure
+  smoothing: number;       // 0 to 1, smooths the stroke path
+  streamline: number;      // 0 to 1, reduces jitter in strokes
+  easing: string;          // easing function name (e.g., "easeOutSine", "linear")
+  simulatePressure?: "yes" | "no" | "yes for mouse, no for pen";
   start: {
-    cap: boolean; // round cap at start
+    cap: boolean;          // round cap at start
     taper: number | boolean; // taper length or true for auto
     easing: string;
   };
@@ -52,14 +64,16 @@ export interface PenStrokeOptions {
   };
 }
 
+// Full pen options (stored in element.customData.strokeOptions)
 export interface PenOptions {
-  highlighter: boolean; // true = semi-transparent fill mode
-  constantPressure: boolean; // true = ignore pressure variation
-  hasOutline: boolean; // future: add outline around stroke
-  outlineWidth: number; // future: outline thickness
-  options: PenStrokeOptions;
+  highlighter: boolean;     // true = semi-transparent fill mode (future)
+  constantPressure: boolean; // true = ignore pressure variation, use uniform width
+  hasOutline: boolean;      // true = draw outline around stroke
+  outlineWidth: number;     // outline thickness multiplier
+  options: PenStrokeOptions; // perfect-freehand parameters
 }
 
+// Pen preset type identifiers
 export type PenType =
   | "default"
   | "highlighter"
@@ -69,14 +83,15 @@ export type PenType =
   | "thick-thin"
   | "thin-thick-thin";
 
+// Complete pen style definition
 export interface PenStyle {
   type: PenType;
-  freedrawOnly: boolean; // if true, saves/restores other tool settings
-  strokeColor: string;
-  backgroundColor: string;
-  fillStyle: string;
-  strokeWidth: number;
-  roughness: number | null;
+  freedrawOnly: boolean;    // if true, saves/restores other tool settings
+  strokeColor: string;      // pen stroke color (empty = use canvas current)
+  backgroundColor: string;  // pen fill color (for outline pens)
+  fillStyle: string;        // fill style (empty = use canvas current)
+  strokeWidth: number;      // 0 = use canvas current stroke width
+  roughness: number | null; // null = use canvas current
   penOptions: PenOptions;
 }
 
@@ -92,84 +107,96 @@ export interface ResetCustomPenState {
 // Added to AppState interface:
 export interface AppState {
   // ... existing fields
-  currentStrokeOptions: PenOptions | null; // Active pen configuration
+  currentStrokeOptions: PenOptions | null;  // Active pen configuration
+  currentPenType: PenType | null;           // Active pen type
   resetCustomPen: ResetCustomPenState | null; // Saved state to restore
-  customPens: PenStyle[]; // Available pen presets
+  customPens: PenStyle[];                   // User's pen presets
 }
 ```
 
-**`packages/element/src/types.ts`** - Extended FreeDrawElement:
+## Data Flow
+
+### 1. User Selects Pen
+
+When a user clicks a pen button in `PenToolbar`:
 
 ```typescript
-export interface FreeDrawStrokeOptions {
-  thinning: number;
-  smoothing: number;
-  streamline: number;
-  easing: string;
-  start?: {
-    cap: boolean;
-    taper: number | boolean;
-    easing: string;
-  };
-  end?: {
-    cap: boolean;
-    taper: number | boolean;
-    easing: string;
-  };
-}
+const setPen = useCallback((pen: PenStyle) => {
+  const st = excalidrawAPI.getAppState();
 
-export type ExcalidrawFreeDrawElement = _ExcalidrawElementBase &
-  Readonly<{
-    type: "freedraw";
-    points: readonly LocalPoint[];
-    pressures: readonly number[];
-    simulatePressure: boolean;
-    customStrokeOptions?: FreeDrawStrokeOptions; // NEW: attached to each stroke
-  }>;
+  // Save current settings if switching to freedrawOnly pen
+  const resetCustomPen = pen.freedrawOnly && !st.resetCustomPen
+    ? {
+        currentItemStrokeWidth: st.currentItemStrokeWidth,
+        currentItemBackgroundColor: st.currentItemBackgroundColor,
+        currentItemStrokeColor: st.currentItemStrokeColor,
+        currentItemFillStyle: st.currentItemFillStyle,
+        currentItemRoughness: st.currentItemRoughness,
+      }
+    : null;
+
+  const appStateUpdate = {
+    currentStrokeOptions: pen.penOptions,
+    currentPenType: pen.type,
+  };
+
+  // Apply pen properties following Obsidian Excalidraw plugin patterns:
+  // - strokeWidth: 0 means "keep current canvas width" (don't override)
+  // - backgroundColor/strokeColor: only apply if truthy
+  // - fillStyle: empty string means "keep current" (don't override)
+  // - roughness: null means "keep current" (don't override)
+  if (pen.strokeWidth && pen.strokeWidth > 0) {
+    appStateUpdate.currentItemStrokeWidth = pen.strokeWidth;
+  }
+  if (pen.backgroundColor) {
+    appStateUpdate.currentItemBackgroundColor = pen.backgroundColor;
+  }
+  if (pen.strokeColor) {
+    appStateUpdate.currentItemStrokeColor = pen.strokeColor;
+  }
+  // ... etc
+
+  excalidrawAPI.updateScene({ appState: appStateUpdate });
+  excalidrawAPI.setActiveTool({ type: "freedraw" });
+}, [excalidrawAPI]);
 ```
 
-### 2. Default State
+### 2. User Draws (Element Creation)
 
-**`packages/excalidraw/appState.ts`**:
+In `App.tsx` `handlePointerDown`, when creating a freedraw element:
 
 ```typescript
-export const getDefaultAppState = () => {
-  return {
-    // ... existing defaults
-    currentStrokeOptions: null, // No custom pen active by default
-    resetCustomPen: null,
-    customPens: [], // Populated by App.tsx on init
-  };
-};
+// Custom pen stroke options (AstraDraw)
+const strokeOptions = this.state.currentStrokeOptions;
 
-// Storage configuration
-APP_STATE_STORAGE_CONF = {
-  currentStrokeOptions: { browser: true, export: false, server: false },
-  resetCustomPen: { browser: false, export: false, server: false },
-  customPens: { browser: true, export: false, server: false },
-};
+// constantPressure means ignore hardware pressure - use uniform width
+const simulatePressure = strokeOptions?.constantPressure
+  ? false
+  : event.pressure === 0.5;
+
+const element = newFreeDrawElement({
+  type: elementType,
+  x: gridX,
+  y: gridY,
+  strokeColor: this.state.currentItemStrokeColor,
+  backgroundColor: this.state.currentItemBackgroundColor,
+  strokeWidth: this.state.currentItemStrokeWidth,
+  // ... other properties
+  simulatePressure,
+  // Store custom pen options in customData (AstraDraw)
+  ...(strokeOptions ? { customData: { strokeOptions } } : {}),
+  pressures: simulatePressure
+    ? []
+    : [strokeOptions?.constantPressure ? 1 : event.pressure],
+});
 ```
 
-### 3. Rendering Logic
+### 3. Rendering
 
-**`packages/element/src/renderElement.ts`** - Modified `getFreedrawOutlinePoints()`:
+In `renderElement.ts`, `getFreedrawOutlinePoints()` reads the custom options:
 
 ```typescript
-// Easing functions map for perfect-freehand
-const EASING_FUNCTIONS: Record<string, (t: number) => number> = {
-  linear: (t) => t,
-  easeOutSine: (t) => Math.sin((t * Math.PI) / 2),
-  easeInSine: (t) => 1 - Math.cos((t * Math.PI) / 2),
-  easeInOutSine: (t) => (1 - Math.cos(t * Math.PI)) / 2,
-  easeInQuad: (t) => t * t,
-  easeOutQuad: (t) => t * (2 - t),
-  easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2),
-  easeInCubic: (t) => t * t * t,
-  easeOutCubic: (t) => 1 - Math.pow(1 - t, 3),
-  easeInOutCubic: (t) =>
-    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
-  // ... more easing functions
-};
+import easingsFunctions from "./easingFunctions";
 
 export function getFreedrawOutlinePoints(element: ExcalidrawFreeDrawElement) {
   const inputPoints = element.simulatePressure
@@ -178,51 +205,131 @@ export function getFreedrawOutlinePoints(element: ExcalidrawFreeDrawElement) {
     ? element.points.map(([x, y], i) => [x, y, element.pressures[i]])
     : [[0, 0, 0.5]];
 
-  // KEY: Read custom options from the element itself
-  const customOpts = element.customStrokeOptions;
+  // Read custom stroke options from customData (AstraDraw pen system)
+  const customOptions = element.customData?.strokeOptions?.options;
 
-  const options: StrokeOptions = {
-    simulatePressure: element.simulatePressure,
-    size: element.strokeWidth * 4.25,
-    // Use custom values if present, otherwise use Excalidraw defaults
-    thinning: customOpts?.thinning ?? 0.6,
-    smoothing: customOpts?.smoothing ?? 0.5,
-    streamline: customOpts?.streamline ?? 0.5,
-    easing: customOpts?.easing
-      ? getEasingFunction(customOpts.easing)
-      : (t) => Math.sin((t * Math.PI) / 2),
-    last: true,
-    // Apply start/end taper settings if present
-    ...(customOpts?.start && {
-      start: {
-        cap: customOpts.start.cap,
-        taper: customOpts.start.taper,
-        easing: getEasingFunction(customOpts.start.easing),
-      },
-    }),
-    ...(customOpts?.end && {
-      end: {
-        cap: customOpts.end.cap,
-        taper: customOpts.end.taper,
-        easing: getEasingFunction(customOpts.end.easing),
-      },
-    }),
-  };
+  // Use custom stroke options if available, otherwise use defaults
+  const options: StrokeOptions = customOptions
+    ? {
+        ...customOptions,
+        simulatePressure: customOptions.simulatePressure ?? element.simulatePressure,
+        size: element.strokeWidth * 4.25, // Override size with stroke width
+        last: true,
+        easing: easingsFunctions[customOptions.easing] ?? ((t) => t),
+        // Handle start/end easing functions
+        ...(customOptions.start?.easing && {
+          start: {
+            ...customOptions.start,
+            easing: easingsFunctions[customOptions.start.easing] ?? ((t) => t),
+          },
+        }),
+        ...(customOptions.end?.easing && {
+          end: {
+            ...customOptions.end,
+            easing: easingsFunctions[customOptions.end.easing] ?? ((t) => t),
+          },
+        }),
+      }
+    : {
+        // Default Excalidraw values
+        simulatePressure: element.simulatePressure,
+        size: element.strokeWidth * 4.25,
+        thinning: 0.6,
+        smoothing: 0.5,
+        streamline: 0.5,
+        easing: easingsFunctions.easeOutSine,
+        last: true,
+      };
 
   return getStroke(inputPoints, options);
 }
 ```
 
-### 4. Pen Presets
+### 4. Outline Rendering
 
-**`excalidraw-app/pens/pens.ts`** - Pen preset definitions:
+For pens with `hasOutline: true`, in `drawElementOnCanvas`:
+
+```typescript
+case "freedraw": {
+  context.save();
+  const path = getFreeDrawPath2D(element) as Path2D;
+  const fillShape = ShapeCache.get(element);
+
+  if (fillShape) {
+    rc.draw(fillShape);
+  }
+
+  // AstraDraw: Check for outline stroke options in customData
+  const strokeOptions = element.customData?.strokeOptions;
+  if (strokeOptions?.hasOutline) {
+    // Draw outline first: strokeColor is outline, backgroundColor is fill
+    context.lineWidth = element.strokeWidth * (strokeOptions.outlineWidth ?? 1);
+    context.strokeStyle = element.strokeColor;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.stroke(path);
+    context.fillStyle = element.backgroundColor;
+  } else {
+    context.fillStyle = element.strokeColor;
+  }
+  context.fill(path);
+
+  context.restore();
+  break;
+}
+```
+
+## Easing Functions
+
+**`packages/element/src/easingFunctions.ts`**:
+
+```typescript
+type EasingFunction = (t: number) => number;
+
+interface EasingDictionary {
+  [key: string]: EasingFunction;
+}
+
+const easingsFunctions: EasingDictionary = {
+  linear: (x) => x,
+  easeInQuad(x) { return x * x; },
+  easeOutQuad(x) { return 1 - (1 - x) * (1 - x); },
+  easeInOutQuad(x) {
+    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  },
+  easeInCubic(x) { return x * x * x; },
+  easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); },
+  easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  },
+  easeInSine(x) { return 1 - Math.cos((x * Math.PI) / 2); },
+  easeOutSine(x) { return Math.sin((x * Math.PI) / 2); },
+  easeInOutSine(x) { return -(Math.cos(Math.PI * x) - 1) / 2; },
+  // ... more easing functions (expo, circ, back, elastic, bounce)
+};
+
+export default easingsFunctions;
+```
+
+## Pen Presets
+
+**`excalidraw-app/pens/pens.ts`**:
 
 ```typescript
 export const PENS: Record<PenType, PenStyle> = {
   default: {
     type: "default",
     freedrawOnly: false,
+    strokeColor: "#000000",
+    backgroundColor: "transparent",
+    fillStyle: "hachure",
+    strokeWidth: 0,  // 0 = use canvas current
+    roughness: 0,
     penOptions: {
+      highlighter: false,
+      constantPressure: false,
+      hasOutline: false,
+      outlineWidth: 1,
       options: {
         thinning: 0.6,
         smoothing: 0.5,
@@ -235,218 +342,228 @@ export const PENS: Record<PenType, PenStyle> = {
   },
   highlighter: {
     type: "highlighter",
-    freedrawOnly: true, // Will save/restore other settings
+    freedrawOnly: true,
     strokeColor: "#FFC47C",
+    backgroundColor: "#FFC47C",
     fillStyle: "solid",
+    strokeWidth: 2,
+    roughness: null,
     penOptions: {
       highlighter: true,
       constantPressure: true,
+      hasOutline: true,
+      outlineWidth: 4,
       options: {
         thinning: 1,
         smoothing: 0.5,
         streamline: 0.5,
         easing: "linear",
-        // No taper = flat ends like a real highlighter
+        start: { taper: 0, cap: true, easing: "linear" },
+        end: { taper: 0, cap: true, easing: "linear" },
+      },
+    },
+  },
+  finetip: {
+    type: "finetip",
+    freedrawOnly: false,
+    strokeColor: "#3E6F8D",
+    backgroundColor: "transparent",
+    fillStyle: "hachure",
+    strokeWidth: 0.5,
+    roughness: 0,
+    penOptions: {
+      highlighter: false,
+      hasOutline: false,
+      outlineWidth: 1,
+      constantPressure: true,
+      options: {
+        smoothing: 0.4,
+        thinning: -0.5,  // Negative = thicker with pressure
+        streamline: 0.4,
+        easing: "linear",
+        start: { taper: 5, cap: false, easing: "linear" },
+        end: { taper: 5, cap: false, easing: "linear" },
       },
     },
   },
   fountain: {
     type: "fountain",
     freedrawOnly: false,
+    strokeColor: "#000000",
+    backgroundColor: "transparent",
+    fillStyle: "hachure",
+    strokeWidth: 2,
+    roughness: 0,
     penOptions: {
+      highlighter: false,
+      constantPressure: false,
+      hasOutline: false,
+      outlineWidth: 1,
       options: {
-        thinning: 0.6,
         smoothing: 0.2,
+        thinning: 0.6,
         streamline: 0.2,
         easing: "easeInOutSine",
-        start: { taper: 150, cap: true, easing: "linear" }, // Long entry taper
+        start: { taper: 150, cap: true, easing: "linear" },  // Long entry taper
         end: { taper: 1, cap: true, easing: "linear" },
       },
     },
   },
-  // ... more presets (finetip, marker, thick-thin, thin-thick-thin)
-};
-```
-
-### 5. UI Component
-
-**`excalidraw-app/pens/PenToolbar.tsx`**:
-
-```typescript
-export const PenToolbar: React.FC<PenToolbarProps> = ({ excalidrawAPI }) => {
-  const appState = excalidrawAPI.getAppState();
-  const currentStrokeOptions = appState.currentStrokeOptions;
-  const isSidebarOpen = !!appState.openSidebar;
-
-  const setPen = useCallback(
-    (pen: PenStyle) => {
-      const st = excalidrawAPI.getAppState();
-
-      // Save current settings if switching to freedrawOnly pen
-      const resetCustomPen =
-        pen.freedrawOnly && !st.resetCustomPen
-          ? {
-              currentItemStrokeWidth: st.currentItemStrokeWidth,
-              currentItemBackgroundColor: st.currentItemBackgroundColor,
-              currentItemStrokeColor: st.currentItemStrokeColor,
-              currentItemFillStyle: st.currentItemFillStyle,
-              currentItemRoughness: st.currentItemRoughness,
-            }
-          : null;
-
-      // Update appState with new pen settings
-      excalidrawAPI.updateScene({
-        appState: {
-          currentStrokeOptions: pen.penOptions,
-          currentItemStrokeWidth: pen.strokeWidth,
-          currentItemStrokeColor: pen.strokeColor,
-          // ... other pen properties
-          resetCustomPen,
-        },
-      });
-
-      // Switch to freedraw tool
-      excalidrawAPI.setActiveTool({ type: "freedraw" });
-    },
-    [excalidrawAPI],
-  );
-
-  const resetToDefault = useCallback(() => {
-    const st = excalidrawAPI.getAppState();
-    // Restore saved settings
-    excalidrawAPI.updateScene({
-      appState: {
-        currentStrokeOptions: null,
-        ...(st.resetCustomPen && { ...st.resetCustomPen }),
-        resetCustomPen: null,
+  marker: {
+    type: "marker",
+    freedrawOnly: true,
+    strokeColor: "#B83E3E",
+    backgroundColor: "#FF7C7C",
+    fillStyle: "dashed",
+    strokeWidth: 2,
+    roughness: 3,
+    penOptions: {
+      highlighter: false,
+      constantPressure: true,
+      hasOutline: true,
+      outlineWidth: 4,
+      options: {
+        thinning: 1,
+        smoothing: 0.5,
+        streamline: 0.5,
+        easing: "linear",
+        start: { taper: 0, cap: true, easing: "linear" },
+        end: { taper: 0, cap: true, easing: "linear" },
       },
-    });
-  }, [excalidrawAPI]);
-
-  // Toolbar shifts left when sidebar is open
-  return (
-    <div
-      className="pen-toolbar"
-      style={{ right: isSidebarOpen ? "var(--right-sidebar-width, 302px)" : 0 }}
-    >
-      {/* Pen buttons */}
-    </div>
-  );
+    },
+  },
+  "thick-thin": {
+    type: "thick-thin",
+    freedrawOnly: true,
+    strokeColor: "#CECDCC",
+    backgroundColor: "transparent",
+    fillStyle: "hachure",
+    strokeWidth: 0,
+    roughness: null,
+    penOptions: {
+      highlighter: true,
+      constantPressure: true,
+      hasOutline: false,
+      outlineWidth: 1,
+      options: {
+        thinning: 1,
+        smoothing: 0.5,
+        streamline: 0.5,
+        easing: "linear",
+        start: { taper: 0, cap: true, easing: "linear" },
+        end: { cap: true, taper: true, easing: "linear" },  // Auto taper at end
+      },
+    },
+  },
+  "thin-thick-thin": {
+    type: "thin-thick-thin",
+    freedrawOnly: true,
+    strokeColor: "#CECDCC",
+    backgroundColor: "transparent",
+    fillStyle: "hachure",
+    strokeWidth: 0,
+    roughness: null,
+    penOptions: {
+      highlighter: true,
+      constantPressure: true,
+      hasOutline: false,
+      outlineWidth: 1,
+      options: {
+        thinning: 1,
+        smoothing: 0.5,
+        streamline: 0.5,
+        easing: "linear",
+        start: { cap: true, taper: true, easing: "linear" },  // Auto taper both ends
+        end: { cap: true, taper: true, easing: "linear" },
+      },
+    },
+  },
 };
 ```
-
-### 6. App Integration
-
-**`excalidraw-app/App.tsx`**:
-
-```typescript
-import { PenToolbar, getDefaultPenPresets } from "./pens";
-
-// In initializeScene:
-const defaultPenPresets = getDefaultPenPresets();
-appState.customPens = defaultPenPresets;
-
-// In render:
-<Excalidraw>
-  <AppSidebar />
-  {excalidrawAPI && <PenToolbar excalidrawAPI={excalidrawAPI} />}
-</Excalidraw>;
-```
-
-## Data Flow
-
-1. **User clicks pen button** → `setPen()` in PenToolbar
-2. **Updates AppState** → `currentStrokeOptions` set to pen's options
-3. **User draws** → New freedraw element created
-4. **Element stores options** → `customStrokeOptions` copied from `currentStrokeOptions`
-5. **Rendering** → `getFreedrawOutlinePoints()` reads `element.customStrokeOptions`
-6. **perfect-freehand** → Uses custom thinning/smoothing/taper values
 
 ## Adding New Pen Types
 
-1. Add type to `PenType` union in `types.ts`
-2. Add preset definition to `PENS` object in `pens.ts`
+1. Add type to `PenType` union in `packages/excalidraw/types.ts`
+2. Add preset definition to `PENS` object in `excalidraw-app/pens/pens.ts`
 3. Add icon case to `PenIcon` component in `PenToolbar.tsx`
 
-## Future Improvements (from Obsidian Plugin)
+## Pen Settings Modal
 
-- **Highlighter mode**: Semi-transparent fill with `globalCompositeOperation`
-- **Outline strokes**: Double-stroke rendering for outlined pens
+Users can customize pen settings via the `PenSettingsModal` component, which allows editing:
+
+- Pen type selection
+- Stroke & fill applies to: All shapes / Freedraw only
+- Stroke color (current or preset)
+- Background color (current, preset, or transparent)
+- Sloppiness (roughness)
+- Stroke width
+- Highlighter mode
+- Pressure sensitivity / constant pressure
+- Outline stroke
+- Perfect Freehand settings:
+  - Thinning (-1 to 1)
+  - Smoothing (0 to 1)
+  - Streamline (0 to 1)
+  - Easing function
+  - Simulate pressure mode
+  - Start/End tapering options
+
+## Implemented Features
+
+- ✅ **Custom pen presets**: 7 built-in pen types
+- ✅ **Perfect Freehand integration**: Full control over stroke parameters
+- ✅ **Outline strokes**: Double-stroke rendering for outlined pens
+- ✅ **Constant pressure**: Uniform stroke width ignoring stylus pressure
+- ✅ **freedrawOnly mode**: Saves/restores other tool settings
+- ✅ **Pen settings modal**: User-editable pen presets
+- ✅ **Easing functions**: Full set of easing functions for tapering
+
+## Future Improvements
+
+- **Highlighter rendering order**: Draw highlighter strokes behind other content (requires canvas layer changes)
 - **Pressure curves**: Custom pressure-to-width mapping
-- **Pen customization UI**: User-editable pen presets
-- **Keyboard shortcuts**: Quick pen switching
-
-## Key Differences from Obsidian Plugin
-
-The Obsidian Excalidraw plugin uses a heavily modified fork (`@zsviczian/excalidraw`) with deeper integration. This implementation:
-
-1. Stores stroke options on each element (not just in appState)
-2. Uses standard Excalidraw APIs where possible
-3. Renders in the main Excalidraw component tree
-4. Designed for web-first (not Electron/Obsidian)
+- **Keyboard shortcuts**: Quick pen switching (1-7 keys)
+- **Pen import/export**: Share pen presets
 
 ## Bug Fixes
 
 ### Pen Toolbar Hidden Behind Sidebar (v0.18.0-beta0.2)
 
-**Problem**: When the sidebar was opened, the pen toolbar was hidden behind it instead of shifting to the left.
+**Problem**: When the sidebar was opened, the pen toolbar was hidden behind it.
 
-**Root Causes**:
-
-1. **Missing CSS variable**: `--right-sidebar-width` was referenced but never defined
-2. **Insufficient z-index**: Pen toolbar had `z-index: 100` while sidebar had `z-index: 120`
-3. **Non-reactive state**: `PenToolbar` used `excalidrawAPI.getAppState()` which doesn't trigger re-renders when sidebar state changes
-
-**Solution**:
-
-1. **Added `--right-sidebar-width` CSS variable** in `packages/excalidraw/css/styles.scss`:
-
-```scss
-:root {
-  // ... other variables
-  --right-sidebar-width: 360px;
-}
-```
-
-2. **Fixed z-index** in `excalidraw-app/pens/PenToolbar.scss`:
-
-```scss
-.pen-toolbar {
-  z-index: calc(var(--zIndex-ui-library, 120) + 1); // Above sidebar
-
-  &--sidebar-open {
-    right: var(--right-sidebar-width, 360px);
-    border-radius: 8px;
-  }
-}
-```
-
-3. **Used reactive hook** in `excalidraw-app/pens/PenToolbar.tsx`:
+**Solution**: Used `useUIAppState()` hook for reactive state updates and proper z-index.
 
 ```typescript
 import { useUIAppState } from "@excalidraw/excalidraw/context/ui-appState";
 
 export const PenToolbar: React.FC<PenToolbarProps> = ({ excalidrawAPI }) => {
-  // Use reactive UI state for sidebar detection
   const uiAppState = useUIAppState();
   const isSidebarOpen = !!uiAppState.openSidebar;
-
-  return (
-    <div
-      className={clsx("pen-toolbar", {
-        "pen-toolbar--sidebar-open": isSidebarOpen,
-      })}
-    >
-      {/* ... */}
-    </div>
-  );
+  // ...
 };
 ```
 
-**Key Insight**: The `useUIAppState()` hook provides reactive state updates from Excalidraw's context, ensuring the component re-renders when `openSidebar` changes. The previous approach using `excalidrawAPI.getAppState()` only captured state at render time.
+### strokeWidth: 0 Not Working
+
+**Problem**: Pens with `strokeWidth: 0` were setting element stroke width to 0, making strokes invisible.
+
+**Solution**: Changed conditional check to treat `strokeWidth: 0` as "keep current canvas width":
+
+```typescript
+// Before (wrong)
+if (pen.strokeWidth !== undefined) {
+  appStateUpdate.currentItemStrokeWidth = pen.strokeWidth;
+}
+
+// After (correct - matches Obsidian plugin)
+if (pen.strokeWidth && pen.strokeWidth > 0) {
+  appStateUpdate.currentItemStrokeWidth = pen.strokeWidth;
+}
+```
 
 ## References
 
 - [perfect-freehand options](https://github.com/steveruizok/perfect-freehand#options)
-- [Obsidian Excalidraw pens.ts](https://github.com/zsviczian/obsidian-excalidraw-plugin/blob/master/src/utils/pens.ts)
+- [Obsidian Excalidraw Plugin](https://github.com/zsviczian/obsidian-excalidraw-plugin)
+- [zsviczian/excalidraw fork](https://github.com/zsviczian/excalidraw)
 - [Easing functions](https://easings.net/)
