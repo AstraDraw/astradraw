@@ -517,10 +517,10 @@ Users can customize pen settings via the `PenSettingsModal` component, which all
 - ✅ **freedrawOnly mode**: Saves/restores other tool settings
 - ✅ **Pen settings modal**: User-editable pen presets
 - ✅ **Easing functions**: Full set of easing functions for tapering
+- ✅ **Highlighter rendering order**: Pens with `highlighter: true` are drawn behind other elements, both during drawing and after completion
 
 ## Future Improvements
 
-- **Highlighter rendering order**: Draw highlighter strokes behind other content (requires canvas layer changes)
 - **Pressure curves**: Custom pressure-to-width mapping
 - **Keyboard shortcuts**: Quick pen switching (1-7 keys)
 - **Pen import/export**: Share pen presets

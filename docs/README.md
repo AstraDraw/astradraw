@@ -64,6 +64,7 @@ This is the documentation index for AstraDraw, a self-hosted Excalidraw fork wit
 | [LIBRARIES_SYSTEM.md](features/LIBRARIES_SYSTEM.md) | Shape library system |
 | [THUMBNAIL_PREVIEW.md](features/THUMBNAIL_PREVIEW.md) | Scene thumbnail generation |
 | [INVITE_LINKS.md](features/INVITE_LINKS.md) | Workspace invite links |
+| [WEB_EMBEDS.md](features/WEB_EMBEDS.md) | Web embeds (SharePoint, Google Docs, Power BI, etc.) |
 
 ### Deployment
 
